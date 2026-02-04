@@ -3,8 +3,20 @@
 ob_start();
 
 session_start();
-require_once '../../includes/MultiTenantSupabaseHelper.php';
-require_once '../../includes/push_notification_service.php';
+
+try {
+    require_once '../../includes/MultiTenantSupabaseHelper.php';
+    require_once '../../includes/push_notification_service.php';
+} catch (Exception $e) {
+    ob_end_clean();
+    error_log("Failed to load required files: " . $e->getMessage());
+    header("Content-Type: application/json; charset=utf-8");
+    http_response_code(500);
+    echo json_encode(["success" => false, "error" => "Server configuration error"]);
+    exit;
+}
+
+ob_end_clean();
 
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");

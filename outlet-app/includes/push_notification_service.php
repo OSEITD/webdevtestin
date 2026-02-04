@@ -13,11 +13,10 @@ class PushNotificationService {
         $this->supabase = $supabase;
         
         require_once __DIR__ . '/env.php';
-        EnvLoader::load();
         
-        $vapidPublic = EnvLoader::get('VAPID_PUBLIC_KEY');
-        $vapidPrivate = EnvLoader::get('VAPID_PRIVATE_KEY');
-        $vapidSubject = EnvLoader::get('VAPID_SUBJECT', 'mailto:admin@yourcompany.com');
+        $vapidPublic = getenv('VAPID_PUBLIC_KEY') ?: EnvLoader::get('VAPID_PUBLIC_KEY');
+        $vapidPrivate = getenv('VAPID_PRIVATE_KEY') ?: EnvLoader::get('VAPID_PRIVATE_KEY');
+        $vapidSubject = getenv('VAPID_SUBJECT') ?: EnvLoader::get('VAPID_SUBJECT', 'mailto:admin@yourcompany.com');
         
         error_log("VAPID Configuration Check:");
         error_log("- VAPID_PUBLIC_KEY: " . ($vapidPublic ? "SET (" . strlen($vapidPublic) . " chars)" : "NOT SET"));
@@ -25,7 +24,9 @@ class PushNotificationService {
         error_log("- VAPID_SUBJECT: " . $vapidSubject);
         
         if (!$vapidPublic || !$vapidPrivate) {
-            throw new Exception("VAPID keys not configured. Please set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables.");
+            error_log("WARNING: VAPID keys not configured - push notifications will be disabled");
+            $this->webPush = null;
+            return;
         }
         
         $auth = array(
@@ -36,10 +37,20 @@ class PushNotificationService {
             ),
         );
         
-        $this->webPush = new WebPush($auth);
+        try {
+            $this->webPush = new WebPush($auth);
+        } catch (Exception $e) {
+            error_log("Failed to initialize WebPush: " . $e->getMessage());
+            $this->webPush = null;
+        }
     }
     
     public function sendToDriver($driverId, $title, $body, $data = array()) {
+        if ($this->webPush === null) {
+            error_log("WebPush not initialized - skipping push notification for driver: $driverId");
+            return array('success' => false, 'message' => 'Push notifications disabled');
+        }
+        
         try {
             error_log("=== SENDING TO DRIVER: $driverId ===");
             error_log("Title: $title");
