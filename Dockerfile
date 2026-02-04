@@ -1,7 +1,7 @@
 # Production Dockerfile for WD Parcel Send Receiver PWA
-# Multi-tenant parcel management system with PHP 8.1 + Apache
+# Multi-tenant parcel management system with PHP 8.2 + Apache
 
-FROM php:8.1-apache
+FROM php:8.2-apache
 
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
