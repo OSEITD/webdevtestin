@@ -1,10 +1,13 @@
 <?php
+ob_start();
 session_start();
 
 require_once __DIR__ . '/includes/env.php';
 require_once __DIR__ . '/includes/security_headers.php';
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/rate_limiter.php';
+
+ob_end_clean();
 
 SecurityHeaders::apply();
 
