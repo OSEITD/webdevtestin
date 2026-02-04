@@ -58,8 +58,7 @@ class EnvLoader {
 try {
     EnvLoader::load();
 } catch (Exception $e) {
-    
-    if (getenv('APP_ENV') === 'production') {
-        error_log('Failed to load .env file: ' . $e->getMessage());
-    }
+    // In production (like Render), environment variables come from the platform
+    // Don't throw error if .env file is missing
+    error_log('Note: .env file not found, using system environment variables: ' . $e->getMessage());
 }

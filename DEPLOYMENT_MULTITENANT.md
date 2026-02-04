@@ -35,18 +35,43 @@ git push origin main
 
 2. **Set Environment Variables**
    
-   Required variables:
+   In Render Dashboard → Environment section, add these variables:
+   
+   **CRITICAL - Required for Core Functionality:**
    ```
-   APP_DOMAIN=your-app.onrender.com
+   APP_ENV=production
+   APP_DOMAIN=webdevtestin.onrender.com
    SUPABASE_URL=https://xerpchdsykqafrsxbqef.supabase.co
-   SUPABASE_ANON_KEY=<your-anon-key>
-   SUPABASE_SERVICE_ROLE_KEY=<your-service-key>
-   VAPID_PUBLIC_KEY=<your-vapid-public-key>
-   VAPID_PRIVATE_KEY=<your-vapid-private-key>
-   LENCO_PUBLIC_KEY=<your-lenco-key>
-   LENCO_SECRET_KEY=<your-lenco-secret>
-   LENCO_WEBHOOK_SECRET=<your-webhook-secret>
+   SUPABASE_ANON_KEY=<your_supabase_anon_key>
+   SUPABASE_SERVICE_ROLE_KEY=<your_supabase_service_role_key>
    ```
+   
+   **CRITICAL - Required for Push Notifications:**
+   Generate VAPID keys at: https://web-push-codelab.glitch.me/
+   ```
+   VAPID_SUBJECT=mailto:admin@yourcompany.com
+   VAPID_PUBLIC_KEY=<your_vapid_public_key>
+   VAPID_PRIVATE_KEY=<your_vapid_private_key>
+   ```
+   
+   **Optional - Payment Integration (Lenco):**
+   ```
+   LENCO_API_KEY=<your_lenco_api_key>
+   LENCO_BUSINESS_ID=<your_lenco_business_id>
+   LENCO_WEBHOOK_SECRET=<your_lenco_webhook_secret>
+   ```
+   
+   **Optional - Email Fallback Notifications:**
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USERNAME=<your_email@gmail.com>
+   SMTP_PASSWORD=<your_gmail_app_password>
+   SMTP_FROM_EMAIL=noreply@yourcompany.com
+   SMTP_FROM_NAME=WD Parcel System
+   ```
+   
+   ⚠️ **Without VAPID keys, trip creation will fail with 500 errors!**
 
 3. **Deploy**
    - Click "Create Web Service"
