@@ -52,6 +52,9 @@ RUN cd outlet-app && composer install --no-dev --optimize-autoloader --no-intera
 # Copy application code
 COPY . .
 
+# Copy Apache virtual host configuration for multi-tenant setup
+COPY apache-vhosts.conf /etc/apache2/sites-available/000-default.conf
+
 # Create required directories with proper permissions
 RUN mkdir -p \
     /var/www/html/logs \
@@ -77,22 +80,6 @@ RUN mkdir -p \
     /var/www/html/outlet-app/cache \
     /var/www/html/outlet-app/assets/barcodes \
     /var/www/html/customer-app/assets/barcodes
-
-# Apache configuration for multi-tenant routing
-RUN echo '<VirtualHost *:80>' > /etc/apache2/sites-available/000-default.conf && \
-    echo '    ServerAdmin webmaster@localhost' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    DocumentRoot /var/www/html' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    ' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    # Enable .htaccess overrides' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    <Directory /var/www/html>' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '        AllowOverride All' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '        Require all granted' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    </Directory>' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    ' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    # Logging' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    ErrorLog ${APACHE_LOG_DIR}/error.log' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '    CustomLog ${APACHE_LOG_DIR}/access.log combined' >> /etc/apache2/sites-available/000-default.conf && \
-    echo '</VirtualHost>' >> /etc/apache2/sites-available/000-default.conf
 
 # PHP configuration for production
 RUN echo 'memory_limit = 256M' >> /usr/local/etc/php/conf.d/docker-php-prod.ini && \
