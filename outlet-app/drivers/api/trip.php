@@ -3,15 +3,24 @@ ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 session_start();
-require_once '../../includes/OutletAwareSupabaseHelper.php';
-require_once '../../includes/push_notification_service.php';
+
+try {
+    require_once '../../includes/OutletAwareSupabaseHelper.php';
+    require_once '../../includes/push_notification_service.php';
+} catch (Exception $e) {
+    ob_end_clean();
+    error_log("Failed to load dependencies: " . $e->getMessage());
+    header('Content-Type: application/json');
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server configuration error']);
+    exit;
+}
 
 ob_end_clean();
 header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 if (!in_array($action, ['start', 'accept'])) {
-	ob_end_clean();
 	echo json_encode(['success' => false, 'error' => 'Invalid action. Use "start" or "accept"']);
 	exit;
 }
@@ -19,7 +28,6 @@ $trip_id = $_GET['trip_id'] ?? $_POST['trip_id'] ?? '';
 $driver_id = $_GET['driver_id'] ?? $_POST['driver_id'] ?? ($_SESSION['user_id'] ?? '');
 $company_id = $_SESSION['company_id'] ?? '';
 if (!$trip_id || !$driver_id || !$company_id) {
-	ob_end_clean();
 	echo json_encode(['success' => false, 'error' => 'Missing trip_id, driver_id, or company_id']);
 	exit;
 }
@@ -36,7 +44,6 @@ try {
 		$supabase->update('drivers', [
 			'current_trip_id' => $trip_id
 		], 'id=eq.' . urlencode($driver_id));
-		ob_end_clean();
 		echo json_encode([
 			'success' => true, 
 			'message' => 'Trip accepted successfully',
@@ -185,7 +192,9 @@ try {
 	error_log("Trip API Error: " . $e->getMessage());
 	error_log("Stack trace: " . $e->getTraceAsString());
 	
-	ob_end_clean();
+	if (ob_get_level() > 0) {
+		ob_end_clean();
+	}
 	http_response_code(500);
 	echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 	exit;
