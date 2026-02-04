@@ -14,7 +14,8 @@ class EnvLoader {
         }
 
         if (!file_exists($path)) {
-            throw new Exception('.env file not found at: ' . $path);
+            self::$loaded = true;
+            return;
         }
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
