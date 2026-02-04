@@ -15,11 +15,24 @@ class PushNotificationService {
         require_once __DIR__ . '/env.php';
         EnvLoader::load();
         
+        $vapidPublic = EnvLoader::get('VAPID_PUBLIC_KEY');
+        $vapidPrivate = EnvLoader::get('VAPID_PRIVATE_KEY');
+        $vapidSubject = EnvLoader::get('VAPID_SUBJECT', 'mailto:admin@yourcompany.com');
+        
+        error_log("VAPID Configuration Check:");
+        error_log("- VAPID_PUBLIC_KEY: " . ($vapidPublic ? "SET (" . strlen($vapidPublic) . " chars)" : "NOT SET"));
+        error_log("- VAPID_PRIVATE_KEY: " . ($vapidPrivate ? "SET (" . strlen($vapidPrivate) . " chars)" : "NOT SET"));
+        error_log("- VAPID_SUBJECT: " . $vapidSubject);
+        
+        if (!$vapidPublic || !$vapidPrivate) {
+            throw new Exception("VAPID keys not configured. Please set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables.");
+        }
+        
         $auth = array(
             'VAPID' => array(
-                'subject' => EnvLoader::get('VAPID_SUBJECT', 'mailto:admin@yourcompany.com'),
-                'publicKey' => EnvLoader::get('VAPID_PUBLIC_KEY'),
-                'privateKey' => EnvLoader::get('VAPID_PRIVATE_KEY'),
+                'subject' => $vapidSubject,
+                'publicKey' => $vapidPublic,
+                'privateKey' => $vapidPrivate,
             ),
         );
         

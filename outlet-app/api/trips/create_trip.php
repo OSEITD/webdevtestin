@@ -33,7 +33,11 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['company_id'])) {
 }
 
 try {
+    error_log("=== TRIP CREATION STARTED ===");
+    error_log("Session data: " . json_encode(['user_id' => $_SESSION['user_id'] ?? 'NOT SET', 'company_id' => $_SESSION['company_id'] ?? 'NOT SET']));
+    
     $supabase = new MultiTenantSupabaseHelper($_SESSION['company_id']);
+    error_log("✅ Supabase helper initialized");
     
     
     $input = null;
@@ -47,6 +51,8 @@ try {
     if (!$input) {
         throw new Exception("Invalid JSON input");
     }
+    
+    error_log("Input data received: " . json_encode($input));
     
     
     $required = ['vehicle_id', 'departure_time', 'origin_outlet', 'destination_outlet'];
