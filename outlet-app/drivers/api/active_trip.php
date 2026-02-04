@@ -1,7 +1,11 @@
 <?php
+ob_start();
 require_once '../../includes/ResponseCache.php';
 session_start();
+
+ob_end_clean();
 header('Content-Type: application/json');
+
 if (!ob_start('ob_gzhandler')) ob_start();
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'driver') {
     http_response_code(401);
@@ -17,7 +21,7 @@ if ($cachedResponse !== null) {
     echo json_encode($cachedResponse);
     exit();
 }
-$SUPABASE_URL = "https://xerpchdsykqafrsxbqef.supabase.co";
+$SUPABASE_URL = getenv('SUPABASE_URL') ?: "https://xerpchdsykqafrsxbqef.supabase.co";
 $SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
 $context = stream_context_create([
     'http' => [

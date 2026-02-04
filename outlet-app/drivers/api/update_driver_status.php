@@ -1,17 +1,24 @@
 <?php
+ob_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('Content-Type: application/json');
+    exit(0);
+}
+
+require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../config/supabase_config.php';
+require_once __DIR__ . '/../../includes/OutletAwareSupabaseHelper.php';
+session_start();
+
+ob_end_clean();
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
-}
-require_once '../../../vendor/autoload.php';
-require_once '../../../config/supabase_config.php';
-require_once '../includes/OutletAwareSupabaseHelper.php';
-session_start();
+
 try {
     
     $input = json_decode(file_get_contents('php://input'), true);

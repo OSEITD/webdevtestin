@@ -1,11 +1,15 @@
 <?php
+ob_start();
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 error_reporting(E_ALL);
 require_once '../../includes/OutletAwareSupabaseHelper.php';
 require_once '../../includes/push_notification_service.php';
-header('Content-Type: application/json');
 session_start();
+
+ob_end_clean();
+header('Content-Type: application/json');
+
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? null) !== 'driver') {
     http_response_code(401);
     echo json_encode([
