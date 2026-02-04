@@ -1,0 +1,13 @@
+{
+    "name": "wdparcel/outlet-app",
+    "description": "Outlet application for WD Parcel Send Receiver System",
+    "type": "project",
+    "require": {
+        "php": ">=8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "OutletApp\\": "includes/"
+        }
+    }
+}
