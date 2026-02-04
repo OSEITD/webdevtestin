@@ -1,0 +1,35 @@
+/* Styles for check-in and check-out buttons */
+#checkInBtn, #checkOutBtn, #checkInBtnDynamic, #checkOutBtnDynamic {
+    padding: 10px 20px;
+    font-weight: 600;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    color: white;
+}
+
+#checkInBtn, #checkInBtnDynamic {
+    background-color: #22c55e; /* Tailwind green-500 */
+}
+
+#checkInBtn:hover, #checkInBtnDynamic:hover {
+    background-color: #16a34a; /* Tailwind green-700 */
+    box-shadow: 0 6px 12px rgba(22,163,74,0.4);
+}
+
+#checkOutBtn, #checkOutBtnDynamic {
+    background-color: #ef4444; /* Tailwind red-500 */
+}
+
+#checkOutBtn:hover, #checkOutBtnDynamic:hover {
+    background-color: #b91c1c; /* Tailwind red-700 */
+    box-shadow: 0 6px 12px rgba(185,28,28,0.4);
+}
+
+#checkInBtn:disabled, #checkOutBtn:disabled, #checkInBtnDynamic:disabled, #checkOutBtnDynamic:disabled {
+    background-color: #9ca3af; /* Tailwind gray-400 */
+    cursor: not-allowed;
+    box-shadow: none;
+}

@@ -1,0 +1,42 @@
+/* Trips Page Styles */
+
+.trip-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.trip-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #e0e7ff;
+    color: #3730a3;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.filter-tag button {
+    background: none;
+    border: none;
+    color: #3730a3;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.filter-tag button:hover {
+    color: #1e1b4b;
+}
+
+.active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}

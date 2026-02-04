@@ -1,0 +1,44 @@
+{
+  "name": "Outlet Management System",
+  "short_name": "OutletApp",
+  "description": "Parcel management system for outlet managers with offline support",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#2e0b3f",
+  "theme_color": "#2e0b3f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "en-US",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Create Parcel",
+      "short_name": "New Parcel",
+      "description": "Register a new parcel",
+      "url": "./pages/parcel_registration.php",
+      "icons": [{ "src": "img/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View Trips",
+      "short_name": "Trips",
+      "description": "Manage delivery trips",
+      "url": "./pages/trips.php",
+      "icons": [{ "src": "img/logo.png", "sizes": "192x192" }]
+    }
+  ]
+}

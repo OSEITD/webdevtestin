@@ -1,0 +1,11 @@
+# Rewrite non-file requests to index.php so we can forward to Admins/super_admin
+RewriteEngine On
+RewriteBase /WDParcelSendReceiverPWA/super_admin/
+
+# If the request is for an existing file or directory, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Otherwise, forward to index.php to handle routing
+RewriteRule ^ index.php [L,QSA]

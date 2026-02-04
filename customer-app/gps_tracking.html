@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Tracking - WD Parcel</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Roboto', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 16px 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f5f5f5;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: #e5e5e5;
+            transform: scale(1.05);
+        }
+
+        .tracking-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .tracking-id {
+            font-size: 14px;
+            color: #666;
+            margin-left: 8px;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: #10b981;
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        
+        .info-card {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+            z-index: 1000;
+            max-height: 50vh;
+            transition: transform 0.3s ease;
+        }
+
+        .info-card.minimized {
+            transform: translateY(calc(100% - 80px));
+        }
+
+        .drag-handle {
+            width: 40px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            margin: 12px auto;
+            cursor: grab;
+        }
+
+        .info-content {
+            padding: 0 20px 20px;
+            overflow-y: auto;
+            max-height: calc(50vh - 80px);
+        }
+
+        
+        .driver-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .driver-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .driver-info {
+            flex: 1;
+        }
+
+        .driver-name {
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 4px;
+        }
+
+        .driver-vehicle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .call-button {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #10b981;
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+
+        .call-button:hover {
+            background: #059669;
+            transform: scale(1.05);
+        }
+
+        
+        .route-section {
+            padding: 20px 0;
+        }
+
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .route-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .route-eta {
+            font-size: 14px;
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .progress-bar-container {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 10px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .route-stops {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .route-stop {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .stop-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .stop-icon.origin {
+            background: #e0f2fe;
+            color: #0284c7;
+        }
+
+        .stop-icon.destination {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .stop-details {
+            flex: 1;
+        }
+
+        .stop-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stop-address {
+            font-size: 15px;
+            color: #000;
+            font-weight: 500;
+        }
+
+        
+        .parcel-section {
+            padding: 20px 0;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+        }
+
+        .detail-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: #000;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        
+        .location-badge {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .location-icon {
+            color: #10b981;
+            font-size: 16px;
+        }
+
+        
+        .zoom-controls {
+            position: absolute;
+            right: 20px;
+            top: 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 999;
+        }
+
+        .zoom-button {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .zoom-button:hover {
+            background: #f5f5f5;
+            transform: scale(1.05);
+        }
+
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #666;
+        }
+
+        
+        .error-message {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fee;
+            color: #c00;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translate(-50%, -20px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+
+        
+        @media (max-width: 768px) {
+            .top-bar {
+                padding: 12px 16px;
+            }
+
+            .tracking-title {
+                font-size: 16px;
+            }
+
+            .tracking-id {
+                display: none;
+            }
+
+            .info-card {
+                max-height: 60vh;
+            }
+
+            .location-badge {
+                top: 70px;
+                right: 16px;
+                font-size: 12px;
+                padding: 10px 14px;
+            }
+
+            .zoom-controls {
+                right: 16px;
+                top: 120px;
+            }
+        }
+
+        
+        .custom-marker {
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vehicle-marker {
+            width: 40px;
+            height: 40px;
+            background: #000;
+            color: white;
+            border: 3px solid white;
+        }
+
+        .outlet-marker {
+            width: 32px;
+            height: 32px;
+            background: white;
+            border: 2px solid #10b981;
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading tracking information...</div>
+    </div>
+
+    
+    <div id="errorMessage" class="error-message"></div>
+
+    
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <button class="back-button" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+                <span class="tracking-title">Live Tracking</span>
+                <span class="tracking-id" id="trackingId">---</span>
+            </div>
+        </div>
+        <div class="status-pill" id="statusPill">
+            <span class="status-pulse"></span>
+            <span>Live</span>
+        </div>
+    </div>
+
+    
+    <div id="map"></div>
+
+    
+    <div class="location-badge" id="locationBadge" style="display: none;">
+        <i class="fas fa-map-marker-alt location-icon"></i>
+        <span id="locationText">Updating location...</span>
+    </div>
+
+    
+    <div class="zoom-controls">
+        <button class="zoom-button" id="zoomIn">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="zoom-button" id="zoomOut">
+            <i class="fas fa-minus"></i>
+        </button>
+        <button class="zoom-button" id="centerMap" title="Center on vehicle">
+            <i class="fas fa-crosshairs"></i>
+        </button>
+    </div>
+
+    
+    <div class="info-card" id="infoCard">
+        <div class="drag-handle" id="dragHandle"></div>
+        
+        <div class="info-content">
+            
+            <div class="driver-section" id="driverSection" style="display: none;">
+                <div class="driver-avatar" id="driverAvatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="driver-info">
+                    <div class="driver-name" id="driverName">Loading...</div>
+                    <div class="driver-vehicle" id="driverVehicle">Delivery Driver</div>
+                </div>
+                <button class="call-button" id="callButton" title="Call driver">
+                    <i class="fas fa-phone"></i>
+                </button>
+            </div>
+
+            
+            <div class="route-section">
+                <div class="route-header">
+                    <span class="route-title">Delivery Route</span>
+                    <span class="route-eta" id="routeEta">Calculating...</span>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progressBar" style="width: 0%;"></div>
+                </div>
+
+                <div class="route-stops">
+                    <div class="route-stop">
+                        <div class="stop-icon origin">
+                            <i class="fas fa-circle" style="font-size: 8px;"></i>
+                        </div>
+                        <div class="stop-details">
+                            <div class="stop-label">From</div>
+                            <div class="stop-address" id="originAddress">Loading...</div>
+                        </div>
+                    </div>
+
+                    <div class="route-stop">
+                        <div class="stop-icon destination">
+                            <i class="fas fa-map-marker-alt" style="font-size: 12px;"></i>
+                        </div>
+                        <div class="stop-details">
+                            <div class="stop-label">To</div>
+                            <div class="stop-address" id="destinationAddress">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="parcel-section">
+                <div class="detail-row">
+                    <span class="detail-label">Tracking Number</span>
+                    <span class="detail-value" id="trackingNumber">---</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value" id="parcelStatus">---</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Distance Remaining</span>
+                    <span class="detail-value" id="distanceRemaining">---</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Last Update</span>
+                    <span class="detail-value" id="lastUpdate">---</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        class UberStyleGPSTracker {
+            showLocationBadge(text) {
+                const badge = document.getElementById('locationBadge');
+                document.getElementById('locationText').textContent = text;
+                badge.style.display = 'flex';
+            }
+            constructor() {
+                this.map = null;
+                this.vehicleMarker = null;
+                this.originMarker = null;
+                this.destinationMarker = null;
+                this.routeLine = null;
+                this.parcelId = new URLSearchParams(window.location.search).get('parcel_id');
+                this.refreshInterval = null;
+                this.isMinimized = false;
+                this.init();
+            }
+            async init() {
+                if (!this.parcelId) {
+                    this.showError('No parcel ID provided');
+                    return;
+                }
+                this.initMap();
+                this.setupEventListeners();
+                await this.loadTrackingData();
+                this.startAutoRefresh();
+            }
+            initMap() {
+                this.map = L.map('map', {
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView([-15.3875, 28.3228], 12);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19
+                }).addTo(this.map);
+                L.control.attribution({
+                    position: 'bottomleft',
+                    prefix: false
+                }).addAttribution('© OpenStreetMap').addTo(this.map);
+            }
+            setupEventListeners() {
+                document.getElementById('zoomIn').addEventListener('click', () => {
+                    this.map.zoomIn();
+                });
+                document.getElementById('centerMap').addEventListener('click', () => {
+                    if (this.vehicleMarker) {
+                        this.map.setView(this.vehicleMarker.getLatLng(), 15, {
+                            animate: true,
+                            duration: 0.5
+                        });
+                    }
+                });
+                const dragHandle = document.getElementById('dragHandle');
+                const infoCard = document.getElementById('infoCard');
+                let startY = 0;
+                let currentY = 0;
+                dragHandle.addEventListener('touchstart', (e) => {
+                    startY = e.touches[0].clientY;
+                });
+                dragHandle.addEventListener('touchmove', (e) => {
+                    currentY = e.touches[0].clientY;
+                    const diff = currentY - startY;
+                    if (diff > 50 && !this.isMinimized) {
+                        infoCard.classList.add('minimized');
+                        this.isMinimized = true;
+                    } else if (diff < -50 && this.isMinimized) {
+                        infoCard.classList.remove('minimized');
+                        this.isMinimized = false;
+                    }
+                });
+                document.getElementById('callButton').addEventListener('click', () => {
+                    const phone = document.getElementById('driverVehicle').dataset.phone;
+                    if (phone) {
+                        window.location.href = `tel:${phone}`;
+                    }
+                });
+            }
+            async loadTrackingData() {
+                try {
+                    const response = await fetch(`api/gps_tracking.php?action=track_parcel&parcel_id=${encodeURIComponent(this.parcelId)}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const result = await response.json();
+                    if (result.success) {
+                        this.updateUI(result);
+                        this.hideLoading();
+                    } else {
+                        throw new Error(result.error || 'Failed to load tracking data');
+                    }
+                } catch (error) {
+                    console.error('Tracking error:', error);
+                    this.showError(error.message);
+                    this.hideLoading();
+                }
+            }
+            updateUI(data) {
+                document.getElementById('trackingId').textContent = `#${data.parcel?.track_number || this.parcelId}`;
+                document.getElementById('trackingNumber').textContent = data.parcel?.track_number || 'N/A';
+                const status = data.parcel?.status || 'unknown';
+                document.getElementById('parcelStatus').textContent = status.toUpperCase().replace('_', ' ');
+                if (data.parcel?.driver_name) {
+                    document.getElementById('driverSection').style.display = 'flex';
+                    document.getElementById('driverName').textContent = data.parcel.driver_name;
+                    const initials = data.parcel.driver_name.split(' ').map(n => n[0]).join('').toUpperCase();
+                    document.getElementById('driverAvatar').innerHTML = initials;
+                    if (data.parcel.driver_phone) {
+                        document.getElementById('driverVehicle').dataset.phone = data.parcel.driver_phone;
+                    }
+                }
+                if (data.route_data) {
+                    let progress = 0;
+                    const status = data.parcel?.status || 'pending';
+                    const tripStatus = data.route_data?.trip_status;
+                    if (typeof data.route_data.progress_percentage !== 'undefined' && data.route_data.progress_percentage !== null) {
+                        progress = parseFloat(data.route_data.progress_percentage);
+                    } else {
+                        const statusProgressMap = {
+                            'pending': 0,
+                            'scheduled': 10,
+                            'at_origin': 20,
+                            'picked_up': 30,
+                            'in_transit': 50,
+                            'at_outlet': 70,
+                            'out_for_delivery': 80,
+                            'delivered': 100,
+                            'completed': 100
+                        };
+                        if (tripStatus === 'completed' || status === 'delivered') {
+                            progress = 100;
+                        } else if (tripStatus) {
+                            progress = statusProgressMap[tripStatus] || statusProgressMap[status] || 0;
+                        } else {
+                            progress = statusProgressMap[status] || 0;
+                        }
+                    }
+                    progress = Math.max(0, Math.min(100, progress));
+                    const progressBar = document.getElementById('progressBar');
+                    const currentWidth = parseFloat(progressBar.style.width) || 0;
+                    progressBar.style.width = `${progress}%`;
+                    const etaElement = document.getElementById('routeEta');
+                    let currentProgress = currentWidth;
+                    const targetProgress = progress;
+                    const animationDuration = 1000;
+                    const steps = 30;
+                    const increment = (targetProgress - currentProgress) / steps;
+                    const stepDuration = animationDuration / steps;
+                    let step = 0;
+                    const progressAnimation = setInterval(() => {
+                        currentProgress += increment;
+                        step++;
+                        if (step >= steps || (increment > 0 && currentProgress >= targetProgress) || (increment < 0 && currentProgress <= targetProgress)) {
+                            currentProgress = targetProgress;
+                            clearInterval(progressAnimation);
+                        }
+                        if (targetProgress === 100) {
+                            etaElement.textContent = 'Delivered';
+                            etaElement.style.color = '#10b981';
+                            etaElement.style.fontWeight = 'bold';
+                        } else {
+                            etaElement.textContent = `${Math.round(currentProgress)}% Complete`;
+                            etaElement.style.color = '';
+                            etaElement.style.fontWeight = '';
+                        }
+                    }, stepDuration);
+                    if (data.route_data.origin) {
+                        document.getElementById('originAddress').textContent = 
+                            data.route_data.origin.outlet_name || data.route_data.origin.address || 'Origin';
+                    }
+                    if (data.route_data.destination) {
+                        document.getElementById('destinationAddress').textContent = 
+                            data.route_data.destination.outlet_name || data.route_data.destination.address || 'Destination';
+                    }
+                    document.getElementById('distanceRemaining').textContent = 
+                        `${Math.round(data.route_data.distance_remaining || 0)} km`;
+                }
+                if (data.current_location?.timestamp) {
+                    try {
+                        const timestamp = new Date(data.current_location.timestamp);
+                        document.getElementById('lastUpdate').textContent = timestamp.toLocaleTimeString();
+                    } catch (e) {
+                        document.getElementById('lastUpdate').textContent = 'Just now';
+                    }
+                }
+                let mapData = { ...data };
+                if (data.driver_location) {
+                    mapData.current_location = data.driver_location;
+                }
+                if (
+                    mapData.current_location &&
+                    typeof mapData.current_location.latitude !== 'undefined' &&
+                    typeof mapData.current_location.longitude !== 'undefined' &&
+                    mapData.current_location.latitude !== null &&
+                    mapData.current_location.longitude !== null &&
+                    !isNaN(parseFloat(mapData.current_location.latitude)) &&
+                    !isNaN(parseFloat(mapData.current_location.longitude)) &&
+                    data.tracking_available
+                ) {
+                    this.updateMapMarkers(mapData);
+                    this.showLocationBadge(`Speed: ${Math.round(mapData.current_location.speed || 0)} km/h`);
+                } else {
+                    this.showError('No valid location data available');
+                }
+            }
+            updateMapMarkers(data) {
+                if (!data.current_location ||
+                    typeof data.current_location.latitude === 'undefined' ||
+                    typeof data.current_location.longitude === 'undefined' ||
+                    data.current_location.latitude === null ||
+                    data.current_location.longitude === null ||
+                    isNaN(parseFloat(data.current_location.latitude)) ||
+                    isNaN(parseFloat(data.current_location.longitude))) {
+                    this.showError('No valid location data available');
+                    return;
+                }
+                let currentLat = null, currentLng = null;
+                if (!data.current_location ||
+                    typeof data.current_location.latitude === 'undefined' ||
+                    typeof data.current_location.longitude === 'undefined' ||
+                    data.current_location.latitude === null ||
+                    data.current_location.longitude === null ||
+                    isNaN(parseFloat(data.current_location.latitude)) ||
+                    isNaN(parseFloat(data.current_location.longitude)) ||
+                    Math.abs(parseFloat(data.current_location.latitude)) > 90 ||
+                    Math.abs(parseFloat(data.current_location.longitude)) > 180) {
+                    this.showError('No valid location data available');
+                    return;
+                }
+                currentLat = parseFloat(data.current_location.latitude);
+                currentLng = parseFloat(data.current_location.longitude);
+                try {
+                    if (this.vehicleMarker) {
+                        this.vehicleMarker.setLatLng([currentLat, currentLng]);
+                    } else {
+                        const vehicleIcon = L.divIcon({
+                            html: `<div class="custom-marker vehicle-marker">
+                                <i class="fas fa-truck" style="font-size: 18px;"></i>
+                            </div>`,
+                            className: '',
+                            iconSize: [40, 40],
+                            iconAnchor: [20, 20]
+                        });
+                        this.vehicleMarker = L.marker([currentLat, currentLng], { icon: vehicleIcon })
+                            .addTo(this.map);
+                    }
+                } catch (e) {
+                    this.showError('Error updating vehicle marker');
+                }
+                if (data.route_data && data.route_data.origin && !this.originMarker) {
+                    const oLat = data.route_data.origin.latitude;
+                    const oLng = data.route_data.origin.longitude;
+                    if (oLat !== null && oLng !== null && !isNaN(parseFloat(oLat)) && !isNaN(parseFloat(oLng)) && Math.abs(parseFloat(oLat)) <= 90 && Math.abs(parseFloat(oLng)) <= 180) {
+                        try {
+                            const originIcon = L.divIcon({
+                                html: `<div class="custom-marker outlet-marker">
+                                    <i class="fas fa-circle" style="font-size: 8px; color: #0284c7;"></i>
+                                </div>`,
+                                className: '',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16]
+                            });
+                            this.originMarker = L.marker(
+                                [parseFloat(oLat), parseFloat(oLng)],
+                                { icon: originIcon }
+                            ).addTo(this.map);
+                        } catch (e) {
+                            this.showError('Error updating origin marker');
+                        }
+                    }
+                }
+                if (data.route_data && data.route_data.destination && !this.destinationMarker) {
+                    const destLat = data.route_data.destination.latitude;
+                    const destLng = data.route_data.destination.longitude;
+                    if (destLat !== null && destLng !== null && !isNaN(parseFloat(destLat)) && !isNaN(parseFloat(destLng)) && Math.abs(parseFloat(destLat)) <= 90 && Math.abs(parseFloat(destLng)) <= 180) {
+                        try {
+                            const destIcon = L.divIcon({
+                                html: `<div class="custom-marker outlet-marker">
+                                    <i class="fas fa-map-marker-alt" style="font-size: 12px; color: #16a34a;"></i>
+                                </div>`,
+                                className: '',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16]
+                            });
+                            this.destinationMarker = L.marker(
+                                [parseFloat(destLat), parseFloat(destLng)],
+                                { icon: destIcon }
+                            ).addTo(this.map);
+                        } catch (e) {
+                            this.showError('Error updating destination marker');
+                        }
+                    }
+                }
+                if (data.route_data && Array.isArray(data.route_data.stops)) {
+                    if (!this.stopMarkers) this.stopMarkers = [];
+                    this.stopMarkers.forEach(m => this.map.removeLayer(m));
+                    this.stopMarkers = [];
+                    let stopsToShow = data.route_data.stops;
+                    if (data.route_data.destination) {
+                        const customerDestinationIndex = data.route_data.stops.findIndex(stop => 
+                            Math.abs(parseFloat(stop.latitude) - parseFloat(data.route_data.destination.latitude)) < 0.0001 && 
+                            Math.abs(parseFloat(stop.longitude) - parseFloat(data.route_data.destination.longitude)) < 0.0001
+                        );
+                        if (customerDestinationIndex >= 0) {
+                            stopsToShow = data.route_data.stops.slice(0, customerDestinationIndex + 1);
+                        }
+                    }
+                    stopsToShow.forEach((stop, idx) => {
+                        const sLat = stop.latitude;
+                        const sLng = stop.longitude;
+                        if (sLat !== null && sLng !== null && !isNaN(parseFloat(sLat)) && !isNaN(parseFloat(sLng)) && Math.abs(parseFloat(sLat)) <= 90 && Math.abs(parseFloat(sLng)) <= 180) {
+                            try {
+                                if (data.route_data.destination && 
+                                    Math.abs(parseFloat(sLat) - parseFloat(data.route_data.destination.latitude)) < 0.0001 && 
+                                    Math.abs(parseFloat(sLng) - parseFloat(data.route_data.destination.longitude)) < 0.0001) {
+                                    return;
+                                }
+                                const stopIcon = L.divIcon({
+                                    html: `<div class=\"custom-marker outlet-marker\"><span style=\"font-size:12px;color:#2563eb;font-weight:bold;\">${idx+1}</span></div>`,
+                                    className: '',
+                                    iconSize: [28, 28],
+                                    iconAnchor: [14, 14]
+                                });
+                                const marker = L.marker([parseFloat(sLat), parseFloat(sLng)], { icon: stopIcon })
+                                    .addTo(this.map)
+                                    .bindPopup(`<b>${stop.outlet_name}</b><br>${stop.address}`);
+                                this.stopMarkers.push(marker);
+                            } catch (e) {
+                                this.showError('Error updating stop marker');
+                            }
+                        }
+                    });
+                }
+                if (data.route_data && data.route_data.origin && data.route_data.destination) {
+                    const destLat = data.route_data.destination.latitude;
+                    const destLng = data.route_data.destination.longitude;
+                    const oLat = data.route_data.origin.latitude;
+                    const oLng = data.route_data.origin.longitude;
+                    if (
+                        destLat !== null && destLng !== null && !isNaN(parseFloat(destLat)) && !isNaN(parseFloat(destLng)) && Math.abs(parseFloat(destLat)) <= 90 && Math.abs(parseFloat(destLng)) <= 180 &&
+                        oLat !== null && oLng !== null && !isNaN(parseFloat(oLat)) && !isNaN(parseFloat(oLng)) && Math.abs(parseFloat(oLat)) <= 90 && Math.abs(parseFloat(oLng)) <= 180
+                    ) {
+                        try {
+                            if (this.routeLine) {
+                                this.map.removeLayer(this.routeLine);
+                            }
+                            const routePoints = [[parseFloat(oLat), parseFloat(oLng)]];
+                            if (data.route_data.stops && Array.isArray(data.route_data.stops)) {
+                                const customerDestinationIndex = data.route_data.stops.findIndex(stop => 
+                                    Math.abs(parseFloat(stop.latitude) - parseFloat(destLat)) < 0.0001 && 
+                                    Math.abs(parseFloat(stop.longitude) - parseFloat(destLng)) < 0.0001
+                                );
+                                const stopsToInclude = customerDestinationIndex >= 0 
+                                    ? data.route_data.stops.slice(0, customerDestinationIndex) 
+                                    : [];
+                                stopsToInclude.forEach(stop => {
+                                    if (stop.latitude !== null && stop.longitude !== null && 
+                                        !isNaN(parseFloat(stop.latitude)) && !isNaN(parseFloat(stop.longitude))) {
+                                        routePoints.push([parseFloat(stop.latitude), parseFloat(stop.longitude)]);
+                                    }
+                                });
+                            }
+                            routePoints.push([currentLat, currentLng]);
+                            routePoints.push([parseFloat(destLat), parseFloat(destLng)]);
+                            this.routeLine = L.polyline(routePoints, {
+                                color: '#10b981',
+                                weight: 4,
+                                opacity: 0.7,
+                                smoothFactor: 1
+                            }).addTo(this.map);
+                            const bounds = L.latLngBounds(routePoints);
+                            this.map.fitBounds(bounds, { padding: [80, 80] });
+                        } catch (e) {
+                            this.showError('Error drawing route line');
+                        }
+                    } else {
+                        this.map.setView([currentLat, currentLng], 14);
+                    }
+                } else {
+                    this.map.setView([currentLat, currentLng], 14);
+                }
+            }
+            showError(message) {
+                const errorEl = document.getElementById('errorMessage');
+                errorEl.textContent = message;
+                errorEl.classList.add('show');
+                setTimeout(() => {
+                    errorEl.classList.remove('show');
+                }, 5000);
+            }
+            hideLoading() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+            startAutoRefresh() {
+                this.refreshInterval = setInterval(() => {
+                    this.loadTrackingData();
+                }, 10000);
+            }
+            destroy() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                }
+            }
+        }
+        let tracker;
+        document.addEventListener('DOMContentLoaded', () => {
+            tracker = new UberStyleGPSTracker();
+        });
+        window.addEventListener('beforeunload', () => {
+            if (tracker) {
+                tracker.destroy();
+            }
+        });
+    </script>
+</body>
+</html>

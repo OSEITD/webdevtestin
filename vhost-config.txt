@@ -1,0 +1,48 @@
+# Add this to C:\xampp\apache\conf\extra\httpd-vhosts.conf
+
+# Customer App Virtual Host
+<VirtualHost *:80>
+    ServerName customer.localhost
+    DocumentRoot "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app"
+    ErrorLog "logs/customer.localhost-error.log"
+    CustomLog "logs/customer.localhost-access.log" common
+
+    <Directory "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+
+# Outlet App Virtual Host (existing - update if needed)
+<VirtualHost *:80>
+    ServerName outlet.localhost
+    DocumentRoot "C:/xampp/htdocs/WDParcelSendReceiverPWA/outlet-app"
+    ErrorLog "logs/outlet.localhost-error.log"
+    CustomLog "logs/outlet.localhost-access.log" common
+
+    <Directory "C:/xampp/htdocs/WDParcelSendReceiverPWA/outlet-app">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+
+# Main Project Virtual Host
+<VirtualHost *:80>
+    ServerName acme.localhost
+    DocumentRoot "C:/xampp/htdocs/WDParcelSendReceiverPWA"
+    ErrorLog "logs/acme.localhost-error.log"
+    CustomLog "logs/acme.localhost-access.log" common
+
+    <Directory "C:/xampp/htdocs/WDParcelSendReceiverPWA">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+
+# Add these to C:\Windows\System32\drivers\etc\hosts (run as administrator):
+# 127.0.0.1 acme.localhost
+# 127.0.0.1 customer.localhost
+# 127.0.0.1 outlet.localhost

@@ -1,0 +1,48 @@
+{
+  "name": "Driver App - Professional Courier",
+  "short_name": "Driver App",
+  "description": "Professional courier and delivery driver application with real-time tracking",
+  "start_url": "/WDParcelSendReceiverPWA/outlet-app/drivers/dashboard.php",
+  "display": "standalone",
+  "background_color": "#2e0d2a",
+  "theme_color": "#2e0d2a",
+  "orientation": "portrait",
+  "scope": "/WDParcelSendReceiverPWA/outlet-app/drivers/",
+  "icons": [
+    {
+      "src": "img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["productivity", "business", "logistics"],
+  "shortcuts": [
+    {
+      "name": "Scan QR Code",
+      "short_name": "Scan",
+      "description": "Quick QR code scanner for parcel tracking",
+      "url": "/WDParcelSendReceiverPWA/outlet-app/drivers/pages/scanner.php"
+    },
+    {
+      "name": "My Deliveries",
+      "short_name": "Deliveries",
+      "description": "View current delivery assignments",
+      "url": "/WDParcelSendReceiverPWA/outlet-app/drivers/pages/deliveries.php"
+    },
+    {
+      "name": "Pickup List",
+      "short_name": "Pickups",
+      "description": "View scheduled pickups",
+      "url": "/WDParcelSendReceiverPWA/outlet-app/drivers/pages/pickups.php"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

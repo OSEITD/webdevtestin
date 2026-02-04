@@ -1,0 +1,39 @@
+# Virtual Host Configuration for Customer App
+# Add this to C:\xampp\apache\conf\extra\httpd-vhosts.conf
+
+# Customer App Virtual Host
+<VirtualHost *:80>
+    ServerName customer.localhost
+    DocumentRoot "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app"
+    ErrorLog "logs/customer.localhost-error.log"
+    CustomLog "logs/customer.localhost-access.log" common
+    
+    <Directory "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+        DirectoryIndex index.php index.html
+    </Directory>
+</VirtualHost>
+
+# Alternative: Company App Virtual Host (if needed)
+<VirtualHost *:80>
+    ServerName company.localhost
+    DocumentRoot "C:/xampp/htdocs/WDParcelSendReceiverPWA/company"
+    ErrorLog "logs/company.localhost-error.log"
+    CustomLog "logs/company.localhost-access.log" common
+    
+    <Directory "C:/xampp/htdocs/WDParcelSendReceiverPWA/company">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+        DirectoryIndex index.php index.html
+    </Directory>
+</VirtualHost>
+
+# Instructions:
+# 1. Copy the Customer App Virtual Host section above
+# 2. Add it to C:\xampp\apache\conf\extra\httpd-vhosts.conf
+# 3. Add "127.0.0.1 customer.localhost" to C:\Windows\System32\drivers\etc\hosts
+# 4. Restart Apache in XAMPP Control Panel
+# 5. Access at: http://customer.localhost/

@@ -1,0 +1,14 @@
+2025-12-01T09:42:48+01:00 - Failed to generate revenue report: HTTP error 404: {"code":"42P01","details":null,"hint":null,"message":"relation \"public.payments\" does not exist"}
+2025-12-01T09:47:03+01:00 - Failed to generate revenue report: HTTP error 404: {"code":"42P01","details":null,"hint":null,"message":"relation \"public.payments\" does not exist"}
+2025-12-01T10:06:17+01:00 - Failed to generate revenue report: HTTP error 404: {"code":"42P01","details":null,"hint":null,"message":"relation \"public.payments\" does not exist"}
+2025-12-11T10:54:28+01:00 - Failed to generate revenue report: HTTP error 404: {"code":"42P01","details":null,"hint":null,"message":"relation \"public.payments\" does not exist"}
+2025-12-12T16:01:18+01:00 - Failed to generate revenue report: HTTP error 404: {"code":"42P01","details":null,"hint":null,"message":"relation \"public.payments\" does not exist"}
+2025-12-31T01:35:52+01:00 - Failed to generate outlet report: HTTP error 400: {"code":"42703","details":null,"hint":null,"message":"column parcels.outlet_id does not exist"}
+2025-12-31T01:37:26+01:00 - Failed to generate outlet report: HTTP error 400: {"code":"42703","details":null,"hint":null,"message":"column parcels.outlet_id does not exist"}
+2025-12-31T01:37:53+01:00 - Failed to generate outlet report: HTTP error 400: {"code":"42703","details":null,"hint":null,"message":"column parcels.outlet_id does not exist"}
+2025-12-31T01:40:24+01:00 - Failed to generate outlet report: HTTP error 400: {"code":"42703","details":null,"hint":null,"message":"column parcels.outlet_id does not exist"}
+2025-12-31T01:48:11+01:00 - Failed to generate outlet report: HTTP error 400: {"code":"42703","details":null,"hint":null,"message":"column parcels.outlet_id does not exist"}
+2026-01-02T00:36:49+01:00 - Failed to generate outlet report: cURL error: Could not resolve host: xerpchdsykqafrsxbqef.supabase.co
+2026-01-02T00:46:44+01:00 - Failed to generate outlet report: cURL error: Could not resolve host: xerpchdsykqafrsxbqef.supabase.co
+2026-01-29T00:01:34+01:00 - Failed to generate revenue report: HTTP error 404: {"code":"42P01","details":null,"hint":null,"message":"relation \"public.payments\" does not exist"}
+2026-01-29T00:56:29+01:00 - Failed to generate revenue report: HTTP error 404: {"code":"42P01","details":null,"hint":null,"message":"relation \"public.payments\" does not exist"}

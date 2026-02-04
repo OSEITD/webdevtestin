@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WD Parcel Services - Secure Tracking</title>
+    
+    <meta name="description" content="Secure parcel tracking with identity verification - Track your packages safely with NRC and phone verification">
+    <meta name="keywords" content="secure parcel tracking, NRC verification, Zambian parcel tracking, logistics">
+    <meta name="author" content="WD Parcel Services">
+    <meta name="theme-color" content="#1e40af">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="assets/css/secure_tracking.css">
+    
+</head>
+<body>
+    <div class="tracking-container">
+        <div class="webdev-logo-header">
+            <img src="assets/img/logo.png" alt="WebDev" class="webdev-tracking-logo">
+        </div>
+        
+        <div class="tracking-header">
+            <h1><i class="fas fa-shield-check"></i> Secure Tracking</h1>
+            <p>Verify your identity to track your parcel securely</p>
+        </div>
+        
+        <div class="tracking-content">
+            <div id="alerts"></div>
+            
+            <div class="verification-notice">
+                <h3><i class="fas fa-info-circle"></i> Identity Verification Required</h3>
+                <p>For your security, we require verification of your identity before showing parcel information. Please provide your tracking number, phone number, and NRC as used during parcel registration.</p>
+            </div>
+            
+            <form id="trackingForm" class="tracking-form">
+                <div class="form-group">
+                    <label for="trackNumber">Tracking Number</label>
+                    <input type="text" 
+                           id="trackNumber" 
+                           class="form-control" 
+                           placeholder="Enter your tracking number"
+                           style="text-transform: uppercase;"
+                           required>
+                    <div class="help-text">Found on your receipt or confirmation message</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number</label>
+                    <input type="tel" 
+                           id="phoneNumber" 
+                           class="form-control" 
+                           placeholder="+260123456789"
+                           required>
+                    <div class="help-text">Phone number used when sending or receiving the parcel</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="nrc">National Registration Card (NRC)</label>
+                    <input type="text" 
+                           id="nrc" 
+                           class="form-control" 
+                           placeholder="123456/78/9"
+                           style="text-transform: uppercase;"
+                           required>
+                    <div class="help-text">Your NRC number as provided during parcel registration</div>
+                </div>
+                
+                <div class="company-toggle">
+                    <input type="checkbox" id="useCompanyAccess" class="checkbox">
+                    <label for="useCompanyAccess">Access through specific company portal</label>
+                </div>
+                
+                <div id="companySection" class="company-section">
+                    <div class="form-group">
+                        <label for="companyCode">Company Code</label>
+                        <input type="text" 
+                               id="companyCode" 
+                               class="form-control" 
+                               placeholder="Enter company code"
+                               style="text-transform: lowercase;">
+                        <div class="help-text">Company-specific code (optional, for enhanced security)</div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn" id="trackBtn">
+                    <i class="fas fa-search"></i>
+                    <span>Track My Parcel</span>
+                </button>
+                
+                <div style="text-align: center; margin-top: 20px; display: none;">
+                    <a href="enable-notifications.php" 
+                       style="display: inline-flex; align-items: center; gap: 10px; color: #667eea; text-decoration: none; font-weight: 500; padding: 12px 24px; background: white; border: 2px solid #667eea; border-radius: 10px; transition: all 0.3s;"
+                       onmouseover="this.style.background='#667eea'; this.style.color='white'"
+                       onmouseout="this.style.background='white'; this.style.color='#667eea'">
+                        <i class="fas fa-bell"></i>
+                        <span>Enable Push Notifications</span>
+                    </a>
+                </div>
+            </form>
+            
+            <div class="security-features">
+                <h4><i class="fas fa-lock"></i> Security </h4>
+                <ul>
+                    <li>Multi-factor identity verification (Track # + Phone + NRC)</li>
+                    <li>Role-based data access (sender vs receiver permissions)</li>
+                    
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const trackingForm = document.getElementById('trackingForm');
+        const trackBtn = document.getElementById('trackBtn');
+        const alertsContainer = document.getElementById('alerts');
+        const useCompanyAccess = document.getElementById('useCompanyAccess');
+        const companySection = document.getElementById('companySection');
+        useCompanyAccess.addEventListener('change', function() {
+            if (this.checked) {
+                companySection.classList.add('active');
+            } else {
+                companySection.classList.remove('active');
+                document.getElementById('companyCode').value = '';
+            }
+        });
+        function checkUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const reason = urlParams.get('reason');
+            if (reason === 'verification_required') {
+                showAlert('Please verify your identity to access parcel information.', 'info');
+            } else if (reason === 'invalid_data') {
+                showAlert('Session expired or invalid data. Please verify your identity again.', 'error');
+            } else if (reason === 'session_expired') {
+                showAlert('Your session has expired for security reasons. Please verify again.', 'error');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            checkUrlParameters();
+        });
+        document.getElementById('trackNumber').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+        document.getElementById('nrc').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+        document.getElementById('companyCode').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+        });
+        document.getElementById('phoneNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^\d+]/g, '');
+            if (value.length > 0 && !value.startsWith('+')) {
+                if (value.startsWith('260')) {
+                    value = '+' + value;
+                } else if (value.length === 9) {
+                    value = '+260' + value;
+                }
+            }
+            e.target.value = value;
+        });
+        trackingForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const trackNumber = document.getElementById('trackNumber').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const nrc = document.getElementById('nrc').value.trim();
+            const companyCode = document.getElementById('companyCode').value.trim();
+            if (!trackNumber || !phoneNumber || !nrc) {
+                showAlert('Please fill in all required fields', 'error');
+                return;
+            }
+            if (useCompanyAccess.checked && !companyCode) {
+                showAlert('Please enter company code or uncheck company access', 'error');
+                return;
+            }
+            setLoadingState(true);
+            clearAlerts();
+            console.log('Submitting tracking request...', {
+                track_number: trackNumber,
+                phone_number: phoneNumber,
+                nrc: nrc,
+                company_subdomain: useCompanyAccess.checked ? companyCode : null
+            });
+            try {
+                const requestData = {
+                    action: 'track_parcel',
+                    track_number: trackNumber,
+                    phone_number: phoneNumber,
+                    nrc: nrc
+                };
+                if (useCompanyAccess.checked && companyCode) {
+                    requestData.company_subdomain = companyCode;
+                }
+                console.log('Making API request to:', 'api/secure_track.php');
+                console.log('Request data:', requestData);
+                const possibleUrls = [
+                    'api/secure_track.php',
+                    './api/secure_track.php',
+                    '/WDParcelSendReceiverPWA/customer-app/api/secure_track.php'
+                ];
+                let response;
+                let lastError;
+                for (const url of possibleUrls) {
+                    try {
+                        console.log(`Trying URL: ${url}`);
+                        response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(requestData)
+                        });
+                        if (response.ok || response.status < 500) {
+                            console.log(`Success with URL: ${url}`);
+                            break;
+                        }
+                    } catch (error) {
+                        console.log(`Failed with URL ${url}:`, error.message);
+                        lastError = error;
+                        continue;
+                    }
+                }
+                if (!response) {
+                    throw lastError || new Error('All API endpoints failed');
+                }
+                console.log('API Response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    headers: Object.fromEntries(response.headers.entries()),
+                    url: response.url
+                });
+                if (!response.ok) {
+                    const statusText = response.statusText || 'Unknown error';
+                    console.error(`HTTP Error: ${response.status} ${statusText}`);
+                    throw new Error(`Server error (${response.status}): ${statusText}`);
+                }
+                const responseText = await response.text();
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.error('Non-JSON response received:', responseText);
+                    throw new Error('Server returned non-JSON response. Please check API configuration.');
+                }
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('JSON parsing failed. Response text:', responseText);
+                    console.error('JSON error:', jsonError.message);
+                    throw new Error('Invalid JSON response from server');
+                }
+                if (result.success) {
+                    try {
+                        const sessionResponse = await fetch('api/set_tracking_session.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                tracking_data: result
+                            })
+                        });
+                        if (!sessionResponse.ok) {
+                            throw new Error('Failed to create tracking session');
+                        }
+                        const sessionResult = await sessionResponse.json();
+                        if (sessionResult.success) {
+                            showAlert('Verification successful! Redirecting to tracking details...', 'success');
+                            setTimeout(() => {
+                                window.location.href = 'track_details.php';
+                            }, 1500);
+                        } else {
+                            throw new Error(sessionResult.error || 'Session creation failed');
+                        }
+                    } catch (sessionError) {
+                        console.error('Session creation error:', sessionError);
+                        showAlert('Verification successful but failed to create session. Please try again.', 'error');
+                    }
+                } else {
+                    showAlert(result.error || 'Verification failed', 'error');
+                }
+            } catch (error) {
+                console.error('Tracking error:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                });
+                let errorMessage = 'Network error. Please check your connection and try again.';
+                if (error.message.includes('JSON')) {
+                    errorMessage = 'Server returned invalid response. Please try again or contact support.';
+                } else if (error.message.includes('HTTP Error')) {
+                    errorMessage = 'Server error occurred. Please try again later.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Cannot connect to server. Please check your internet connection.';
+                }
+                showAlert(errorMessage, 'error');
+            } finally {
+                setLoadingState(false);
+            }
+        });
+        function showAlert(message, type = 'error') {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+            alertsContainer.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <i class="fas ${icon}"></i>
+                    ${message}
+                </div>
+            `;
+            if (type === 'success') {
+                setTimeout(clearAlerts, 5000);
+            }
+        }
+        function clearAlerts() {
+            alertsContainer.innerHTML = '';
+        }
+        function setLoadingState(loading) {
+            if (loading) {
+                trackBtn.classList.add('loading');
+                trackBtn.disabled = true;
+            } else {
+                trackBtn.classList.remove('loading');
+                trackBtn.disabled = false;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            trackingForm.reset();
+            clearAlerts();
+        });
+    </script>
+</body>
+</html>

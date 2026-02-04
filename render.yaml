@@ -1,0 +1,97 @@
+# Render deployment configuration for WD Parcel Send Receiver PWA
+# Multi-tenant parcel management system
+
+services:
+  - type: web
+    name: wd-parcel-pwa
+    runtime: docker
+    plan: free  # Use 'starter' or 'standard' for production
+    
+    # Build settings
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    
+    # Environment variables (set these in Render dashboard)
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: PHP_MEMORY_LIMIT
+        value: 256M
+        
+      # Supabase Configuration (SET THESE IN RENDER DASHBOARD - DO NOT COMMIT REAL VALUES)
+      - key: SUPABASE_URL
+        value: your_supabase_url_here
+      - key: SUPABASE_ANON_KEY
+        value: your_supabase_anon_key_here
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: your_supabase_service_role_key_here
+        
+      # Payment Configuration (Lenco)
+      - key: LENCO_PUBLIC_KEY
+        value: your_lenco_public_key_here
+      - key: LENCO_SECRET_KEY
+        value: your_lenco_secret_key_here
+      - key: LENCO_WEBHOOK_SECRET
+        value: your_lenco_webhook_secret_here
+        
+      # App Configuration
+      - key: DEFAULT_TIMEZONE
+        value: Africa/Lusaka
+      - key: DEFAULT_CURRENCY
+        value: ZMW
+      - key: SESSION_TIMEOUT
+        value: 1800
+        
+      # Push Notification Keys (Web Push VAPID)
+      - key: VAPID_PUBLIC_KEY
+        value: your_vapid_public_key_here
+      - key: VAPID_PRIVATE_KEY
+        value: your_vapid_private_key_here
+      - key: VAPID_SUBJECT
+        value: mailto:admin@yourcompany.com
+        
+      # Security
+      - key: JWT_SECRET
+        value: your_jwt_secret_here
+      - key: ENCRYPTION_KEY
+        value: your_32_char_encryption_key_here
+        
+      # SMTP Configuration (optional - for system emails)
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USERNAME
+        value: your_smtp_username
+      - key: SMTP_PASSWORD
+        value: your_smtp_password
+        
+    # Health check
+    healthCheckPath: /
+    
+    # Disk storage for uploaded files, barcodes, logs
+    disk:
+      name: wd-parcel-storage
+      mountPath: /var/www/html/storage
+      sizeGB: 1  # Free tier limit - upgrade for more storage
+      
+    # Auto-deploy on GitHub push
+    autoDeploy: true
+    
+    # Custom domains (configure after first deployment)
+    # domains:
+    #   - your-domain.com
+    #   - www.your-domain.com
+    
+  # Background worker for cleanup tasks (optional - requires paid plan)
+  # - type: worker
+  #   name: wd-parcel-cleanup
+  #   runtime: docker
+  #   dockerfilePath: ./Dockerfile.worker
+  #   plan: starter
+  #   autoDeploy: true
+  #   envVars:
+  #     - key: WORKER_TYPE
+  #       value: cleanup

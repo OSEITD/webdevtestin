@@ -1,0 +1,7 @@
+{
+    "require": {
+        "supabase/supabase-php": "^0.0.1",
+        "guzzlehttp/guzzle": "^7.0",
+        "vlucas/phpdotenv": "^5.5"
+    }
+}

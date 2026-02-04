@@ -1,0 +1,3 @@
+{
+  "sql": "CREATE TABLE public.financial_transactions (id uuid DEFAULT gen_random_uuid() NOT NULL, created_at timestamp with time zone DEFAULT now() NOT NULL, amount numeric NOT NULL, company_id uuid NOT NULL, parcel_id uuid, type text, description text, CONSTRAINT financial_transactions_pkey PRIMARY KEY (id), CONSTRAINT financial_transactions_company_id_fkey FOREIGN KEY (company_id) REFERENCES companies(id), CONSTRAINT financial_transactions_parcel_id_fkey FOREIGN KEY (parcel_id) REFERENCES parcels(id));"
+}

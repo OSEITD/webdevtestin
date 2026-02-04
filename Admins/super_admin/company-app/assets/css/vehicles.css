@@ -1,0 +1,222 @@
+.vehicles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.vehicle-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.vehicle-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.vehicle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    background: linear-gradient(145deg, #4F46E5 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure vehicle title and status text are readable on the dark header */
+.vehicle-header h3 {
+    color: #ffffff;
+    margin: 0;
+}
+
+.vehicle-header .status-badge {
+    color: #ffffff !important;
+}
+
+.vehicle-type {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    color: #4A5568;
+}
+
+.vehicle-type i {
+    font-size: 1.25rem;
+    color: #2D3748;
+}
+
+.vehicle-status {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.status-active {
+    background-color: #C6F6D5;
+    color: #2F855A;
+}
+
+.status-inactive {
+    background-color: #FED7D7;
+    color: #9B2C2C;
+}
+
+.vehicle-info {
+    padding: 1.5rem;
+}
+
+.vehicle-info h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2D3748;
+    margin-bottom: 0.5rem;
+}
+
+.vehicle-info .model {
+    color: #718096;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.capacity {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #EDF2F7;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #4A5568;
+}
+
+.vehicle-footer {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: #F7FAFC;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.btn-view, .btn-toggle {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-view {
+    background-color: #6A2A62 ;
+    color: #6A2A62 ;
+}
+
+.btn-view:hover {
+    background-color: #BEE3F8;
+}
+
+.add-button {
+    background: linear-gradient(135deg, #4F46E5 0%, #6A2A62 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+}
+
+.add-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(79, 70, 229, 0.3);
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #718096;
+    font-size: 1rem;
+}
+
+.loading i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #4F46E5;
+}
+
+.no-vehicles {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.no-vehicles i {
+    font-size: 3rem;
+    color: #CBD5E0;
+    margin-bottom: 1rem;
+}
+
+.no-vehicles p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .vehicles-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    .vehicle-card {
+        border-radius: 12px;
+    }
+
+    .vehicle-header {
+        padding: 1rem;
+    }
+
+    .vehicle-info {
+        padding: 1.25rem;
+    }
+
+    .vehicle-footer {
+        padding: 1rem;
+        flex-direction: column;
+    }
+
+    .btn-view {
+        width: 100%;
+    }
+}
+
+/* Animation for loading spinner */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
