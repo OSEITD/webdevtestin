@@ -44,10 +44,10 @@ COPY customer-app/composer.json customer-app/composer.lock* ./customer-app/
 COPY outlet-app/composer.json outlet-app/composer.lock* ./outlet-app/
 
 # Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
-RUN cd Admins && composer install --no-dev --optimize-autoloader --no-interaction
-RUN cd customer-app && composer install --no-dev --optimize-autoloader --no-interaction
-RUN cd outlet-app && composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction || composer update --no-dev --optimize-autoloader --no-interaction
+RUN cd Admins && (composer install --no-dev --optimize-autoloader --no-interaction || composer update --no-dev --optimize-autoloader --no-interaction)
+RUN cd customer-app && (composer install --no-dev --optimize-autoloader --no-interaction || composer update --no-dev --optimize-autoloader --no-interaction)
+RUN cd outlet-app && (composer install --no-dev --optimize-autoloader --no-interaction || composer update --no-dev --optimize-autoloader --no-interaction)
 
 # Copy application code
 COPY . .
