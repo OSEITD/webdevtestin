@@ -178,16 +178,22 @@ try {
                 exit;
             }
 
-            
-            $supabase->update('notifications', [
-                'status' => 'archived'
-            ], 'id=eq.' . urlencode($notificationId) . 
-               '&recipient_id=eq.' . urlencode($userId));
+            // Perform a permanent delete, limited to the owner
+            $filters = 'id=eq.' . urlencode($notificationId) . '&recipient_id=eq.' . urlencode($userId);
+            $deleted = $supabase->delete('notifications', $filters);
 
-            echo json_encode([
-                'success' => true,
-                'message' => 'Notification deleted'
-            ]);
+            if ($deleted) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Notification permanently deleted'
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Delete failed'
+                ]);
+            }
             break;
 
         case 'stats':

@@ -165,6 +165,47 @@ class OutletAwareSupabaseHelper {
         return $response ? json_decode($response, true) : [];
     }
 
+    public function delete($table, $filters = '') {
+        $applyCompanyFilter = $this->shouldApplyCompanyFilter($table);
+        if ($applyCompanyFilter && !$this->companyId) {
+            error_log("Warning: Company ID is missing for table '$table' which requires company filtering");
+        }
+
+        $companyFilter = $applyCompanyFilter ? 'company_id=eq.' . $this->companyId : '';
+        if ($companyFilter && $filters) {
+            $finalFilters = $companyFilter . '&' . $filters;
+        } elseif ($companyFilter) {
+            $finalFilters = $companyFilter;
+        } else {
+            $finalFilters = $filters;
+        }
+
+        $url = $this->url . '/rest/v1/' . $table;
+        if ($finalFilters) {
+            $url .= '?' . $finalFilters;
+        }
+        $options = [
+            'http' => [
+                'method' => 'DELETE',
+                'header' => 'Authorization: Bearer ' . $this->key . "\r\n" .
+                           'apikey: ' . $this->key . "\r\n" .
+                           'Content-Type: application/json',
+                'ignore_errors' => true
+            ]
+        ];
+        $context = stream_context_create($options);
+        $response = @file_get_contents($url, false, $context);
+
+        error_log("Supabase delete request for $table: URL=$url");
+        error_log("Supabase delete response for $table: " . ($response ?: 'empty/false'));
+
+        $httpResponseHeader = $http_response_header ?? [];
+        $statusLine = $httpResponseHeader[0] ?? 'Unknown status';
+        error_log("HTTP response status: $statusLine");
+
+        return $response !== false;
+    }
+
     public function getContextInfo() {
         return [
             'company_id' => $this->companyId,

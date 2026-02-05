@@ -1616,6 +1616,16 @@ header('Content-Type: text/html; charset=UTF-8');
                 justify-content: space-between;
             }
         }
+
+        /* Collapsible section styles */
+        .collapsible-section { margin-bottom: 1.6rem; border-radius:8px; background: #fff; padding: 0.6rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:1.05rem; margin:0; padding:0.5rem 0.6rem; }
+        .section-title span { display:flex; align-items:center; gap:10px; font-weight:600; color:#111827; }
+        .collapse-toggle { background:transparent; border:0; font-size:1rem; cursor:pointer; padding:6px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; color:#374151; }
+        .collapse-toggle i { transition: transform 0.25s ease; }
+        .collapse-content { overflow:hidden; transition:max-height 0.3s ease, padding 0.2s ease; max-height:2000px; }
+        .collapse-content.collapsed { max-height:0; padding:0; }
+        .collapse-toggle[aria-expanded="false"] i { transform: rotate(-90deg); }
     </style>
 
 </head>
@@ -1755,126 +1765,142 @@ header('Content-Type: text/html; charset=UTF-8');
             </div>
 
             <div class="dashboard-content">
-                <h2 class="section-title">
-                    <i class="fas fa-box"></i>
-                    Parcels Overview
-                </h2>
-                <div class="metrics-grid">
-                    <div class="metric-card clickable" onclick="showParcelsPendingAtOutlet()" data-card="pending">
-                        <div class="live-indicator" id="liveIndicator"></div>
-                        <i class="fas fa-box-open icon"></i>
-                        <div class="value" id="pendingAtOutletCount">0</div>
-                        <div class="label">Parcels at Outlet</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
+                <div class="collapsible-section">
+                    <h2 class="section-title">
+                        <span><i class="fas fa-box"></i> Parcels Overview</span>
+                        <button class="collapse-toggle" aria-expanded="false" aria-controls="section-parcels"><i class="fas fa-chevron-down"></i></button>
+                    </h2>
+                    <div id="section-parcels" class="collapse-content collapsed" aria-hidden="true">
+                        <div class="metrics-grid">
+                            <div class="metric-card clickable" onclick="showParcelsPendingAtOutlet()" data-card="pending">
+                                <div class="live-indicator" id="liveIndicator"></div>
+                                <i class="fas fa-box-open icon"></i>
+                                <div class="value" id="pendingAtOutletCount">0</div>
+                                <div class="label">Parcels at Outlet</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
 
-                    <div class="metric-card clickable" onclick="showParcelsInTransit()" data-card="transit">
-                        <i class="fas fa-truck-moving icon"></i>
-                        <div class="value" id="inTransitCount">0</div>
-                        <div class="label">Parcels in Transit</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
+                            <div class="metric-card clickable" onclick="showParcelsInTransit()" data-card="transit">
+                                <i class="fas fa-truck-moving icon"></i>
+                                <div class="value" id="inTransitCount">0</div>
+                                <div class="label">Parcels in Transit</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
 
-                    <div class="metric-card clickable" onclick="showParcelsCompleted()" data-card="completed">
-                        <i class="fas fa-check-circle icon"></i>
-                        <div class="value" id="completedCount">0</div>
-                        <div class="label">Delivered Today</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
+                            <div class="metric-card clickable" onclick="showParcelsCompleted()" data-card="completed">
+                                <i class="fas fa-check-circle icon"></i>
+                                <div class="value" id="completedCount">0</div>
+                                <div class="label">Delivered Today</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
 
-                    <div class="metric-card clickable urgent-card" onclick="showParcelsDelayedUrgent()" data-card="urgent">
-                        <i class="fas fa-exclamation-triangle icon"></i>
-                        <div class="value" id="delayedUrgentCount">0</div>
-                        <div class="label">Delayed / Urgent</div>
-                        <div class="click-hint">Click to view details</div>
+                            <div class="metric-card clickable urgent-card" onclick="showParcelsDelayedUrgent()" data-card="urgent">
+                                <i class="fas fa-exclamation-triangle icon"></i>
+                                <div class="value" id="delayedUrgentCount">0</div>
+                                <div class="label">Delayed / Urgent</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </div> 
 
-                <h2 class="section-title">
-                    <i class="fas fa-route"></i>
-                    Trip Status
-                </h2>
-                <div class="metrics-grid">
-                    <div class="metric-card clickable" onclick="showUpcomingTrips()" data-card="upcoming-trips">
-                        <i class="fas fa-clock icon"></i>
-                        <div class="value" id="upcomingTripsCount">0</div>
-                        <div class="label">Upcoming Trips</div>
-                        <div class="click-hint">Click to view details</div>
+                <div class="collapsible-section">
+                    <h2 class="section-title">
+                        <span><i class="fas fa-route"></i> Trip Status</span>
+                        <button class="collapse-toggle" aria-expanded="false" aria-controls="section-trips"><i class="fas fa-chevron-down"></i></button>
+                    </h2>
+                    <div id="section-trips" class="collapse-content collapsed" aria-hidden="true">
+                        <div class="metrics-grid">
+                            <div class="metric-card clickable" onclick="showUpcomingTrips()" data-card="upcoming-trips">
+                                <i class="fas fa-clock icon"></i>
+                                <div class="value" id="upcomingTripsCount">0</div>
+                                <div class="label">Upcoming Trips</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
+
+                            <div class="metric-card clickable" onclick="showInTransitTrips()" data-card="transit-trips">
+                                <i class="fas fa-shipping-fast icon"></i>
+                                <div class="value" id="inTransitTripsCount">0</div>
+                                <div class="label">In-Transit Trips</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
+
+                            <div class="metric-card clickable" onclick="showCompletedTrips()" data-card="completed-trips">
+                                <i class="fas fa-check-double icon"></i>
+                                <div class="value" id="completedTripsCount">0</div>
+                                <div class="label">Completed Trips Today</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
+                        </div>
                     </div>
+                </div> 
 
-                    <div class="metric-card clickable" onclick="showInTransitTrips()" data-card="transit-trips">
-                        <i class="fas fa-shipping-fast icon"></i>
-                        <div class="value" id="inTransitTripsCount">0</div>
-                        <div class="label">In-Transit Trips</div>
-                        <div class="click-hint">Click to view details</div>
+                <div class="collapsible-section">
+                    <h2 class="section-title">
+                        <span><i class="fas fa-truck"></i> Vehicle Availability</span>
+                        <button class="collapse-toggle" aria-expanded="false" aria-controls="section-vehicles"><i class="fas fa-chevron-down"></i></button>
+                    </h2>
+                    <div id="section-vehicles" class="collapse-content collapsed" aria-hidden="true">
+                        <div class="metrics-grid">
+                            <div class="metric-card clickable" onclick="showVehicleAvailability()" data-card="available-vehicles">
+                                <i class="fas fa-truck icon"></i>
+                                <div class="value" id="availableVehiclesCount">0</div>
+                                <div class="label">Available Vehicles</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
+
+                            <div class="metric-card clickable unavailable-card" onclick="showVehicleUnavailability()" data-card="unavailable-vehicles">
+                                <i class="fas fa-truck-medical icon"></i>
+                                <div class="value" id="unavailableVehiclesCount">0</div>
+                                <div class="label">Unavailable Vehicles</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
+
+                            <div class="metric-card clickable" onclick="showAssignedTrips()" data-card="assigned-trips">
+                                <i class="fas fa-route icon"></i>
+                                <div class="value" id="assignedTripsCount">0</div>
+                                <div class="label">Assigned to Trips</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
+                        </div>
                     </div>
+                </div> 
 
-                    <div class="metric-card clickable" onclick="showCompletedTrips()" data-card="completed-trips">
-                        <i class="fas fa-check-double icon"></i>
-                        <div class="value" id="completedTripsCount">0</div>
-                        <div class="label">Completed Trips Today</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
-                </div>
+                <div class="collapsible-section">
+                    <h2 class="section-title">
+                        <span><i class="fas fa-chart-line"></i> Revenue Snapshot</span>
+                        <button class="collapse-toggle" aria-expanded="false" aria-controls="section-revenue"><i class="fas fa-chevron-down"></i></button>
+                    </h2>
+                    <div id="section-revenue" class="collapse-content collapsed" aria-hidden="true">
+                        <div class="metrics-grid">
+                            <div class="metric-card clickable revenue-card" onclick="showRevenueToday()" data-card="revenue-today" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white;">
+                                <i class="fas fa-money-bill-wave icon" style="color: white;"></i>
+                                <div class="value" id="revenueTodayCount" style="color: white;">ZMW 0.00</div>
+                                <div class="label" style="color: rgba(255,255,255,0.9);">Revenue Today</div>
+                                <div class="click-hint" style="background: rgba(255,255,255,0.2); color: white;">Click for details</div>
+                            </div>
 
-                <h2 class="section-title">
-                    <i class="fas fa-truck"></i>
-                    Vehicle Availability
-                </h2>
-                <div class="metrics-grid">
-                    <div class="metric-card clickable" onclick="showVehicleAvailability()" data-card="available-vehicles">
-                        <i class="fas fa-truck icon"></i>
-                        <div class="value" id="availableVehiclesCount">0</div>
-                        <div class="label">Available Vehicles</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
+                            <div class="metric-card clickable" onclick="showRevenueWeek()" data-card="revenue-week">
+                                <i class="fas fa-calendar-week icon"></i>
+                                <div class="value" id="revenueWeekCount">ZMW 0.00</div>
+                                <div class="label">Revenue This Week</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
 
-                    <div class="metric-card clickable unavailable-card" onclick="showVehicleUnavailability()" data-card="unavailable-vehicles">
-                        <i class="fas fa-truck-medical icon"></i>
-                        <div class="value" id="unavailableVehiclesCount">0</div>
-                        <div class="label">Unavailable Vehicles</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
+                            <div class="metric-card clickable" onclick="showCODCollections()" data-card="cod-collections">
+                                <i class="fas fa-hand-holding-usd icon"></i>
+                                <div class="value" id="codCollectionsCount">ZMW 0.00</div>
+                                <div class="label">COD Collections</div>
+                                <div class="click-hint">Click to view details</div>
+                            </div>
 
-                    <div class="metric-card clickable" onclick="showAssignedTrips()" data-card="assigned-trips">
-                        <i class="fas fa-route icon"></i>
-                        <div class="value" id="assignedTripsCount">0</div>
-                        <div class="label">Assigned to Trips</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
-                </div>
-
-                <h2 class="section-title">
-                    <i class="fas fa-chart-line"></i>
-                    Revenue Snapshot
-                </h2>
-                <div class="metrics-grid">
-                    <div class="metric-card clickable revenue-card" onclick="showRevenueToday()" data-card="revenue-today" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white;">
-                        <i class="fas fa-money-bill-wave icon" style="color: white;"></i>
-                        <div class="value" id="revenueTodayCount" style="color: white;">ZMW 0.00</div>
-                        <div class="label" style="color: rgba(255,255,255,0.9);">Revenue Today</div>
-                        <div class="click-hint" style="background: rgba(255,255,255,0.2); color: white;">Click for details</div>
-                    </div>
-
-                    <div class="metric-card clickable" onclick="showRevenueWeek()" data-card="revenue-week">
-                        <i class="fas fa-calendar-week icon"></i>
-                        <div class="value" id="revenueWeekCount">ZMW 0.00</div>
-                        <div class="label">Revenue This Week</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
-
-                    <div class="metric-card clickable" onclick="showCODCollections()" data-card="cod-collections">
-                        <i class="fas fa-hand-holding-usd icon"></i>
-                        <div class="value" id="codCollectionsCount">ZMW 0.00</div>
-                        <div class="label">COD Collections</div>
-                        <div class="click-hint">Click to view details</div>
-                    </div>
-
-                    <div class="metric-card clickable" onclick="showTransactionCount()" data-card="transactions">
-                        <i class="fas fa-receipt icon"></i>
-                        <div class="value" id="transactionCount">0</div>
+                            <div class="metric-card clickable" onclick="showTransactionCount()" data-card="transactions">
+                                <i class="fas fa-receipt icon"></i>
+                                <div class="value" id="transactionCount">0</div>
                         <div class="label">Transactions Today</div>
                         <div class="click-hint">Click to view details</div>
+                    </div>
+                </div>
                     </div>
                 </div>
 
@@ -2839,6 +2865,60 @@ header('Content-Type: text/html; charset=UTF-8');
                 markPageLoaded();
             }
         })();
+    </script>
+
+    <script>
+        // Dashboard collapsible toggles
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.collapsible-section').forEach(function (section) {
+                const btn = section.querySelector('.collapse-toggle');
+                const content = section.querySelector('.collapse-content');
+                if (!btn || !content) return;
+                // Initialize heights and ARIA states
+                if (btn.getAttribute('aria-expanded') === 'true') {
+                    content.classList.remove('collapsed');
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    content.setAttribute('aria-hidden', 'false');
+                } else {
+                    content.classList.add('collapsed');
+                    content.style.maxHeight = '0px';
+                    content.setAttribute('aria-hidden', 'true');
+                }
+
+                // Handle toggle with smooth transitions
+                btn.addEventListener('click', function (e) {
+                    const expanded = btn.getAttribute('aria-expanded') === 'true';
+                    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+
+                    if (expanded) {
+                        // Collapse: set current height then animate to 0
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        // Force reflow so the transition runs
+                        // eslint-disable-next-line no-unused-expressions
+                        content.offsetHeight;
+                        content.style.maxHeight = '0px';
+                        content.classList.add('collapsed');
+                        content.setAttribute('aria-hidden', 'true');
+                    } else {
+                        // Expand: remove collapsed class and expand to full height
+                        content.classList.remove('collapsed');
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        content.setAttribute('aria-hidden', 'false');
+                    }
+                });
+
+                // After transition ends, clear inline maxHeight when expanded so content can grow/shrink naturally
+                content.addEventListener('transitionend', function () {
+                    if (btn.getAttribute('aria-expanded') === 'true') {
+                        content.style.maxHeight = '';
+                        content.setAttribute('aria-hidden', 'false');
+                    } else {
+                        content.style.maxHeight = '0px';
+                        content.setAttribute('aria-hidden', 'true');
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>

@@ -1,6 +1,10 @@
 <?php
 session_start();
+
+ob_start();
 require_once __DIR__ . '/../../../vendor/autoload.php';
+ob_end_clean();
+
 require_once __DIR__ . '/../../includes/OutletAwareSupabaseHelper.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'driver') {
