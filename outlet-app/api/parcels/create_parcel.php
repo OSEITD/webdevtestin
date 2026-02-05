@@ -837,6 +837,31 @@ try {
                 $totalAmount += $codAmount;
             }
             
+            // Determine company commission percentage (fetch from companies table)
+            $companyCommissionPercent = 0;
+            try {
+                $companyIdForCommission = $input['companyId'] ?? null;
+                if ($companyIdForCommission) {
+                    // Use the initialized Supabase helper instance
+                    if (!isset($supabaseHelper)) {
+                        require_once __DIR__ . '/../../includes/supabase-helper.php';
+                        $supabaseHelper = new SupabaseHelper();
+                    }
+                    $companyResp = $supabaseHelper->get('companies', 'id=eq.' . urlencode($companyIdForCommission) . '&select=commission_rate');
+                    error_log('DEBUG: Company commission lookup response: ' . json_encode($companyResp));
+                    if (!empty($companyResp) && isset($companyResp[0]['commission_rate'])) {
+                        $companyCommissionPercent = floatval($companyResp[0]['commission_rate']);
+                    } else {
+                        $companyCommissionPercent = floatval(getenv('DEFAULT_COMMISSION_RATE') ?: 0);
+                    }
+                } else {
+                    $companyCommissionPercent = floatval(getenv('DEFAULT_COMMISSION_RATE') ?: 0);
+                }
+            } catch (Exception $e) {
+                error_log('Failed to fetch company commission: ' . $e->getMessage());
+                $companyCommissionPercent = floatval(getenv('DEFAULT_COMMISSION_RATE') ?: 0);
+            }
+
             // Prepare payment transaction data
             $paymentData = [
                 'tx_ref' => 'TXN-' . $trackingNumber . '-' . time(),
@@ -846,7 +871,7 @@ try {
                 'parcel_id' => $parcelId,
                 'amount' => $totalAmount,
                 'transaction_fee' => 0, // Will be calculated by payment processor
-                'commission_percentage' => 0, // Will be set by business rules
+                'commission_percentage' => $companyCommissionPercent,
                 'total_amount' => $totalAmount,
                 'currency' => 'ZMW',
                 'payment_method' => $paymentMethod,
@@ -861,7 +886,8 @@ try {
                     'delivery_fee' => $deliveryFee,
                     'insurance_amount' => $insuranceAmount,
                     'cod_amount' => $codAmount,
-                    'payment_provider' => $paymentProvider
+                    'payment_provider' => $paymentProvider,
+                    'commission_percentage' => $companyCommissionPercent
                 ]
             ];
             
