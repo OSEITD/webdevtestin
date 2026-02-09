@@ -241,7 +241,7 @@ $current_user = getCurrentUser();
                                 </h3>
                                 <p style="margin: 5px 0;"><strong>Delivery Fee:</strong> ZMW <span id="detailDeliveryFee">0</span></p>
                                 <p style="margin: 5px 0;"><strong>Insurance:</strong> ZMW <span id="detailInsuranceAmount">0</span></p>
-                                <p style="margin: 5px 0;"><strong>COD Amount:</strong> ZMW <span id="detailCodAmount">0</span></p>
+                                <p style="margin: 5px 0;"><strong>Cash to Collect:</strong> ZMW <span id="detailCodAmount">0</span></p>
                                 <p style="margin: 5px 0;"><strong>Payment Status:</strong> <span id="detailPaymentStatus" class="payment-status-badge"></span></p>
                             </div>
                         </div>

@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFeeCalculation();
     setupTripSelection(); 
     setupAutofill(); 
-    setupDestinationOutletChangeHandler(); 
+    setupDestinationOutletChangeHandler();
+    setupPaymentFieldTracking();
 });
 
 function initializeFormHandlers() {
@@ -422,63 +423,206 @@ async function loadDestinationOutlets() {
 
 function setupFeeCalculation() {
     const weightInput = document.getElementById('parcelWeight');
-    const valueInput = document.getElementById('parcelValue');
+    const valueInput = document.getElementById('value');
     const deliveryOption = document.getElementById('deliveryOption');
     const insuranceInput = document.getElementById('insuranceAmount');
     const deliveryFeeInput = document.getElementById('deliveryFee');
+    const cashAmountInput = document.getElementById('cashAmount');
     const codAmountInput = document.getElementById('codAmount');
+    const dimensionsInput = document.getElementById('dimensions');
     
-    // Add event listeners for automatic fee display update
-    [weightInput, valueInput, deliveryOption, insuranceInput, deliveryFeeInput, codAmountInput].forEach(input => {
+    // Track if user has manually overridden the delivery fee
+    let userOverrodeDeliveryFee = false;
+    
+    if (deliveryFeeInput) {
+        deliveryFeeInput.addEventListener('focus', function() {
+            userOverrodeDeliveryFee = true;
+        });
+    }
+    
+    // Auto-calculate delivery fee when weight, dimensions, or delivery option change
+    [weightInput, dimensionsInput, deliveryOption].forEach(input => {
         if (input) {
-            input.addEventListener('change', calculateDeliveryFee);
-            input.addEventListener('input', debounce(calculateDeliveryFee, 500));
+            input.addEventListener('change', function() {
+                userOverrodeDeliveryFee = false; // Reset override on relevant field changes
+                autoCalculateDeliveryFee();
+            });
+            input.addEventListener('input', debounce(function() {
+                userOverrodeDeliveryFee = false;
+                autoCalculateDeliveryFee();
+            }, 500));
+        }
+    });
+    
+    // Update summary when insurance or delivery fee changes
+    [insuranceInput, deliveryFeeInput, cashAmountInput, codAmountInput].forEach(input => {
+        if (input) {
+            input.addEventListener('change', updatePaymentSummarySection);
+            input.addEventListener('input', debounce(updatePaymentSummarySection, 300));
         }
     });
     
     // Initial calculation
-    calculateDeliveryFee();
+    autoCalculateDeliveryFee();
+    
+    // Auto-calculate delivery fee using billing config
+    function autoCalculateDeliveryFee() {
+        const config = window.BILLING_CONFIG;
+        if (!config) return;
+        
+        const weight = parseFloat(weightInput?.value) || 0;
+        if (weight <= 0 && !userOverrodeDeliveryFee) {
+            if (deliveryFeeInput) deliveryFeeInput.value = '';
+            updatePaymentSummarySection();
+            return;
+        }
+        
+        const option = deliveryOption?.value || 'standard';
+        const parcelValue = parseFloat(valueInput?.value) || 0;
+        const insurance = parseFloat(insuranceInput?.value) || 0;
+        
+        // Parse dimensions
+        let length = 0, width = 0, height = 0;
+        const dimStr = dimensionsInput?.value || '';
+        if (dimStr.match(/\d/)) {
+            const dims = dimStr.split(/[x,×]/).map(s => s.trim()).filter(Boolean);
+            if (dims.length === 3 && dims.every(d => !isNaN(d))) {
+                length = parseFloat(dims[0]);
+                width = parseFloat(dims[1]);
+                height = parseFloat(dims[2]);
+            }
+        }
+        
+        // Calculate using local billing config (same logic as server)
+        const deliveryOptions = config.additional_rules?.delivery_options || {};
+        let baseFee = config.base_rate;
+        if (deliveryOptions[option]) {
+            baseFee = deliveryOptions[option].base_fee || config.base_rate;
+        }
+        
+        let weightFee = weight * config.rate_per_kg;
+        let volumetricFee = 0;
+        
+        if (length > 0 && width > 0 && height > 0) {
+            const volumetricWeight = (length * width * height) / config.volumetric_divisor;
+            const chargeableWeight = Math.max(weight, volumetricWeight);
+            volumetricFee = (chargeableWeight - weight) * config.rate_per_kg;
+            weightFee = chargeableWeight * config.rate_per_kg;
+        }
+        
+        let insuranceFee = 0;
+        if (insurance > 0) {
+            const insuranceRate = config.additional_rules?.insurance_rate || 0.02;
+            insuranceFee = Math.max(parcelValue, insurance) * insuranceRate;
+        }
+        
+        let total = baseFee + weightFee + volumetricFee + insuranceFee;
+        const minFee = config.additional_rules?.min_fee || 0;
+        if (minFee > 0 && total < minFee) {
+            total = minFee;
+        }
+        
+        total = Math.round(total * 100) / 100;
+        
+        if (!userOverrodeDeliveryFee && deliveryFeeInput) {
+            deliveryFeeInput.value = total.toFixed(2);
+            // Update help text to show breakdown
+            const helpEl = document.getElementById('deliveryFeeHelp');
+            if (helpEl) {
+                helpEl.textContent = `Base: K${baseFee.toFixed(0)} + Weight: K${weightFee.toFixed(0)}${volumetricFee > 0 ? ' + Vol: K' + volumetricFee.toFixed(0) : ''}${insuranceFee > 0 ? ' + Ins: K' + insuranceFee.toFixed(0) : ''}`;
+            }
+        }
+        
+        updatePaymentSummarySection();
+    }
 }
 
-function calculateDeliveryFee() {
-    console.log('🔥 calculateDeliveryFee function called');
-    // Manual fee system - update display elements based on user input
+// Update the payment summary section and auto-fill cash/cod amounts
+function updatePaymentSummarySection() {
     const deliveryFee = parseFloat(document.getElementById('deliveryFee')?.value) || 0;
     const insuranceAmount = parseFloat(document.getElementById('insuranceAmount')?.value) || 0;
-    const codAmount = parseFloat(document.getElementById('codAmount')?.value) || 0;
+    const commissionPct = parseFloat(document.getElementById('commissionPercentage')?.value) || 0;
+    const paymentMethod = document.getElementById('paymentMethod')?.value || 'cash';
     
-    // Update display elements
+    const totalDue = deliveryFee + insuranceAmount;
+    const commissionAmount = Math.round((totalDue * commissionPct / 100) * 100) / 100;
+    const netAmount = Math.round((totalDue - commissionAmount) * 100) / 100;
+    
+    // Update commission amount field
+    const commAmountField = document.getElementById('commissionAmount');
+    if (commAmountField) commAmountField.value = commissionAmount.toFixed(2);
+    
+    // Update summary display
+    const summaryDeliveryFee = document.getElementById('summaryDeliveryFee');
+    const summaryInsurance = document.getElementById('summaryInsurance');
+    const summaryCommPct = document.getElementById('summaryCommPct');
+    const summaryCommission = document.getElementById('summaryCommission');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const summaryNetAmount = document.getElementById('summaryNetAmount');
+    
+    if (summaryDeliveryFee) summaryDeliveryFee.textContent = `K ${deliveryFee.toFixed(2)}`;
+    if (summaryInsurance) summaryInsurance.textContent = `K ${insuranceAmount.toFixed(2)}`;
+    if (summaryCommPct) summaryCommPct.textContent = commissionPct.toFixed(1);
+    if (summaryCommission) summaryCommission.textContent = `K ${commissionAmount.toFixed(2)}`;
+    if (summaryTotal) summaryTotal.innerHTML = `<strong>K ${totalDue.toFixed(2)}</strong>`;
+    if (summaryNetAmount) summaryNetAmount.textContent = `K ${netAmount.toFixed(2)}`;
+    
+    // Auto-fill cash amount when cash is selected
+    if (paymentMethod === 'cash') {
+        const cashField = document.getElementById('cashAmount');
+        // Only auto-fill if the user hasn't manually changed it or it's empty
+        if (cashField && (!cashField.dataset.userEdited || cashField.value === '' || cashField.value === '0')) {
+            cashField.value = totalDue.toFixed(2);
+        }
+    }
+    
+    // Auto-fill COD amount when COD is selected
+    if (paymentMethod === 'cod') {
+        const codField = document.getElementById('codAmount');
+        if (codField && (!codField.dataset.userEdited || codField.value === '' || codField.value === '0')) {
+            codField.value = totalDue.toFixed(2);
+        }
+    }
+    
+    // Also update the Lenco payment sections if they exist
+    const mobileTotalAmount = document.getElementById('mobileTotalAmount');
+    const cardTotalAmount = document.getElementById('cardTotalAmount');
+    if (mobileTotalAmount) mobileTotalAmount.textContent = `K ${totalDue.toFixed(2)}`;
+    if (cardTotalAmount) cardTotalAmount.textContent = `K ${totalDue.toFixed(2)}`;
+    
+    // Legacy display elements
     const deliveryFeeDisplay = document.getElementById('deliveryFeeDisplay');
     const insuranceDisplay = document.getElementById('insuranceDisplay');
     const totalFeeDisplay = document.getElementById('totalFeeDisplay');
-    const codDisplay = document.getElementById('codDisplay');
-    const codRow = document.querySelector('.cod-row');
+    if (deliveryFeeDisplay) deliveryFeeDisplay.textContent = `ZMW ${deliveryFee.toFixed(2)}`;
+    if (insuranceDisplay) insuranceDisplay.textContent = `ZMW ${insuranceAmount.toFixed(2)}`;
+    if (totalFeeDisplay) totalFeeDisplay.innerHTML = `<strong>ZMW ${totalDue.toFixed(2)}</strong>`;
+}
+
+// Track manual edits on cash/cod fields so auto-fill doesn't overwrite user input
+function setupPaymentFieldTracking() {
+    const cashField = document.getElementById('cashAmount');
+    const codField = document.getElementById('codAmount');
+    const paymentMethodSelect = document.getElementById('paymentMethod');
     
-    if (deliveryFeeDisplay) {
-        deliveryFeeDisplay.textContent = `ZMW ${deliveryFee.toFixed(2)}`;
+    if (cashField) {
+        cashField.addEventListener('input', function() {
+            this.dataset.userEdited = 'true';
+        });
+    }
+    if (codField) {
+        codField.addEventListener('input', function() {
+            this.dataset.userEdited = 'true';
+        });
     }
     
-    if (insuranceDisplay) {
-        insuranceDisplay.textContent = `ZMW ${insuranceAmount.toFixed(2)}`;
-    }
-    
-    const totalFee = deliveryFee + insuranceAmount;
-    if (totalFeeDisplay) {
-        totalFeeDisplay.innerHTML = `<strong>ZMW ${totalFee.toFixed(2)}</strong>`;
-    }
-    
-    // Handle COD display
-    if (codAmount > 0) {
-        if (codDisplay) {
-            codDisplay.textContent = `ZMW ${codAmount.toFixed(2)}`;
-        }
-        if (codRow) {
-            codRow.style.display = 'flex';
-        }
-    } else {
-        if (codRow) {
-            codRow.style.display = 'none';
-        }
+    // When payment method changes, reset the user-edited flag and recalculate
+    if (paymentMethodSelect) {
+        paymentMethodSelect.addEventListener('change', function() {
+            if (cashField) cashField.dataset.userEdited = '';
+            if (codField) codField.dataset.userEdited = '';
+            updatePaymentSummarySection();
+        });
     }
 }
 
@@ -984,8 +1128,7 @@ async function handleParcelSubmission(event) {
         // Delivery information
         // Validate delivery option
         const deliveryOption = document.getElementById('deliveryOption')?.value || 'standard';
-        // Fix delivery option validation to only allow 'standard'
-        const allowedDeliveryOptions = ['standard'];
+        const allowedDeliveryOptions = ['standard', 'express', 'sameday'];
         if (!allowedDeliveryOptions.includes(deliveryOption)) {
             showError('Invalid delivery option selected.');
             if (submitBtn) {
@@ -1010,6 +1153,8 @@ async function handleParcelSubmission(event) {
         formData.append('deliveryFee', document.getElementById('deliveryFee')?.value || '0');
         formData.append('insuranceAmount', document.getElementById('insuranceAmount')?.value || '0');
         formData.append('codAmount', document.getElementById('codAmount')?.value || '0');
+        formData.append('cashAmount', document.getElementById('cashAmount')?.value || '0');
+        formData.append('commissionAmount', document.getElementById('commissionAmount')?.value || '0');
         // Validate payment method
         const paymentMethod = document.getElementById('paymentMethod')?.value || '';
             // Accept both legacy and Lenco-specific values

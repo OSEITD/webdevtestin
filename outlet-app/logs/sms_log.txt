@@ -50,3 +50,15 @@
 [2026-01-24 14:57:46] SMS service is DISABLED - Message would be: Your parcel to Osei Mupeta has been registered successfully. Tracking Number: PKG3F3E905425977. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKG3F3E905425977
 [2026-01-24 14:57:46] Attempting to send SMS to +260761986849
 [2026-01-24 14:57:46] SMS service is DISABLED - Message would be: A parcel from Peter Nkandu is on its way to you! Tracking Number: PKG3F3E905425977. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKG3F3E905425977
+[2026-02-05 09:36:31] Attempting to send SMS to +260977888999
+[2026-02-05 09:36:31] SMS service is DISABLED - Message would be: Your parcel to Test Customer 627 has been registered successfully. Tracking Number: PKGB6CED85748857. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKGB6CED85748857
+[2026-02-05 09:36:31] Attempting to send SMS to +260120470389
+[2026-02-05 09:36:31] SMS service is DISABLED - Message would be: A parcel from Direct Test Customer is on its way to you! Tracking Number: PKGB6CED85748857. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKGB6CED85748857
+[2026-02-05 09:44:37] Attempting to send SMS to +260977888999
+[2026-02-05 09:44:37] SMS service is DISABLED - Message would be: Your parcel to Test Customer 627 has been registered successfully. Tracking Number: PKG2BD1C71178884. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKG2BD1C71178884
+[2026-02-05 09:44:37] Attempting to send SMS to +260120470389
+[2026-02-05 09:44:37] SMS service is DISABLED - Message would be: A parcel from Direct Test Customer is on its way to you! Tracking Number: PKG2BD1C71178884. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKG2BD1C71178884
+[2026-02-09 13:00:40] Attempting to send SMS to +260977888999
+[2026-02-09 13:00:40] SMS service is DISABLED - Message would be: Your parcel to Test Customer 627 has been registered successfully. Tracking Number: PKGB7F4230753105. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKGB7F4230753105
+[2026-02-09 13:00:40] Attempting to send SMS to +260120470389
+[2026-02-09 13:00:40] SMS service is DISABLED - Message would be: A parcel from Direct Test Customer is on its way to you! Tracking Number: PKGB7F4230753105. Track at: http://outlet.localhost/customer-app/track_parcel.php?track=PKGB7F4230753105

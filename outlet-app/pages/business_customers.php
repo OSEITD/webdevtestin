@@ -257,7 +257,7 @@ $current_user = getCurrentUser();
                         <option value="prepaid">Prepaid</option>
                         <option value="net15">Net 15</option>
                         <option value="net30">Net 30</option>
-                        <option value="cod">COD</option>
+                        <option value="cod">Cash (To Be Paid)</option>
                     </select>
                 </div>
 

@@ -22,7 +22,7 @@ class PaymentTransactionDB {
             $commissionPercentage = $data['commission_percentage'] ?? 0;
             $amount = $data['amount'];
             $commissionAmount = $data['commission_amount'] ?? ($amount * $commissionPercentage / 100);
-            $netAmount = $amount - $commissionAmount;
+            $netAmount = $data['net_amount'] ?? ($amount - $commissionAmount);
             
             
             $vatPercentage = $data['vat_percentage'] ?? 16.00;
@@ -63,8 +63,9 @@ class PaymentTransactionDB {
                 'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
                 'device_fingerprint' => $data['device_fingerprint'] ?? null,
                 'geolocation' => isset($data['geolocation']) ? json_encode($data['geolocation']) : null,
-                'status' => 'pending',
-                'settlement_status' => 'pending',
+                'status' => $data['status'] ?? 'pending',
+                'settlement_status' => $data['settlement_status'] ?? 'pending',
+                'paid_at' => $data['paid_at'] ?? null,
                 'expires_at' => date('Y-m-d H:i:s', strtotime('+1 hour'))
             ];
             

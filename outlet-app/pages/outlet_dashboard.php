@@ -1890,7 +1890,7 @@ header('Content-Type: text/html; charset=UTF-8');
                             <div class="metric-card clickable" onclick="showCODCollections()" data-card="cod-collections">
                                 <i class="fas fa-hand-holding-usd icon"></i>
                                 <div class="value" id="codCollectionsCount">ZMW 0.00</div>
-                                <div class="label">COD Collections</div>
+                                <div class="label">Cash to Collect</div>
                                 <div class="click-hint">Click to view details</div>
                             </div>
 

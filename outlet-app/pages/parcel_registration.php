@@ -2,6 +2,11 @@
 require_once '../includes/auth_guard.php';
 require_once '../api/payments/lenco_config.php';
 
+// Prevent caching of this page
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header('Location: ../login.php');
     exit();
@@ -31,10 +36,10 @@ $lencoEnv = LENCO_ENV;
     
     <!-- Styles -->
     <link rel="stylesheet" href="../css/outlet-dashboard.css">
-    <link rel="stylesheet" href="../css/parcel_registration_v2.css">
+    <link rel="stylesheet" href="../css/parcel_registration_v2.css?v=<?php echo time(); ?>">
     
-    <!-- Lenco Payment Widget (Sandbox) -->
-    <script src="<?php echo htmlspecialchars($lencoWidgetUrl); ?>"></script>
+    <!-- Lenco Payment Widget (Sandbox) - loaded async so it doesn't block rendering -->
+    <script src="<?php echo htmlspecialchars($lencoWidgetUrl); ?>" async></script>
     
     <!-- Lenco Configuration for JavaScript -->
     <script>
@@ -188,37 +193,159 @@ $lencoEnv = LENCO_ENV;
                         </div>
 
                         <!-- Financial Information -->
+                        <?php
+                            // Fetch company commission and billing config for fee calculation
+                            $companyCommission = 0;
+                            $billingConfig = null;
+                            require_once __DIR__ . '/../includes/supabase-helper.php';
+                            try {
+                                $sup = new SupabaseHelper();
+                                $cid = $_SESSION['company_id'] ?? null;
+                                if ($cid) {
+                                    // Fetch commission rate
+                                    $comp = $sup->get('companies', 'id=eq.' . urlencode($cid) . '&select=commission_rate');
+                                    if (!empty($comp) && isset($comp[0]['commission_rate'])) {
+                                        $companyCommission = floatval($comp[0]['commission_rate']);
+                                    } else {
+                                        $companyCommission = floatval(getenv('DEFAULT_COMMISSION_RATE') ?: 0);
+                                    }
+                                    // Fetch billing config for auto-calculation
+                                    $billingResp = $sup->get('billing_configs', 'company_id=eq.' . urlencode($cid));
+                                    if (!empty($billingResp) && isset($billingResp[0])) {
+                                        $billingConfig = $billingResp[0];
+                                    }
+                                } else {
+                                    $companyCommission = floatval(getenv('DEFAULT_COMMISSION_RATE') ?: 0);
+                                }
+                            } catch (Exception $e) {
+                                error_log('Failed to fetch company financial config for UI: ' . $e->getMessage());
+                                $companyCommission = floatval(getenv('DEFAULT_COMMISSION_RATE') ?: 0);
+                            }
+                            // Prepare billing config JSON for JavaScript
+                            $defaultBillingConfig = [
+                                'base_rate' => 1000,
+                                'rate_per_kg' => 200,
+                                'volumetric_divisor' => 5000,
+                                'currency' => 'ZMW',
+                                'additional_rules' => [
+                                    'delivery_options' => [
+                                        'standard' => ['multiplier' => 1.0, 'base_fee' => 1000],
+                                        'express' => ['multiplier' => 2.5, 'base_fee' => 2500],
+                                        'sameday' => ['multiplier' => 5.0, 'base_fee' => 5000]
+                                    ],
+                                    'insurance_rate' => 0.02,
+                                    'min_fee' => 500
+                                ]
+                            ];
+                            if ($billingConfig) {
+                                $additionalRules = [];
+                                if (!empty($billingConfig['additional_rules'])) {
+                                    $additionalRules = is_string($billingConfig['additional_rules'])
+                                        ? (json_decode($billingConfig['additional_rules'], true) ?? [])
+                                        : $billingConfig['additional_rules'];
+                                }
+                                $billingConfigForJs = [
+                                    'base_rate' => floatval($billingConfig['base_rate'] ?? 1000),
+                                    'rate_per_kg' => floatval($billingConfig['rate_per_kg'] ?? 200),
+                                    'volumetric_divisor' => intval($billingConfig['volumetric_divisor'] ?? 5000),
+                                    'currency' => $billingConfig['currency'] ?? 'ZMW',
+                                    'additional_rules' => array_merge($defaultBillingConfig['additional_rules'], $additionalRules)
+                                ];
+                            } else {
+                                $billingConfigForJs = $defaultBillingConfig;
+                            }
+                        ?>
+                        <!-- Inject billing config into JS -->
+                        <script>
+                            window.BILLING_CONFIG = <?php echo json_encode($billingConfigForJs); ?>;
+                            window.COMPANY_COMMISSION = <?php echo json_encode($companyCommission); ?>;
+                        </script>
+
                         <div class="form-section">
                             <h3><i class="fas fa-dollar-sign"></i> Financial Information</h3>
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="deliveryFee">Delivery Fee (K)</label>
-                                    <input type="number" id="deliveryFee" name="deliveryFee" step="0.01" min="0" placeholder="0.00">
-                                    <small class="form-help">Will be calculated automatically if left blank</small>
+                                    <label for="deliveryFee">Delivery Fee (K) <span class="required">*</span></label>
+                                    <input type="number" id="deliveryFee" name="deliveryFee" step="0.01" min="0" placeholder="Calculating..." required>
+                                    <small class="form-help" id="deliveryFeeHelp">Auto-calculated from weight &amp; delivery option. You can override.</small>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="insuranceAmount">Insurance (K)</label>
                                     <input type="number" id="insuranceAmount" name="insuranceAmount" step="0.01" min="0" placeholder="0.00">
+                                    <small class="form-help">Optional insurance for declared value</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="commissionPercentage">Commission (%)</label>
+                                    <input type="number" id="commissionPercentage" name="commissionPercentage" step="0.01" min="0" max="100" value="<?php echo htmlspecialchars(number_format($companyCommission, 2, '.', '')); ?>" readonly>
+                                    <small class="form-help">Company commission rate</small>
+                                    <input type="hidden" id="companyCommissionHidden" name="companyCommission" value="<?php echo htmlspecialchars(number_format($companyCommission, 2, '.', '')); ?>">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="commissionAmount">Commission Amount (K)</label>
+                                    <input type="number" id="commissionAmount" name="commissionAmount" step="0.01" min="0" value="0.00" readonly>
+                                    <small class="form-help">Deducted from delivery fee</small>
+                                </div>
+                            </div>
+
+                            <!-- Payment Summary -->
+                            <div class="payment-summary-box" id="paymentSummaryBox">
+                                <h4><i class="fas fa-receipt"></i> Payment Summary</h4>
+                                <div class="summary-rows">
+                                    <div class="summary-row">
+                                        <span>Delivery Fee:</span>
+                                        <span id="summaryDeliveryFee">K 0.00</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Insurance:</span>
+                                        <span id="summaryInsurance">K 0.00</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>Commission (<span id="summaryCommPct">0</span>%):</span>
+                                        <span id="summaryCommission">K 0.00</span>
+                                    </div>
+                                    <div class="summary-row total-row">
+                                        <span><strong>Total Due:</strong></span>
+                                        <span id="summaryTotal"><strong>K 0.00</strong></span>
+                                    </div>
+                                    <div class="summary-row net-row">
+                                        <span>Net Amount (after commission):</span>
+                                        <span id="summaryNetAmount">K 0.00</span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="codAmount">Cash on Delivery (K)</label>
-                                <input type="number" id="codAmount" name="codAmount" step="0.01" min="0" placeholder="0.00">
-                            </div>
-
-                            <div class="form-group">
                                 <label for="paymentMethod">Payment Method <span class="required">*</span></label>
-                                <select id="paymentMethod" name="paymentMethod" required>
+                                <select id="paymentMethod" name="paymentMethod" required onchange="handlePaymentMethodChange(this.value)">
                                     <option value="">Select payment method</option>
                                     <option value="cash" selected>Cash Payment (At Outlet)</option>
-                                    <option value="cod">Cash on Delivery (COD)</option>
+                                    <option value="cod">Cash (To Be Paid on Delivery)</option>
                                     <option value="lenco_mobile">Mobile Money (MTN, Airtel) - Lenco</option>
                                     <option value="lenco_card">Card Payment (Visa/Mastercard) - Lenco</option>
                                 </select>
                                 <small class="form-help">Online payments powered by Lenco <?php echo $lencoEnv === 'sandbox' ? '<span class="badge-sandbox">(Sandbox Mode)</span>' : ''; ?></small>
+                            </div>
+
+                            <!-- Cash Payment Section -->
+                            <div id="cashPaymentSection" class="payment-method-panel" style="display: block !important; visibility: visible !important; opacity: 1 !important; background: #f0fdf4 !important; border: 2px solid #22c55e !important; border-radius: 12px !important; padding: 16px !important; margin: 16px 0 !important; height: auto !important; overflow: visible !important; position: relative !important;">
+                                <h4 style="color: #15803d; margin-bottom: 8px;"><i class="fas fa-money-bill-wave"></i> CASH PAYMENT (AT OUTLET)</h4>
+                                <label for="cashAmount" style="font-weight: 600; color: #15803d; display: block !important;">Cash Amount Received (K) <span class="required">*</span></label>
+                                <input type="number" id="cashAmount" name="cashAmount" step="0.01" min="0" placeholder="0.00" required style="font-size: 1.1em !important; padding: 12px !important; border: 2px solid #86efac !important; border-radius: 8px !important; width: 100% !important; margin-top: 8px !important; display: block !important; box-sizing: border-box !important;">
+                                <small class="form-help" style="color: #16a34a; display: block !important; margin-top: 4px;">✓ Auto-filled with total due. Adjust if customer pays a different amount.</small>
+                            </div>
+
+                            <!-- COD Payment Section -->
+                            <div id="codPaymentSection" class="payment-method-panel" style="display: none !important; background: #fefce8 !important; border: 2px solid #eab308 !important; border-radius: 12px !important; padding: 16px !important; margin: 16px 0 !important;">
+                                <h4 style="color: #a16207; margin-bottom: 8px;"><i class="fas fa-hand-holding-usd"></i> CASH ON DELIVERY</h4>
+                                <label for="codAmount" style="font-weight: 600; color: #a16207; display: block !important;">Amount to Collect on Delivery (K) <span class="required">*</span></label>
+                                <input type="number" id="codAmount" name="codAmount" step="0.01" min="0" placeholder="0.00" style="font-size: 1.1em !important; padding: 12px !important; border: 2px solid #fde047 !important; border-radius: 8px !important; width: 100% !important; margin-top: 8px !important; display: block !important; box-sizing: border-box !important;">
+                                <small class="form-help" style="color: #ca8a04; display: block !important; margin-top: 4px;">Total amount to collect from receiver (shipping + item value)</small>
                             </div>
 
                             <!-- Lenco Mobile Money Payment Section (Hidden by default) -->
@@ -341,14 +468,97 @@ $lencoEnv = LENCO_ENV;
                                 </button>
                             </div>
 
+                            <!-- Inline Payment Method Handler - works even if external JS fails -->
+                            <script>
+                            console.log('🔥 PAYMENT METHOD HANDLER LOADED at ' + new Date().toISOString());
+                            
+                            function handlePaymentMethodChange(method) {
+                                console.log('💰 Payment method changed to:', method);
+                                
+                                // Get all payment sections
+                                var sections = {
+                                    cash: document.getElementById('cashPaymentSection'),
+                                    cod: document.getElementById('codPaymentSection'),
+                                    lenco_mobile: document.getElementById('mobileMoneySection'),
+                                    lenco_card: document.getElementById('cardPaymentSection')
+                                };
+                                var inputs = {
+                                    cash: document.getElementById('cashAmount'),
+                                    cod: document.getElementById('codAmount'),
+                                    mobile: document.getElementById('mobileNumber')
+                                };
+                                
+                                console.log('📦 Sections found:', {
+                                    cash: !!sections.cash,
+                                    cod: !!sections.cod,
+                                    mobile: !!sections.lenco_mobile,
+                                    card: !!sections.lenco_card
+                                });
+                                
+                                // Hide all sections and remove required
+                                for (var key in sections) {
+                                    if (sections[key]) {
+                                        sections[key].style.display = 'none';
+                                        sections[key].style.visibility = 'hidden';
+                                    }
+                                }
+                                for (var key in inputs) {
+                                    if (inputs[key]) inputs[key].removeAttribute('required');
+                                }
+                                
+                                // Show the selected section with !important-level visibility
+                                if (method === 'cash' && sections.cash) {
+                                    sections.cash.style.display = 'block';
+                                    sections.cash.style.visibility = 'visible';
+                                    sections.cash.style.opacity = '1';
+                                    sections.cash.style.height = 'auto';
+                                    if (inputs.cash) inputs.cash.setAttribute('required', 'required');
+                                    console.log('✅ CASH section shown');
+                                } else if (method === 'cod' && sections.cod) {
+                                    sections.cod.style.display = 'block';
+                                    sections.cod.style.visibility = 'visible';
+                                    sections.cod.style.opacity = '1';
+                                    if (inputs.cod) inputs.cod.setAttribute('required', 'required');
+                                    console.log('✅ COD section shown');
+                                } else if (method === 'lenco_mobile' && sections.lenco_mobile) {
+                                    sections.lenco_mobile.style.display = 'block';
+                                    sections.lenco_mobile.style.visibility = 'visible';
+                                    if (inputs.mobile) inputs.mobile.setAttribute('required', 'required');
+                                    console.log('✅ Mobile Money section shown');
+                                } else if (method === 'lenco_card' && sections.lenco_card) {
+                                    sections.lenco_card.style.display = 'block';
+                                    sections.lenco_card.style.visibility = 'visible';
+                                    console.log('✅ Card section shown');
+                                }
+                                
+                                // Trigger payment summary update if available
+                                if (typeof updatePaymentSummarySection === 'function') {
+                                    updatePaymentSummarySection();
+                                }
+                            }
+                            
+                            // Initialize on page load - show cash section by default
+                            (function() {
+                                console.log('🚀 Initializing payment method on page load');
+                                var pm = document.getElementById('paymentMethod');
+                                if (pm) {
+                                    console.log('📝 Payment method element found, value:', pm.value);
+                                    handlePaymentMethodChange(pm.value || 'cash');
+                                } else {
+                                    console.error('❌ Payment method select not found!');
+                                }
+                            })();
+                            </script>
+
                             <!-- Delivery Option -->
                             <div class="form-group">
-                                <label for="deliveryOption"><i class="fas fa-shipping-fast"></i> Delivery Option</label>
-                                <input type="hidden" id="deliveryOption" name="deliveryOption" value="standard">
-                                <div class="delivery-option-display" style="padding: 12px 16px; background: var(--gray-50, #f9fafb); border-radius: 8px; border: 2px solid var(--gray-200, #e5e7eb);">
-                                    <span style="font-weight: 600; color: var(--gray-700, #374151);"><i class="fas fa-truck" style="margin-right: 8px; color: var(--primary-500, #6366f1);"></i> Standard Delivery</span>
-                                </div>
-                                <small class="form-help"><i class="fas fa-info-circle"></i> Currently only standard delivery is available</small>
+                                <label for="deliveryOption"><i class="fas fa-shipping-fast"></i> Delivery Option <span class="required">*</span></label>
+                                <select id="deliveryOption" name="deliveryOption" required>
+                                    <option value="standard" selected>Standard Delivery</option>
+                                    <option value="express">Express Delivery</option>
+                                    <option value="sameday">Same Day Delivery</option>
+                                </select>
+                                <small class="form-help"><i class="fas fa-info-circle"></i> Delivery speed affects the delivery fee</small>
                             </div>
                         </div>
                         

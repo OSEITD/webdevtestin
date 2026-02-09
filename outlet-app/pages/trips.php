@@ -1550,7 +1550,7 @@ $current_user = getCurrentUser();
                         </div>
                         ${parcel.cod_amount > 0 ? `
                         <div style="background: white; padding: 0.5rem; border-radius: 4px; border: 1px solid #e5e7eb;">
-                            <span style="color: #6b7280; font-size: 0.75rem;">COD</span>
+                            <span style="color: #6b7280; font-size: 0.75rem;">Cash to Collect</span>
                             <p style="margin: 0.25rem 0 0 0; color: #111827; font-weight: 600;">ZMW ${parcel.cod_amount}</p>
                         </div>
                         ` : ''}

@@ -31,7 +31,11 @@ function setupPaymentMethodHandler() {
     const paymentMethodSelect = document.getElementById('paymentMethod');
     const mobileMoneySection = document.getElementById('mobileMoneySection');
     const cardPaymentSection = document.getElementById('cardPaymentSection');
+    const cashPaymentSection = document.getElementById('cashPaymentSection');
+    const codPaymentSection = document.getElementById('codPaymentSection');
     const mobileNumberField = document.getElementById('mobileNumber');
+    const cashAmountField = document.getElementById('cashAmount');
+    const codAmountField = document.getElementById('codAmount');
     
     if (!paymentMethodSelect) {
         console.error('Payment method select not found');
@@ -41,9 +45,18 @@ function setupPaymentMethodHandler() {
     function hideAllPaymentSections() {
         if (mobileMoneySection) mobileMoneySection.style.display = 'none';
         if (cardPaymentSection) cardPaymentSection.style.display = 'none';
+        if (cashPaymentSection) cashPaymentSection.style.display = 'none';
+        if (codPaymentSection) codPaymentSection.style.display = 'none';
+        
         if (mobileNumberField) {
             mobileNumberField.removeAttribute('required');
             mobileNumberField.classList.remove('error');
+        }
+        if (cashAmountField) {
+            cashAmountField.removeAttribute('required');
+        }
+        if (codAmountField) {
+            codAmountField.removeAttribute('required');
         }
     }
 
@@ -66,6 +79,25 @@ function setupPaymentMethodHandler() {
                 cardPaymentSection.style.display = 'block';
                 updatePaymentSummary('card');
             }
+        } else if (selectedMethod === 'cash') {
+            if (cashPaymentSection) {
+                cashPaymentSection.style.display = 'block';
+                if (cashAmountField) {
+                    cashAmountField.setAttribute('required', 'required');
+                }
+            }
+        } else if (selectedMethod === 'cod') {
+            if (codPaymentSection) {
+                codPaymentSection.style.display = 'block';
+                if (codAmountField) {
+                    codAmountField.setAttribute('required', 'required');
+                }
+            }
+        }
+        
+        // Trigger payment summary update from parcel_registration.js
+        if (typeof updatePaymentSummarySection === 'function') {
+            updatePaymentSummarySection();
         }
     });
 
@@ -80,6 +112,11 @@ function setupPaymentMethodHandler() {
         } else if (initial === 'lenco_card' && cardPaymentSection) {
             cardPaymentSection.style.display = 'block';
             updatePaymentSummary('card');
+        } else if (initial === 'cash' && cashPaymentSection) {
+            cashPaymentSection.style.display = 'block';
+            if (cashAmountField) cashAmountField.setAttribute('required', 'required');
+        } else if (initial === 'cod' && codPaymentSection) {
+            codPaymentSection.style.display = 'block';
         }
     })();
 }

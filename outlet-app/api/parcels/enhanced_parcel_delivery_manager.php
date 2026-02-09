@@ -242,6 +242,23 @@ class EnhancedParcelDeliveryManager {
             
             $this->makeApiCall('PATCH', "/rest/v1/deliveries?parcel_id=eq.$parcelId", $deliveryUpdate);
             
+            // Update COD payment status to 'successful' if payment method is COD
+            try {
+                require_once __DIR__ . '/../../../sql/PaymentTransactionDB.php';
+                $paymentDB = new PaymentTransactionDB();
+                $codPaymentResult = $paymentDB->markCODPaymentAsCollected($parcelId);
+                
+                if ($codPaymentResult['success']) {
+                    $this->log("COD payment for parcel $parcelId marked as collected");
+                } else {
+                    // Not an error if there's no COD payment - could be cash or online payment
+                    $this->log("No COD payment to update for parcel $parcelId: " . ($codPaymentResult['error'] ?? 'N/A'));
+                }
+            } catch (Exception $e) {
+                // Don't fail delivery if payment update fails
+                $this->log("Warning: Failed to update COD payment status: " . $e->getMessage());
+            }
+            
             $this->log("Parcel $parcelId marked as delivered successfully");
             
             return [

@@ -160,6 +160,105 @@ class PaymentTransactionDB {
     }
     
     /**
+     * Update transaction status (for COD, cash, or manual status updates)
+     * 
+     * @param string $txRef Transaction reference (or parcel_id for COD lookup)
+     * @param string $newStatus New status (successful, failed, cancelled, etc.)
+     * @param array $additionalData Additional fields to update
+     * @return array Result with success status
+     */
+    public function updateTransactionStatus($txRef, $newStatus, $additionalData = []) {
+        try {
+            $updateData = [
+                'status' => $newStatus,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            // Set paid_at or failed_at based on status
+            if ($newStatus === 'successful' && !isset($additionalData['paid_at'])) {
+                $updateData['paid_at'] = date('Y-m-d H:i:s');
+            } else if ($newStatus === 'failed' && !isset($additionalData['failed_at'])) {
+                $updateData['failed_at'] = date('Y-m-d H:i:s');
+            } else if ($newStatus === 'cancelled') {
+                $updateData['error_message'] = $additionalData['error_message'] ?? 'Payment cancelled';
+            }
+            
+            // Merge additional data
+            $updateData = array_merge($updateData, $additionalData);
+            
+            $response = $this->supabase
+                ->from('payment_transactions')
+                ->update($updateData)
+                ->eq('tx_ref', $txRef)
+                ->select()
+                ->single()
+                ->execute();
+            
+            if ($response->status === 200) {
+                return [
+                    'success' => true,
+                    'data' => $response->data
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'error' => 'Failed to update transaction status'
+                ];
+            }
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Update COD payment status when parcel is delivered
+     * 
+     * @param string $parcelId Parcel UUID
+     * @return array Result with success status
+     */
+    public function markCODPaymentAsCollected($parcelId) {
+        try {
+            $updateData = [
+                'status' => 'successful',
+                'paid_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+                'settlement_status' => 'pending',
+                'metadata' => json_encode(['payment_note' => 'COD payment collected on delivery'])
+            ];
+            
+            $response = $this->supabase
+                ->from('payment_transactions')
+                ->update($updateData)
+                ->eq('parcel_id', $parcelId)
+                ->eq('payment_method', 'cod')
+                ->eq('status', 'pending')
+                ->select()
+                ->execute();
+            
+            if ($response->status === 200 && count($response->data) > 0) {
+                return [
+                    'success' => true,
+                    'data' => $response->data[0] ?? null,
+                    'message' => 'COD payment marked as collected'
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'error' => 'No pending COD payment found for this parcel'
+                ];
+            }
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
      * Get transaction by reference
      * 
      * @param string $txRef Transaction reference

@@ -516,6 +516,61 @@ textarea.error {
     color: var(--gray-800);
 }
 
+/* Financial Payment Summary Box */
+.payment-summary-box {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 12px 0 16px 0;
+}
+
+.payment-summary-box h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #166534;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.payment-summary-box h4 i {
+    color: #16a34a;
+}
+
+.payment-summary-box .summary-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.payment-summary-box .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.875rem;
+    color: #374151;
+    border-top: none;
+    margin-top: 0;
+    font-weight: 400;
+}
+
+.payment-summary-box .summary-row.total-row {
+    border-top: 2px solid #86efac;
+    margin-top: 6px;
+    padding-top: 10px;
+    font-size: 1rem;
+    color: #14532d;
+}
+
+.payment-summary-box .summary-row.net-row {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
 .payment-info {
     display: flex;
     gap: var(--space-3);
