@@ -62,7 +62,7 @@
         }
 
         .faq-item.active .faq-answer {
-            max-height: 200px; /* Adjust as needed for content length */
+            max-height: 1000px; /* allow larger content without clipping */
             padding-top: 15px;
         }
 

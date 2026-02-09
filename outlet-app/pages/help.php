@@ -33,128 +33,41 @@ $current_user = getCurrentUser();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../css/outlet-dashboard.css">
     <link rel="stylesheet" href="../css/help.css">
-   <style>
-        .search-container {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
+    <style>
+        /* Page container */
+        .content-container { max-width: 900px; margin: 20px auto; padding: 0 12px; }
 
-        .search-box {
-            position: relative;
-        }
+        /* Search input (use site-wide classes for consistent look) */
+        .search-input-container { position: relative; }
+        .search-input-container i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6b7280; }
+        .search-input-container input { width: 100%; padding: 12px 16px 12px 44px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 16px; background: #fff; }
+        .search-input-container input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.06); }
 
-        .search-input {
-            width: 100%;
-            padding: 12px 16px 12px 44px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s ease;
-        }
+        /* FAQ/Guide styles */
+        .faq-item.hidden { display: none; }
+        .no-results { text-align: center; padding: 30px 20px; color: #6b7280; }
 
-        .search-input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
+        .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; }
+        .section-header h2 { margin: 0; color: #1f2937; }
 
-        .search-icon {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6b7280;
-        }
+        .contact-btn { background: #f3f4f6; color: #374151; padding: 12px 20px; border-radius: 8px; text-decoration: none; display: flex; align-items: center; gap: 12px; font-weight: 500; transition: all 0.12s ease; border: 1px solid #e5e7eb; }
+        .contact-btn:hover { background: #e5e7eb; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
 
-        .faq-item.hidden {
-            display: none;
-        }
+        /* Larger FAQ expansion and smoother animation */
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.25s ease; }
+        .faq-item.active .faq-answer { max-height: 1000px; padding-top: 15px; }
 
-        .no-results {
-            text-align: center;
-            padding: 40px 20px;
-            color: #6b7280;
-        }
+        /* Guides styling */
+        .guide-section { margin-top: 24px; }
+        .guide-section .faq-item { background: #f0f9ff; border: 1px solid #e0f2fe; }
+        .guide-section .faq-question { background: #e0f2fe; }
 
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .section-header h2 {
-            margin: 0;
-            color: #1f2937;
-        }
-
-        .contact-btn {
-            background: #f3f4f6;
-            color: #374151;
-            padding: 12px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            border: 1px solid #e5e7eb;
-        }
-
-        .contact-btn:hover {
-            background: #e5e7eb;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .guide-section {
-            margin-top: 24px;
-        }
-
-        .guide-section .faq-item {
-            background: #f0f9ff;
-            border: 1px solid #e0f2fe;
-        }
-
-        .guide-section .faq-question {
-            background: #e0f2fe;
-        }
-
-        .stats-container {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 16px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            min-width: 120px;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #3b82f6;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-    </style>
+        /* Stats cards */
+        .stats-container { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .stat-card { background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06); min-width: 120px; text-align: center; }
+        .stat-number { font-size: 22px; font-weight: 700; color: #3b82f6; }
+        .stat-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    </style> 
 </head>
 <body>
     <?php include '../includes/navbar.php'; ?>
@@ -182,9 +95,9 @@ $current_user = getCurrentUser();
 
         <div class="content-container">
 
-                <div class="search-container">
-                    <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
+                <div class="filter-bar" style="margin-bottom:16px;">
+                    <div class="search-input-container" style="position:relative; flex:1;">
+                        <i class="fas fa-search" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#6b7280;"></i>
                         <input type="text" class="search-input" id="searchInput" placeholder="Search help articles...">
                     </div>
                 </div>
