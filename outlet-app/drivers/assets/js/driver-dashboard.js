@@ -4939,7 +4939,10 @@ class DriverDashboard {
                 completeBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span>Complete & Depart</span>';
             }
 
-            // OPTIMIZATION: Only reload stops list and map, not entire dashboard
+            // Reload dashboard data with cache bypass to get fresh stop statuses
+            await this.loadDashboardData(true);
+            
+            // Then reload stops list with the fresh data
             setTimeout(() => {
                 this.loadAndDisplayTripStops();
                 
