@@ -3,13 +3,13 @@
         <img src="../img/logo.png" alt="Delivery Pro" class="app-logo">
 
         <!-- Search Bar (visible on all devices) -->
-        <div class="search-container">
+        <div class="search-container" id="searchContainer">
             <div class="search-input-wrapper">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" id="globalSearchInput" placeholder="Search..." autocomplete="off">
                 <span class="search-shortcut desktop-only-inline">Ctrl+K</span>
             </div>
-            <div id="searchResults" class="search-results"></div>
+            <!-- Results moved outside header to avoid stacking context issues -->
         </div>
 
         <div class="header-icons">
@@ -48,6 +48,9 @@
     </div>
 
 </header>
+
+<!-- Search Results Portal - positioned at body level to avoid z-index stacking issues -->
+<div id="searchResults" class="search-results"></div>
 
 <!-- Search Overlay -->
 <div id="searchOverlay" class="search-overlay"></div>
@@ -156,6 +159,16 @@ document.addEventListener('DOMContentLoaded', function() {
         markAllReadBtn.addEventListener('click', function() {
             if (window.notificationManager) {
                 notificationManager.markAllAsRead();
+            }
+        });
+    }
+
+    // Close search results when clicking the dim overlay
+    const searchOverlayEl = document.getElementById('searchOverlay');
+    if (searchOverlayEl) {
+        searchOverlayEl.addEventListener('click', function() {
+            if (window.globalSearch && typeof window.globalSearch.hideResults === 'function') {
+                window.globalSearch.hideResults();
             }
         });
     }

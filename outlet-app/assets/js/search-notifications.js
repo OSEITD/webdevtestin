@@ -6,6 +6,7 @@ class GlobalSearch {
         this.searchInput = document.getElementById('globalSearchInput');
         this.searchResults = document.getElementById('searchResults');
         this.searchOverlay = document.getElementById('searchOverlay');
+        this.searchContainer = document.getElementById('searchContainer');
         this.debounceTimer = null;
         this.currentQuery = '';
         this.selectedIndex = -1;
@@ -15,6 +16,18 @@ class GlobalSearch {
         this.maxRecentSearches = 5;
         
         this.init();
+    }
+
+    /** Position search results below the input (since it's now at body level) */
+    positionResults() {
+        if (!this.searchInput || !this.searchResults) return;
+        
+        const inputRect = this.searchInput.getBoundingClientRect();
+        const containerRect = this.searchContainer ? this.searchContainer.getBoundingClientRect() : inputRect;
+        
+        this.searchResults.style.top = (inputRect.bottom + 8) + 'px';
+        this.searchResults.style.left = containerRect.left + 'px';
+        this.searchResults.style.width = containerRect.width + 'px';
     }
 
     init() {
@@ -496,6 +509,7 @@ class GlobalSearch {
     }
 
     showResults() {
+        this.positionResults(); // Position the dropdown below the input
         if (this.searchResults) {
             this.searchResults.classList.add('show');
         }

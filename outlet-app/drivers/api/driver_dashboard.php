@@ -19,10 +19,16 @@ $driver_id = $_SESSION['user_id'];
 $company_id = $_SESSION['company_id'];
 $cache = new ResponseCache(null, 15); // Reduced cache time for faster updates
 $cacheKey = "driver_dashboard_{$driver_id}_{$company_id}";
-$cachedResponse = $cache->get($cacheKey);
-if ($cachedResponse !== null) {
-    echo json_encode($cachedResponse);
-    exit;
+
+// Allow cache bypass with ?nocache=1 (used after trip start for fresh data)
+$noCache = isset($_GET['nocache']) && $_GET['nocache'] == '1';
+
+if (!$noCache) {
+    $cachedResponse = $cache->get($cacheKey);
+    if ($cachedResponse !== null) {
+        echo json_encode($cachedResponse);
+        exit;
+    }
 }
 $supabase = new OutletAwareSupabaseHelper();
 try {

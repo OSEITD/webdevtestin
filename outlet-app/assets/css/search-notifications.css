@@ -8,11 +8,13 @@
     position: relative;
     width: 100%;
     max-width: 600px;
+    z-index: 1002; /* Keep entire search (input + results) above overlay */
 }
 
 .search-input-wrapper {
     position: relative;
     width: 100%;
+    z-index: 1002; /* Keep input clickable above overlay (999) and results (1001) */
 }
 
 .search-input-wrapper input {
@@ -23,6 +25,7 @@
     font-size: 15px;
     transition: all 0.3s ease;
     background: white;
+    pointer-events: auto; /* Ensure input is always clickable */
 }
 
 .search-input-wrapper input:focus {
@@ -53,28 +56,46 @@
     font-weight: 600;
 }
 
+/* Search results - positioned at body level to avoid header stacking context */
 .search-results {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    margin-top: 8px;
+    position: fixed;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    max-height: 600px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    max-height: 70vh;
     overflow-y: auto;
-    z-index: 1001;
+    z-index: 100000; /* Very high to ensure it's above everything */
     opacity: 0;
     transform: translateY(-10px);
     pointer-events: none;
-    transition: all 0.3s ease;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    /* Width and position set via JS */
+    min-width: 320px;
+    max-width: 600px;
 }
 
 .search-results.show {
     opacity: 1;
     transform: translateY(0);
-    pointer-events: all;
+    pointer-events: auto;
+}
+
+/* Search overlay: visual dim effect only, no pointer interception */
+.search-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 998; /* Below everything interactive */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none; /* Never intercept clicks - let document click handler manage closing */
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.search-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    /* Keep pointer-events: none so clicks pass through to document handler */
 }
 
 .search-results-header {

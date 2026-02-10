@@ -64,6 +64,8 @@ $driver_id = $_SESSION['user_id'];
 try {
     $supabase = new OutletAwareSupabaseHelper();
     $current_time = date('c'); 
+    
+    // CRITICAL PATH - Only update arrival time, respond immediately
     $update_result = $supabase->update('trip_stops', 
         ['arrival_time' => $current_time],
         'id=eq.' . urlencode($stop_id)
@@ -73,52 +75,95 @@ try {
         throw new Exception('Failed to update trip stop arrival time');
     }
     
-   
-    $parcels = $supabase->get('parcel_list', 'trip_stop_id=eq.' . urlencode($stop_id));
-    $parcel_count = count($parcels);
-    
-    foreach ($parcels as $parcel) {
-        $supabase->update('parcel_list',
-            ['status' => 'at_outlet', 'updated_at' => $current_time],
-            'id=eq.' . urlencode($parcel['id'])
-        );
-    }
-  
-    if (isset($input['latitude']) && isset($input['longitude'])) {
-        $location_data = [
-            'driver_id' => $driver_id,
-            'trip_id' => $trip_id,
-            'company_id' => $_SESSION['company_id'],
-            'latitude' => (float) $input['latitude'],
-            'longitude' => (float) $input['longitude'],
-            'accuracy' => isset($input['accuracy']) ? (float) $input['accuracy'] : null,
-            'speed' => null,
-            'heading' => null,
-            'timestamp' => $current_time,
-            'created_at' => $current_time,
-            'is_manual' => true,
-            'source' => 'manual',
-            'synced_at' => $current_time,
-            'device_timestamp' => $current_time
-        ];
-        
-        $supabase->insert('driver_locations', $location_data);
-    }
-    
-    echo json_encode([
+    // IMMEDIATE RESPONSE - Don't wait for parcel updates
+    $response = [
         'success' => true,
         'message' => 'Successfully arrived at stop',
         'data' => [
             'stop_id' => $stop_id,
             'arrival_time' => $current_time,
-            'parcels_updated' => $parcel_count,
             'outlet_id' => $outlet_id
         ]
-    ]);
-  
-    if (ob_get_length()) {
-        ob_end_flush();
+    ];
+    
+    // Store for background processing
+    $bgStopId = $stop_id;
+    $bgTripId = $trip_id;
+    $bgOutletId = $outlet_id;
+    $bgDriverId = $driver_id;
+    $bgCompanyId = $_SESSION['company_id'];
+    $bgCurrentTime = $current_time;
+    $bgLatitude = $input['latitude'] ?? null;
+    $bgLongitude = $input['longitude'] ?? null;
+    $bgAccuracy = $input['accuracy'] ?? null;
+    
+    // Send response NOW
+    if (ob_get_length()) ob_clean();
+    header('Content-Type: application/json');
+    http_response_code(200);
+    echo json_encode($response);
+    
+    // Flush to client
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } else {
+        if (ob_get_level() > 0) ob_end_flush();
+        flush();
     }
+    
+    // ==========================================
+    // BACKGROUND PROCESSING - After response sent
+    // ==========================================
+    ob_start();
+    
+    try {
+        $bgSupabase = new OutletAwareSupabaseHelper();
+        
+        // Background Task 1: Update parcels at this stop
+        try {
+            $parcels = $bgSupabase->get('parcel_list', 'trip_stop_id=eq.' . urlencode($bgStopId));
+            if (!empty($parcels)) {
+                foreach ($parcels as $parcel) {
+                    $bgSupabase->update('parcel_list',
+                        ['status' => 'at_outlet', 'updated_at' => $bgCurrentTime],
+                        'id=eq.' . urlencode($parcel['id'])
+                    );
+                }
+            }
+        } catch (Exception $e) {
+            error_log("BG: Failed to update parcels: " . $e->getMessage());
+        }
+        
+        // Background Task 2: Record driver location
+        if ($bgLatitude !== null && $bgLongitude !== null) {
+            try {
+                $bgSupabase->insert('driver_locations', [
+                    'driver_id' => $bgDriverId,
+                    'trip_id' => $bgTripId,
+                    'company_id' => $bgCompanyId,
+                    'latitude' => (float) $bgLatitude,
+                    'longitude' => (float) $bgLongitude,
+                    'accuracy' => $bgAccuracy ? (float) $bgAccuracy : null,
+                    'speed' => null,
+                    'heading' => null,
+                    'timestamp' => $bgCurrentTime,
+                    'created_at' => $bgCurrentTime,
+                    'is_manual' => true,
+                    'source' => 'manual',
+                    'synced_at' => $bgCurrentTime,
+                    'device_timestamp' => $bgCurrentTime
+                ]);
+            } catch (Exception $e) {
+                error_log("BG: Failed to insert location: " . $e->getMessage());
+            }
+        }
+        
+    } catch (Exception $bgException) {
+        error_log("Background arrive processing error: " . $bgException->getMessage());
+    }
+    
+    if (ob_get_level() > 0) ob_end_clean();
+    exit;
     
 } catch (Exception $e) {
    

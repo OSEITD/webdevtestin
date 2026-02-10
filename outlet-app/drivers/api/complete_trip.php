@@ -52,6 +52,7 @@ try {
     }
     $current_time = date('Y-m-d\TH:i:s.u\Z');
     
+    // CRITICAL PATH - Only update trip status, respond immediately
     $result = $supabase->update('trips', 
         [
             'trip_status' => 'completed',
@@ -59,100 +60,134 @@ try {
         ],
         "id=eq.$trip_id"
     );
-    if ($result) {
-     
-        $supabase->update('drivers', 
-            [
-                'status' => 'available',
-                'current_trip_id' => null
-            ],
-            "id=eq.$driver_id"
-        );
-        error_log("Trip Completed: Driver {$driver_id} completed trip {$trip_id} at {$current_time}");
+    
+    if (!$result) {
+        throw new Exception('Failed to update trip status');
+    }
+    
+    // IMMEDIATE RESPONSE - User sees instant feedback
+    $response = [
+        'success' => true,
+        'message' => 'Trip completed successfully',
+        'trip_id' => $trip_id,
+        'completion_time' => $current_time
+    ];
+    
+    // Store for background
+    $bgDriverId = $driver_id;
+    $bgTripId = $trip_id;
+    $bgCompanyId = $company_id;
+    $bgCurrentTime = $current_time;
+    $bgTrip = $trip;
+    
+    // Send response NOW
+    ob_end_clean();
+    header('Content-Type: application/json');
+    http_response_code(200);
+    echo json_encode($response);
+    
+    // Flush to client
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } else {
+        if (ob_get_level() > 0) ob_end_flush();
+        flush();
+    }
+    
+    // ==========================================
+    // BACKGROUND PROCESSING - After response sent
+    // ==========================================
+    ob_start();
+    
+    try {
+        $bgSupabase = new OutletAwareSupabaseHelper();
         
+        // Background Task 1: Update driver status
+        try {
+            $bgSupabase->update('drivers', 
+                [
+                    'status' => 'available',
+                    'current_trip_id' => null
+                ],
+                "id=eq.$bgDriverId"
+            );
+        } catch (Exception $e) {
+            error_log("BG: Failed to update driver: " . $e->getMessage());
+        }
+        
+        // Background Task 2: Update QPS stats
         try {
             $today = date('Y-m-d');
-         
-            $parcels_handled = $supabase->get('parcel_list', [
-                'trip_id' => "eq.$trip_id",
-                'status' => 'in.(delivered,failed_delivery)',
-                'select' => 'id'
-            ]);
-            $parcels_count = $parcels_handled ? count($parcels_handled) : 0;
-           
-            $existing_qps = $supabase->get('driver_qps', [
-                'driver_id' => "eq.$driver_id",
-                'date' => "eq.$today"
-            ]);
+            $parcels_handled = $bgSupabase->get('parcel_list', 
+                "trip_id=eq.$bgTripId&status=in.(delivered,failed_delivery)&select=id"
+            );
+            $parcels_count = is_array($parcels_handled) ? count($parcels_handled) : 0;
             
-            if ($existing_qps && count($existing_qps) > 0) {
+            $existing_qps = $bgSupabase->get('driver_qps', 
+                "driver_id=eq.$bgDriverId&date=eq.$today"
+            );
+            
+            if (!empty($existing_qps)) {
                 $current = $existing_qps[0];
-                $supabase->update('driver_qps', [
+                $bgSupabase->update('driver_qps', [
                     'trips_completed' => ($current['trips_completed'] ?? 0) + 1,
                     'parcels_handled' => ($current['parcels_handled'] ?? 0) + $parcels_count
-                ], "driver_id=eq.$driver_id&date=eq.$today");
+                ], "driver_id=eq.$bgDriverId&date=eq.$today");
             } else {
-
-                $supabase->insert('driver_qps', [
-                    'driver_id' => $driver_id,
-                    'company_id' => $company_id,
+                $bgSupabase->insert('driver_qps', [
+                    'driver_id' => $bgDriverId,
+                    'company_id' => $bgCompanyId,
                     'date' => $today,
                     'trips_completed' => 1,
                     'parcels_handled' => $parcels_count
                 ]);
             }
-
-            error_log("Updated driver_qps for driver {$driver_id}: +1 trip, +{$parcels_count} parcels");
         } catch (Exception $e) {
-            error_log("Error updating driver_qps: " . $e->getMessage());
-
+            error_log("BG: Failed to update QPS: " . $e->getMessage());
         }
-
-        $notificationsSent = 0;
+        
+        // Background Task 3: Send notifications
         try {
-            if (!empty($trip['outlet_manager_id'])) {
-                $shortTripId = substr($trip_id, 0, 8);
-
+            if (!empty($bgTrip['outlet_manager_id'])) {
+                $shortTripId = substr($bgTripId, 0, 8);
                 $notificationData = json_encode([
-                    'trip_id' => $trip_id,
-                    'driver_id' => $driver_id,
-                    'completion_time' => $current_time
+                    'trip_id' => $bgTripId,
+                    'driver_id' => $bgDriverId,
+                    'completion_time' => $bgCurrentTime
                 ]);
-
-
-                $supabase->insert('notifications', [
-                    'company_id' => $company_id,
-                    'recipient_id' => $trip['outlet_manager_id'],
-                    'sender_id' => $driver_id,
-                    'title' => ' Trip Completed',
+                
+                $bgSupabase->insert('notifications', [
+                    'company_id' => $bgCompanyId,
+                    'recipient_id' => $bgTrip['outlet_manager_id'],
+                    'sender_id' => $bgDriverId,
+                    'title' => 'Trip Completed',
                     'message' => "Trip {$shortTripId} is completed",
                     'notification_type' => 'trip_completed',
                     'priority' => 'high',
                     'status' => 'unread',
                     'data' => $notificationData
                 ]);
-                $notificationsSent++;
-
-
-                $pushService = new PushNotificationService($supabase);
-                $pushService->sendTripCompletedNotification($trip_id, [
-                    'outlet_manager_id' => $trip['outlet_manager_id']
-                ]);
+                
+                // Push notification
+                if (class_exists('PushNotificationService')) {
+                    $pushService = new PushNotificationService($bgSupabase);
+                    $pushService->sendTripCompletedNotification($bgTripId, [
+                        'outlet_manager_id' => $bgTrip['outlet_manager_id']
+                    ]);
+                }
             }
         } catch (Exception $e) {
-            error_log("Error sending trip completion notification: " . $e->getMessage());
+            error_log("BG: Failed to send notifications: " . $e->getMessage());
         }
-        echo json_encode([
-            'success' => true,
-            'message' => 'Trip completed successfully',
-            'trip_id' => $trip_id,
-            'completion_time' => $current_time,
-            'notifications_sent' => $notificationsSent
-        ]);
-
-    } else {
-        throw new Exception('Failed to update trip status');
+        
+        error_log("Trip Completed (BG): Driver {$bgDriverId} completed trip {$bgTripId}");
+        
+    } catch (Exception $bgException) {
+        error_log("Background complete trip error: " . $bgException->getMessage());
     }
+    
+    if (ob_get_level() > 0) ob_end_clean();
+    exit;
 } catch (Exception $e) {
     error_log("Complete trip error: " . $e->getMessage());
     echo json_encode(['success' => false, 'error' => 'Server error occurred: ' . $e->getMessage()]);

@@ -130,31 +130,25 @@ try {
     
     error_log("Trip stop update attempt - Stop ID: $stop_id, Action: $action, Result: " . ($result ? 'success' : 'failed'));
     error_log("Update data: " . json_encode($updateData));
-    if ($result) {
-        
-        error_log("Trip Stop Update: Driver {$driver_id} - {$logMessage} {$stop_id} at {$timestamp}");
-        
-        
-        updateParcelStatuses($supabase, $stop['trip_id'], $stop['outlet_id'], $action, $timestamp);
-        
-        
-        $notificationsSent = 0;
-        if ($action === 'arrive') {
-            $notificationsSent = sendOutletArrivalNotifications($supabase, $stop['trip_id'], $stop['outlet_id'], $driver_id, $company_id);
-        }
-        
-        
-        $outletInfo = $supabase->get('outlets', 
-            'id=eq.' . urlencode($stop['outlet_id']) . '&select=outlet_name'
-        );
-        
-        $outletName = !empty($outletInfo) ? $outletInfo[0]['outlet_name'] : 'Unknown Outlet';
-        
-        
+    
+    if (!$result) {
+        error_log("Failed to update trip stop - Stop ID: $stop_id, Update data: " . json_encode($updateData));
+        echo json_encode(['success' => false, 'error' => 'Failed to update trip stop', 'debug' => ['stop_id' => $stop_id, 'action' => $action, 'update_data' => $updateData]]);
+        exit;
+    }
+    
+    // CRITICAL PATH COMPLETE - Now get outlet name quickly for response
+    $outletInfo = $supabase->get('outlets', 
+        'id=eq.' . urlencode($stop['outlet_id']) . '&select=outlet_name'
+    );
+    $outletName = !empty($outletInfo) ? $outletInfo[0]['outlet_name'] : 'Unknown Outlet';
+    
+    // Quick check if all stops might be completed (for depart action)
+    $allCompleted = false;
+    if ($action === 'depart') {
         $allStops = $supabase->get('trip_stops', 
             'trip_id=eq.' . urlencode($stop['trip_id']) . '&select=departure_time'
         );
-        
         $allCompleted = true;
         foreach ($allStops as $tripStop) {
             if (empty($tripStop['departure_time'])) {
@@ -162,42 +156,103 @@ try {
                 break;
             }
         }
+    }
+    
+    // IMMEDIATE RESPONSE - User sees instant feedback
+    $response = [
+        'success' => true,
+        'message' => ucfirst($action) . ' time recorded successfully',
+        'stop_id' => $stop_id,
+        'outlet_name' => $outletName,
+        'timestamp' => $timestamp,
+        'trip_completed' => $allCompleted
+    ];
+    
+    // Store for background processing
+    $bgDriverId = $driver_id;
+    $bgCompanyId = $company_id;
+    $bgTripId = $stop['trip_id'];
+    $bgOutletId = $stop['outlet_id'];
+    $bgStopId = $stop_id;
+    $bgAction = $action;
+    $bgTimestamp = $timestamp;
+    $bgAllCompleted = $allCompleted;
+    
+    // Send response NOW
+    if (ob_get_level()) ob_clean();
+    header('Content-Type: application/json');
+    http_response_code(200);
+    echo json_encode($response);
+    
+    // Flush to client
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } else {
+        if (ob_get_level() > 0) ob_end_flush();
+        flush();
+    }
+    
+    // ==========================================
+    // BACKGROUND PROCESSING - After response sent
+    // ==========================================
+    ob_start();
+    
+    try {
+        $bgSupabase = new OutletAwareSupabaseHelper();
         
+        error_log("BG Start: Driver {$bgDriverId} - {$bgAction} at stop {$bgStopId}");
         
-        if ($action === 'arrive') {
-            
-            $supabase->update('trips', 
-                ['trip_status' => 'at_outlet'],
-                'id=eq.' . urlencode($stop['trip_id'])
-            );
-        } elseif ($allCompleted) {
-            
-            $supabase->update('trips', 
-                ['trip_status' => 'completed', 'arrival_time' => $timestamp],
-                'id=eq.' . urlencode($stop['trip_id'])
-            );
-        } else {
-            
-            $supabase->update('trips', 
-                ['trip_status' => 'in_transit'],
-                'id=eq.' . urlencode($stop['trip_id'])
-            );
+        // Background Task 1: Update parcel statuses
+        try {
+            updateParcelStatuses($bgSupabase, $bgTripId, $bgOutletId, $bgAction, $bgTimestamp);
+        } catch (Exception $e) {
+            error_log("BG: Failed to update parcels: " . $e->getMessage());
         }
         
-        echo json_encode([
-            'success' => true,
-            'message' => ucfirst($action) . ' time recorded successfully',
-            'stop_id' => $stop_id,
-            'outlet_name' => $outletName,
-            'timestamp' => $timestamp,
-            'trip_completed' => $allCompleted,
-            'notifications_sent' => $notificationsSent
-        ]);
+        // Background Task 2: Send notifications (arrive only)
+        if ($bgAction === 'arrive') {
+            try {
+                sendOutletArrivalNotifications($bgSupabase, $bgTripId, $bgOutletId, $bgDriverId, $bgCompanyId);
+            } catch (Exception $e) {
+                error_log("BG: Failed to send notifications: " . $e->getMessage());
+            }
+        }
         
-    } else {
-        error_log("Failed to update trip stop - Stop ID: $stop_id, Update data: " . json_encode($updateData));
-        echo json_encode(['success' => false, 'error' => 'Failed to update trip stop', 'debug' => ['stop_id' => $stop_id, 'action' => $action, 'update_data' => $updateData]]);
+        // Background Task 3: Update trip status
+        try {
+            if ($bgAction === 'arrive') {
+                $bgSupabase->update('trips', 
+                    ['trip_status' => 'at_outlet'],
+                    'id=eq.' . urlencode($bgTripId)
+                );
+            } elseif ($bgAllCompleted) {
+                $bgSupabase->update('trips', 
+                    ['trip_status' => 'completed', 'arrival_time' => $bgTimestamp],
+                    'id=eq.' . urlencode($bgTripId)
+                );
+                // Also update driver status
+                $bgSupabase->update('drivers', 
+                    ['status' => 'available', 'current_trip_id' => null],
+                    'id=eq.' . urlencode($bgDriverId)
+                );
+            } else {
+                $bgSupabase->update('trips', 
+                    ['trip_status' => 'in_transit'],
+                    'id=eq.' . urlencode($bgTripId)
+                );
+            }
+        } catch (Exception $e) {
+            error_log("BG: Failed to update trip status: " . $e->getMessage());
+        }
+        
+        error_log("BG Complete: Trip status updated for {$bgTripId}");
+        
+    } catch (Exception $bgException) {
+        error_log("Background update_trip_stop error: " . $bgException->getMessage());
     }
+    
+    if (ob_get_level() > 0) ob_end_clean();
+    exit;
 } catch (Exception $e) {
     error_log("Update trip stop error: " . $e->getMessage());
     error_log("Error trace: " . $e->getTraceAsString());

@@ -55,7 +55,8 @@ try {
 		
 		$currentTimestamp = date('Y-m-d H:i:s');
 		
-		// Update trip status to in_transit with departure time
+		// CRITICAL PATH - Only update trip status, send response immediately
+		// This single update is all the user needs to see the trip as started
 		$supabase->update('trips', [
 			'trip_status' => 'in_transit',
 			'departure_time' => $currentTimestamp,
@@ -63,75 +64,27 @@ try {
 			'updated_at' => $currentTimestamp
 		], 'id=eq.' . urlencode($trip_id));
 		
-		// Update driver status to unavailable
-		$supabase->update('drivers', [
-			'status' => 'unavailable',
-			'current_trip_id' => $trip_id,
-			'updated_at' => $currentTimestamp
-		], 'id=eq.' . urlencode($driver_id));
-		
-		// AUTO-DEPART from origin outlet: Get the trip's origin_outlet_id and set departure_time on its trip_stop
-		$tripDetails = $supabase->get('trips', 'id=eq.' . urlencode($trip_id), 'origin_outlet_id');
-		if (!empty($tripDetails) && !empty($tripDetails[0]['origin_outlet_id'])) {
-			$originOutletId = $tripDetails[0]['origin_outlet_id'];
-			
-			// Find the trip_stop for the origin outlet (should be stop_order=1 or the first stop)
-			$originStops = $supabase->get('trip_stops', 
-				'trip_id=eq.' . urlencode($trip_id) . 
-				'&outlet_id=eq.' . urlencode($originOutletId) . 
-				'&select=id,arrival_time,departure_time'
-			);
-			
-			if (!empty($originStops)) {
-				$originStop = $originStops[0];
-				// Set both arrival_time (driver was at origin) and departure_time (now departing)
-				$supabase->update('trip_stops', [
-					'arrival_time' => $currentTimestamp,
-					'departure_time' => $currentTimestamp
-				], 'id=eq.' . urlencode($originStop['id']));
-				
-				error_log("Auto-departed from origin outlet: stop_id={$originStop['id']}, outlet_id=$originOutletId");
-			} else {
-				error_log("No trip_stop found for origin outlet: trip_id=$trip_id, outlet_id=$originOutletId");
-			}
-		}
-		
-		$parcelList = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($trip_id) . '&select=parcel_id');
-		$parcelIds = array_column($parcelList, 'parcel_id');
-		
-		if ($parcelIds) {
-			
-			$supabase->update('parcel_list', [
-				'status' => 'in_transit',
-				'updated_at' => date('Y-m-d H:i:s')
-			], 'trip_id=eq.' . urlencode($trip_id));
-			
-			$idsStr = implode(',', array_map('urlencode', $parcelIds));
-			$supabase->update('parcels', [
-				'status' => 'in_transit',
-				'driver_id' => $driver_id,
-				'updated_at' => date('Y-m-d H:i:s')
-			], 'id=in.(' . $idsStr . ')');
-		}
-		
+		// IMMEDIATE RESPONSE - Don't wait for secondary operations
 		$response = [
 			'success' => true, 
 			'message' => 'Trip started successfully',
 			'action' => 'started',
-			'parcels_updated' => count($parcelIds)
+			'trip_id' => $trip_id
 		];
 		
-		
+		// Store variables for background processing
 		$bgCompanyId = $company_id;
 		$bgDriverId = $driver_id;
 		$bgTripId = $trip_id;
+		$bgTimestamp = $currentTimestamp;
 		
+		// Send response NOW - user sees instant feedback
 		ob_end_clean();
 		header('Content-Type: application/json');
 		http_response_code(200);
 		echo json_encode($response);
 		
-		
+		// Flush response to client
 		if (function_exists('fastcgi_finish_request')) {
 			fastcgi_finish_request();
 		} else {
@@ -139,53 +92,100 @@ try {
 			flush();
 		}
 		
-		// Background processing - ensure no output
-		ob_start();
+		// ==========================================
+		// BACKGROUND PROCESSING - After response sent
+		// ==========================================
+		ob_start(); // Suppress any output
 		
 		try {
-			// OPTIMIZED: Only send essential notifications, skip individual delivery events for speed
 			$bgSupabase = new OutletAwareSupabaseHelper();
 			
-			// Send single trip start notification instead of per-parcel events
-			sendTripStartNotifications($bgTripId, $bgDriverId, $bgCompanyId, $parcelIds, $bgSupabase);
-			
-			
-			if (class_exists('PushNotificationService')) {
-				$pushService = new PushNotificationService($bgSupabase);
-				
-				
-				$tripDetails = $bgSupabase->get('trips', 'id=eq.' . urlencode($bgTripId), 
-					'id,outlet_manager_id,origin_outlet_id,destination_outlet_id,company_id');
-				if (!empty($tripDetails)) {
-					$tripData = $tripDetails[0];
-					$tripData['parcel_ids'] = $parcelIds;
-					
-					
-					if (!empty($tripData['origin_outlet_id'])) {
-						$originOutlet = $bgSupabase->get('outlets', 'id=eq.' . urlencode($tripData['origin_outlet_id']), 'outlet_name');
-						$tripData['origin_outlet_name'] = !empty($originOutlet) ? $originOutlet[0]['outlet_name'] : 'Origin';
-					}
-					if (!empty($tripData['destination_outlet_id'])) {
-						$destOutlet = $bgSupabase->get('outlets', 'id=eq.' . urlencode($tripData['destination_outlet_id']), 'outlet_name');
-						$tripData['destination_outlet_name'] = !empty($destOutlet) ? $destOutlet[0]['outlet_name'] : 'Destination';
-					}
-					
-					
-					$pushResults = $pushService->sendTripStartedNotification($bgTripId, $tripData);
-					error_log("✅ Trip started push notifications sent - Manager: " . 
-						count($pushResults['manager_notifications'] ?? []) . ", Customers: " . 
-						count($pushResults['customer_notifications'] ?? []));
-				}
+			// Background Task 1: Update driver status (non-critical)
+			try {
+				$bgSupabase->update('drivers', [
+					'status' => 'unavailable',
+					'current_trip_id' => $bgTripId,
+					'updated_at' => $bgTimestamp
+				], 'id=eq.' . urlencode($bgDriverId));
+			} catch (Exception $e) {
+				error_log("BG: Failed to update driver: " . $e->getMessage());
 			}
+			
+			// Background Task 2: Auto-depart from origin outlet
+			try {
+				$tripDetails = $bgSupabase->get('trips', 'id=eq.' . urlencode($bgTripId), 'origin_outlet_id');
+				if (!empty($tripDetails) && !empty($tripDetails[0]['origin_outlet_id'])) {
+					$originOutletId = $tripDetails[0]['origin_outlet_id'];
+					$originStops = $bgSupabase->get('trip_stops', 
+						'trip_id=eq.' . urlencode($bgTripId) . 
+						'&outlet_id=eq.' . urlencode($originOutletId) . 
+						'&select=id'
+					);
+					if (!empty($originStops)) {
+						$bgSupabase->update('trip_stops', [
+							'arrival_time' => $bgTimestamp,
+							'departure_time' => $bgTimestamp
+						], 'id=eq.' . urlencode($originStops[0]['id']));
+					}
+				}
+			} catch (Exception $e) {
+				error_log("BG: Failed to update origin stop: " . $e->getMessage());
+			}
+			
+			// Background Task 3: Update parcels to in_transit
+			$parcelIds = [];
+			try {
+				$parcelList = $bgSupabase->get('parcel_list', 'trip_id=eq.' . urlencode($bgTripId) . '&select=parcel_id');
+				$parcelIds = array_column($parcelList, 'parcel_id');
+				
+				if (!empty($parcelIds)) {
+					$bgSupabase->update('parcel_list', [
+						'status' => 'in_transit',
+						'updated_at' => $bgTimestamp
+					], 'trip_id=eq.' . urlencode($bgTripId));
+					
+					$idsStr = implode(',', array_map('urlencode', $parcelIds));
+					$bgSupabase->update('parcels', [
+						'status' => 'in_transit',
+						'driver_id' => $bgDriverId,
+						'updated_at' => $bgTimestamp
+					], 'id=in.(' . $idsStr . ')');
+				}
+			} catch (Exception $e) {
+				error_log("BG: Failed to update parcels: " . $e->getMessage());
+			}
+			
+			// Background Task 4: Send notifications (lowest priority)
+			try {
+				sendTripStartNotifications($bgTripId, $bgDriverId, $bgCompanyId, $parcelIds, $bgSupabase);
+				
+				if (class_exists('PushNotificationService')) {
+					$pushService = new PushNotificationService($bgSupabase);
+					$tripDetails = $bgSupabase->get('trips', 'id=eq.' . urlencode($bgTripId), 
+						'id,outlet_manager_id,origin_outlet_id,destination_outlet_id,company_id');
+					if (!empty($tripDetails)) {
+						$tripData = $tripDetails[0];
+						$tripData['parcel_ids'] = $parcelIds;
+						if (!empty($tripData['origin_outlet_id'])) {
+							$originOutlet = $bgSupabase->get('outlets', 'id=eq.' . urlencode($tripData['origin_outlet_id']), 'outlet_name');
+							$tripData['origin_outlet_name'] = !empty($originOutlet) ? $originOutlet[0]['outlet_name'] : 'Origin';
+						}
+						if (!empty($tripData['destination_outlet_id'])) {
+							$destOutlet = $bgSupabase->get('outlets', 'id=eq.' . urlencode($tripData['destination_outlet_id']), 'outlet_name');
+							$tripData['destination_outlet_name'] = !empty($destOutlet) ? $destOutlet[0]['outlet_name'] : 'Destination';
+						}
+						$pushService->sendTripStartedNotification($bgTripId, $tripData);
+					}
+				}
+			} catch (Exception $e) {
+				error_log("BG: Failed to send notifications: " . $e->getMessage());
+			}
+			
 		} catch (Exception $bgException) {
-			error_log("Background notification error: " . $bgException->getMessage());
+			error_log("Background processing error: " . $bgException->getMessage());
 		}
 		
-		// Clean up any background output
-		if (ob_get_level() > 0) {
-			ob_end_clean();
-		}
-		
+		if (ob_get_level() > 0) ob_end_clean();
 		exit;
 	}
 } catch (Exception $e) {

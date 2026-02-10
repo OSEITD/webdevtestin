@@ -820,10 +820,12 @@ class DriverDashboard {
 
     /**
      * Load dashboard data
+     * @param {boolean} noCache - If true, bypass server cache for fresh data
      */
-    async loadDashboardData() {
+    async loadDashboardData(noCache = false) {
         try {
-            const response = await fetch('api/driver_dashboard.php', {
+            const url = noCache ? 'api/driver_dashboard.php?nocache=1' : 'api/driver_dashboard.php';
+            const response = await fetch(url, {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -1610,13 +1612,13 @@ class DriverDashboard {
             // Start GPS tracking immediately (don't wait)
             this.startGpsPolling(tripId);
             
-            // Load dashboard in background while showing feedback
-            this.loadDashboardData().then(() => {
+            // Load dashboard with cache bypass for fresh data after trip start
+            this.loadDashboardData(true).then(() => {
                 // Show route stops panel after data loads
                 setTimeout(() => {
                     this.showRouteStopsPanel();
                     this.loadAndDisplayTripStops();
-                }, 500);
+                }, 300); // Reduced delay since API is faster
             });
             
         } catch (error) {
@@ -1933,7 +1935,7 @@ class DriverDashboard {
                         
                         if (result.success) {
                             this.showNotification('🎉 Trip completed successfully!', 'success');
-                            this.loadDashboardData(); // Refresh dashboard
+                            this.loadDashboardData(true); // Refresh dashboard with cache bypass
                         } else {
                             throw new Error(result.error || 'Failed to complete trip');
                         }
@@ -2541,8 +2543,8 @@ class DriverDashboard {
                         this.tripGpsInterval = null;
                     }
                     
-                    // Reload dashboard to show completion
-                    setTimeout(() => this.loadDashboardData(), 500); // Faster refresh
+                    // Reload dashboard to show completion with cache bypass
+                    setTimeout(() => this.loadDashboardData(true), 300);
                 } else {
                     this.showNotification('✅ Completed stop at ' + (result.outlet_name || stopData.outlet_name) + ' successfully!', 'success');
                     
@@ -2621,8 +2623,8 @@ class DriverDashboard {
                 }
                 this.showNotification(message, 'success');
                 
-                // Refresh dashboard data to show updated status
-                this.loadDashboardData();
+                // Refresh dashboard data with cache bypass for fresh status
+                this.loadDashboardData(true);
                 
                 // Close any open modals
                 const modal = document.querySelector('.modal');
@@ -4783,16 +4785,16 @@ class DriverDashboard {
                     this.restartAutoRefresh();
                     
                     setTimeout(() => {
-                        this.loadDashboardData();
+                        this.loadDashboardData(true); // Cache bypass after completion
                         this.showNotification('🎉 Trip completed! All stops finished.', 'success');
-                    }, 1000);
+                    }, 500);
                 } else {
                     console.log('[DEBUG] Trip not completed - refreshing data and focusing on next stop');
                     // Trip not completed - refresh data and focus on next stop
                     
-                    // First refresh the dashboard data
-                    await this.loadDashboardData();
-                    console.log('[DEBUG] Dashboard data refreshed');
+                    // First refresh the dashboard data with cache bypass
+                    await this.loadDashboardData(true);
+                    console.log('[DEBUG] Dashboard data refreshed (no cache)');
                     
                     // Then reload and display trip stops
                     await this.loadAndDisplayTripStops();
