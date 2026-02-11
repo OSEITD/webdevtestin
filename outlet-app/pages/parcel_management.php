@@ -127,12 +127,71 @@ $current_user = getCurrentUser();
             margin-bottom: 25px;
         }
 
+        .scan-history {
+            width: 100%;
+            max-width: calc(100% - 40px);
+            margin: 20px auto 0;
+            box-sizing: border-box;
+        }
+
+        .scan-history .table-wrapper {
+            overflow-x: auto;
+        }
+
         .scan-history table {
             margin-top: 15px;
             border-collapse: collapse;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            min-width: 700px; /* keeps columns readable on larger viewports, allows horizontal scroll on small */
+        }
+
+        .scan-history th, .scan-history td {
+            padding: 12px 15px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 768px) {
+            /* Make table responsive: convert to stacked cards */
+            .scan-history table, .scan-history thead, .scan-history tbody, .scan-history th, .scan-history td, .scan-history tr {
+                display: block;
+            }
+            .scan-history thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            .scan-history tr {
+                margin: 0 0 12px 0;
+                border-radius: 8px;
+                background: #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+                padding: 10px;
+            }
+            .scan-history td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                white-space: normal;
+            }
+            .scan-history td::before {
+                position: absolute;
+                left: 12px;
+                top: 12px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: 600;
+                color: #4a5568;
+            }
+            .scan-history td:nth-of-type(1)::before { content: "Tracking Number"; }
+            .scan-history td:nth-of-type(2)::before { content: "Action Type"; }
+            .scan-history td:nth-of-type(3)::before { content: "Status Details"; }
+            .scan-history td:nth-of-type(4)::before { content: "Time"; }
+            .scan-history td:nth-of-type(5)::before { content: "Staff & Customer"; }
         }
 
         .scan-history th {
@@ -267,9 +326,6 @@ $current_user = getCurrentUser();
                             <button id="pendingBtn" class="action-btn pending" disabled>
                                 <i class="fas fa-clock" style="margin-right: 5px;"></i>Mark as Pending
                             </button>
-                            <button id="checkOutBtn" class="action-btn check-out" disabled>
-                                <i class="fas fa-sign-out-alt" style="margin-right: 5px;"></i>Check-Out Parcel
-                            </button>
                             <button id="markDeliveredBtn" class="action-btn delivered" disabled>
                                 <i class="fas fa-check-circle" style="margin-right: 5px;"></i>Mark as Delivered
                             </button>
@@ -294,7 +350,7 @@ $current_user = getCurrentUser();
                             Auto-refreshing every 30s
                         </small>
                     </h2>
-                    <div style="overflow-x: auto;">
+                    <div class="table-wrapper">
                         <table style="width: 100%;">
                             <thead>
                                 <tr>
@@ -411,14 +467,27 @@ document.addEventListener('DOMContentLoaded', () => {
             resolveOutletNames(parcel.origin_outlet_id, parcel.destination_outlet_id);
         }
 
-        document.getElementById('checkInBtn').onclick = () => performScanWithBarcode('check-in', parcel.track_number);
-        document.getElementById('pendingBtn').onclick = () => performScanWithBarcode('pending', parcel.track_number);
-        document.getElementById('checkOutBtn').onclick = () => performScanWithBarcode('check-out', parcel.track_number);
-        document.getElementById('markDeliveredBtn').onclick = () => performScanWithBarcode('mark-delivered', parcel.track_number);
-        document.getElementById('checkInBtn').disabled = false;
-        document.getElementById('pendingBtn').disabled = false;
-        document.getElementById('checkOutBtn').disabled = false;
-        document.getElementById('markDeliveredBtn').disabled = false;
+        const checkInBtn = document.getElementById('checkInBtn');
+        const pendingBtn = document.getElementById('pendingBtn');
+        const checkOutBtn = document.getElementById('checkOutBtn');
+        const markDeliveredBtn = document.getElementById('markDeliveredBtn');
+
+        if (checkInBtn) {
+            checkInBtn.onclick = () => performScanWithBarcode('check-in', parcel.track_number);
+            checkInBtn.disabled = false;
+        }
+        if (pendingBtn) {
+            pendingBtn.onclick = () => performScanWithBarcode('pending', parcel.track_number);
+            pendingBtn.disabled = false;
+        }
+        if (checkOutBtn) {
+            checkOutBtn.onclick = () => performScanWithBarcode('check-out', parcel.track_number);
+            checkOutBtn.disabled = false;
+        }
+        if (markDeliveredBtn) {
+            markDeliveredBtn.onclick = () => performScanWithBarcode('mark-delivered', parcel.track_number);
+            markDeliveredBtn.disabled = false;
+        }
     }
 
     async function resolveOutletNames(originId, destinationId) {

@@ -268,6 +268,65 @@ $current_user = getCurrentUser();
             background: white;
         }
 
+        /* Wider content container and responsive table support */
+        .content-container {
+            width: 100%;
+            max-width: calc(100% - 40px);
+            margin: 20px auto;
+            box-sizing: border-box;
+        }
+
+        .content-container .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .content-container table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+
+        .content-container th, .content-container td {
+            padding: 12px 15px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 768px) {
+            .content-container table, .content-container thead, .content-container tbody, .content-container th, .content-container td, .content-container tr {
+                display: block;
+            }
+            .content-container thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            .content-container tr {
+                margin: 0 0 12px 0;
+                border-radius: 8px;
+                background: #fff;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+                padding: 10px;
+            }
+            .content-container td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                white-space: normal;
+            }
+            .content-container td::before {
+                position: absolute;
+                left: 12px;
+                top: 12px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: 600;
+                color: #4a5568;
+                content: attr(data-label);
+            }
+        }
+
         .stop-item {
             background: white;
             border-radius: 10px;

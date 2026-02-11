@@ -42,7 +42,7 @@ class BarcodeGenerator {
                     'barcode_url' => $barcodeUrl,
                     'method' => 'online_api'
                 ];
-            }
+            }     
 
             $localUrl = $this->generateLocally($trackingNumber, $options);
             if ($localUrl) {
@@ -92,7 +92,7 @@ class BarcodeGenerator {
             $filepath = $this->localStoragePath . $filename;
 
             if (file_put_contents($filepath, $barcodeData)) {
-                // Return a relative web path to the barcode so it resolves from pages in the outlet app
+                
                 return '../assets/barcodes/' . $filename;
             }
 
@@ -131,7 +131,7 @@ class BarcodeGenerator {
 
             if (imagepng($image, $filepath)) {
                 imagedestroy($image);
-                // Return a relative web path to the locally generated barcode
+                
                 return '../assets/barcodes/' . $filename;
             }
 

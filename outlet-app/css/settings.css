@@ -26,6 +26,18 @@ body {
             max-width: 100%;
         }
 
+        /* Ensure page content is pushed below the fixed top header */
+        .main-content {
+            padding-top: 90px; /* safe offset to clear header */
+        }
+
+        @media (max-width: 768px) {
+            /* mobile header may be taller due to stacked elements */
+            .main-content {
+                padding-top: 110px;
+            }
+        }
+
         .app-logo {
             height: 28px;
             width: auto;

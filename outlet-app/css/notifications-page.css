@@ -57,6 +57,23 @@ body {
     margin: 0 auto;
 }
 
+/* For pages that should stretch wider (notifications) */
+.content-container.notifications-wide {
+    max-width: none;
+    width: 100%;
+    padding: 16px 20px;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* Ensure wider layout on large viewports but still allow breathing room */
+@media (min-width: 769px) {
+    .content-container.notifications-wide {
+        max-width: calc(100% - 40px);
+        padding: 24px 28px;
+    }
+}
+
 .back-button {
     display: inline-flex;
     align-items: center;
@@ -94,7 +111,9 @@ body {
 
 .notifications-shell {
     width: 100%;
-    max-width: 100%;
+    /* stretch almost full width while leaving breathing room */
+    max-width: calc(100% - 40px);
+    box-sizing: border-box;
     background: var(--bg-primary);
     border-radius: 20px;
     padding: 28px 32px;
@@ -104,6 +123,11 @@ body {
     display: flex;
     flex-direction: column;
     gap: 28px;
+}
+
+/* Wrapper for wide tables/lists to allow horizontal scroll on small screens */
+.notifications-shell .table-wrapper {
+    overflow-x: auto;
 }
 
 .notifications-hero {
@@ -509,7 +533,8 @@ body {
 /* Notification Cards */
 .notifications-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    /* use responsive columns so cards flow across the available width */
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 16px;
 }
 

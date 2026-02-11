@@ -30,7 +30,7 @@ $company_id = $_SESSION['company_id'];
         <div class="menu-overlay" id="menuOverlay"></div>
 
         <main class="main-content">
-            <div class="content-container">
+            <div class="content-container notifications-wide">
                 <a href="outlet_dashboard.php" class="back-button">
                     <i class="fas fa-arrow-left"></i>
                     Back to Dashboard
