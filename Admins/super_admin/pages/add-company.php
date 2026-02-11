@@ -61,6 +61,11 @@ require_once '../includes/header.php';
                         <input type="number" id="revenue" name="revenue" class="form-input-field" placeholder="0.00" step="0.01" value="0">
                     </div>
                     <div class="form-group">
+                        <label for="commission">Commission (%)</label>
+                        <input type="number" id="commission" name="commission" class="form-input-field" placeholder="0.00" step="0.01" min="0" max="100" value="0">
+                        <small class="help-text">Commission percentage for this company</small>
+                    </div>
+                    <div class="form-group">
                         <label for="progress">Progress (%)</label>
                         <input type="number" id="progress" name="progress" class="form-input-field" placeholder="0" min="0" max="100" value="0">
                     </div>
@@ -163,6 +168,7 @@ require_once '../includes/header.php';
                 password: password,
                 confirm_password: confirmPassword,
                 revenue: parseFloat(document.getElementById('revenue').value) || 0,
+                commission: parseFloat(document.getElementById('commission').value) || 0,
                 progress: parseInt(document.getElementById('progress').value) || 0,
                 status: document.getElementById('status').value
             };

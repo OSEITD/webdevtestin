@@ -14,6 +14,7 @@ $stats = [
     'ongoing_deliveries' => 0
 ];
 $totalRevenue = 0;
+$platformCommissions = 0;  // Initialize here
 $monthlyGrowth = 0;
 $topCompanies = [];
 $companiesData = [];
@@ -21,14 +22,15 @@ $companiesData = [];
 // Try to get initial data
 try {
     // Fetch companies data
-    $companiesData = callSupabase('companies?select=id,company_name,revenue,status');
+    $companiesData = callSupabase('companies?select=id,company_name,revenue,commission,status');
     if (is_array($companiesData)) {
         $stats['total_companies'] = count($companiesData);
         
-        // Calculate revenue metrics
+        // Calculate total revenue and commissions from active companies
         foreach ($companiesData as $company) {
             if ($company['status'] === 'active') {
-                $totalRevenue += $company['revenue'] ?? 0;
+                $totalRevenue += floatval($company['revenue'] ?? 0);
+                $platformCommissions += floatval($company['commission'] ?? 0);
             }
         }
     }
@@ -51,41 +53,6 @@ try {
     }
 } catch (Exception $e) {
     error_log('Error fetching initial data: ' . $e->getMessage());
-}
-
-// Handle commission setting form submission
-$commissionMessage = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['commission_percent'])) {
-    $percent = floatval(str_replace(',', '.', $_POST['commission_percent']));
-    if ($percent < 0) $percent = 0;
-
-    try {
-        // Fetch transactions that don't have commission_amount set (null)
-        $transactions = callSupabaseWithServiceKey("payment_transactions?select=id,amount&commission_amount=is.null", 'GET');
-
-        if (is_array($transactions) && count($transactions) > 0) {
-            $updatedCount = 0;
-            foreach ($transactions as $tx) {
-                $id = $tx['id'] ?? null;
-                $amount = isset($tx['amount']) ? floatval($tx['amount']) : 0;
-                if (!$id) continue;
-
-                $commissionValue = round($amount * ($percent / 100), 2);
-
-                // Patch single transaction
-                $endpoint = "payment_transactions?id=eq." . urlencode($id);
-                $payload = ['commission_amount' => $commissionValue];
-                callSupabaseWithServiceKey($endpoint, 'PATCH', $payload);
-                $updatedCount++;
-            }
-            $commissionMessage = "Applied {$percent}% commission to {$updatedCount} transaction(s).";
-        } else {
-            $commissionMessage = 'No uncommissioned transactions found.';
-        }
-    } catch (Exception $e) {
-        error_log('Commission update error: ' . $e->getMessage());
-        $commissionMessage = 'Failed to apply commission: ' . $e->getMessage();
-    }
 }
 
 // Calculate initial company earnings for display
@@ -169,24 +136,6 @@ require_once '../includes/header.php';
                     <p class="label">Total Platform Revenue</p>
                     <p class="value" data-stat="total_revenue">$<?php echo number_format($totalRevenue, 2); ?></p>
                     <p class="trend">Total Earnings</p>
-                </div>
-            </div>
-
-            <!-- Commission Settings -->
-            <div class="stat-card commission-card animate-fade-in">
-                <div class="stat-icon">
-                    <i class="fas fa-percent"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="label">Set Commission Percentage</p>
-                    <form method="post" style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
-                        <input type="number" name="commission_percent" step="0.01" min="0" max="100" placeholder="e.g. 2.5" style="padding:8px;border-radius:6px;border:1px solid #ddd;width:160px;" required>
-                        <button type="submit" class="action-btn">Apply to Uncommissioned Transactions</button>
-                    </form>
-                    <?php if (!empty($commissionMessage)): ?>
-                        <p style="margin-top:10px;color:#065f46;font-weight:600"><?php echo htmlspecialchars($commissionMessage); ?></p>
-                    <?php endif; ?>
-                    <p class="trend" style="margin-top:6px;color:#6b7280">This will compute commission_amount = amount * percent/100 for rows where commission_amount is NULL.</p>
                 </div>
             </div>
 
@@ -338,8 +287,8 @@ require_once '../includes/header.php';
                             <i class="fas fa-chart-line"></i>
                         </div>
                         <div class="stat-content">
-                            <p class="label">Total Revenue Across All Companies</p>
-                            <p class="value">$<?php echo number_format($totalRevenue, 2); ?></p>
+                            <p class="label">Platform Commissions</p>
+                            <p class="value">$<?php echo number_format($platformCommissions, 2); ?></p>
                             <p class="trend">Platform Total</p>
                         </div>
                     </div>
@@ -584,7 +533,9 @@ require_once '../includes/header.php';
     async function updateDashboardStats() {
         try {
             console.log('Fetching dashboard stats...');
-            const response = await fetch('../api/get_dashboard_stats.php');
+            const response = await fetch('../api/get_dashboard_stats.php', {
+                credentials: 'include'
+            });
             console.log('Response status:', response.status);
             const data = await response.json();
             console.log('Received data:', data);
@@ -602,8 +553,14 @@ require_once '../includes/header.php';
                     for (const [key, value] of Object.entries(stats)) {
                         const element = document.querySelector(`[data-stat="${key}"]`);
                         if (element) {
-                            console.log(`Updating ${key} to:`, value);
-                            element.textContent = Number(value).toLocaleString();
+                            // Only update if we have a valid value
+                            const numValue = Number(value);
+                            if (!isNaN(numValue)) {
+                                console.log(`Updating ${key} to:`, numValue);
+                                element.textContent = numValue.toLocaleString();
+                            } else {
+                                console.warn(`Invalid value for ${key}:`, value);
+                            }
                         } else {
                             console.warn(`Element not found for stat: ${key}`);
                         }
@@ -619,16 +576,24 @@ require_once '../includes/header.php';
                         maximumFractionDigits: 2
                     })} ${currency.code}`;
                 }
-                // Update average revenue
-                const avgRevenueElement = document.querySelectorAll('.earnings-summary-card .value');
-                if (avgRevenueElement && stats.total_companies > 0) {
+                // Update platform commissions in Earnings Overview section
+                const commissionsCards = document.querySelectorAll('.earnings-summary-card .value');
+                if (commissionsCards.length > 0 && data.revenue?.commissions !== undefined) {
+                    // First card is Platform Commissions
+                    commissionsCards[0].textContent = `${currency.symbol}${Number(data.revenue.commissions).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })} ${currency.code}`;
+                }
+                // Update average revenue (second card in earnings summary)
+                const avgRevenueCards = document.querySelectorAll('.earnings-summary-card .value');
+                if (avgRevenueCards.length > 1 && stats.total_companies > 0) {
                     const avgRevenue = (data.revenue?.total || 0) / stats.total_companies;
-                    avgRevenueElement.forEach(el => {
-                        el.textContent = `${currency.symbol}${Number(avgRevenue).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })} ${currency.code}`;
-                    });
+                    // Second card is Average Revenue Per Company
+                    avgRevenueCards[1].textContent = `${currency.symbol}${Number(avgRevenue).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })} ${currency.code}`;
                 }
                 // Update company list
                 if (data.topCompanies) {

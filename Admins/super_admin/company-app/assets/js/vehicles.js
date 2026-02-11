@@ -50,7 +50,9 @@ async function loadVehicles() {
     const vehiclesGrid = document.getElementById('vehiclesGrid');
     
     try {
-        const response = await fetch('api/fetch_vehicles.php');
+        const response = await fetch('../api/fetch_vehicles.php', {
+            credentials: 'include'
+        });
         const result = await response.json();
 
         if (!result.success) {

@@ -100,7 +100,7 @@ function showMessageBox(message) {
 class NotificationSystem {
     constructor() {
         // Check if required elements exist
-        if (!document.querySelector('.notification-btn') || 
+        if (!document.querySelector('.notification-btn') ||
             !document.getElementById('notificationSidebar')) {
             return;
         }
@@ -110,7 +110,7 @@ class NotificationSystem {
         this.setupEventListeners();
         this.loadNotifications();
         this.updateUI();
-        
+
         // Demo mode - remove in production
         this.startDemo();
     }
@@ -123,14 +123,14 @@ class NotificationSystem {
         this.notificationList = document.querySelector('.notification-list');
         this.badge = document.querySelector('.notification-btn .badge');
         this.closeBtn = document.querySelector('.notification-close-btn');
-        
+
         // Initialize empty notifications array
         this.notifications = [];
     }
 
     loadNotifications() {
         // Try to fetch from server API first. Fallback to localStorage/demo data on error.
-        const apiUrl = 'api/fetch_notifications.php?limit=50';
+        const apiUrl = '../api/fetch_notifications.php?limit=50';
         fetch(apiUrl, { credentials: 'include' })
             .then(res => {
                 if (!res.ok) throw new Error('Network response was not ok');
@@ -223,7 +223,7 @@ class NotificationSystem {
         if (this.closeBtn) {
             this.closeBtn.addEventListener('click', () => this.closeSidebar());
         }
-        
+
         if (this.overlay) {
             this.overlay.addEventListener('click', () => this.closeSidebar());
         }
@@ -241,7 +241,7 @@ class NotificationSystem {
     toggleSidebar() {
         this.sidebar.classList.toggle('show');
         this.overlay.classList.toggle('show');
-        
+
         // Mark all as read when opening
         if (this.sidebar.classList.contains('show')) {
             this.markAllAsRead();
@@ -256,11 +256,11 @@ class NotificationSystem {
     formatTime(date) {
         const now = new Date();
         const diff = now - date;
-        
+
         if (diff < 60000) return 'Just now';
-        if (diff < 3600000) return `${Math.floor(diff/60000)} min ago`;
-        if (diff < 86400000) return `${Math.floor(diff/3600000)} hours ago`;
-        if (diff < 604800000) return `${Math.floor(diff/86400000)} days ago`;
+        if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+        if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
         return date.toLocaleDateString();
     }
 
@@ -271,20 +271,20 @@ class NotificationSystem {
 
     renderNotifications() {
         if (!this.notificationList) return;
-        
+
         // Clear existing notifications
         this.notificationList.innerHTML = '';
-        
+
         // Sort by newest first and get first 5
         const recentNotifications = [...this.notifications]
             .sort((a, b) => b.time - a.time)
             .slice(0, 5);
-        
+
         if (recentNotifications.length === 0) {
             this.notificationList.innerHTML = '<div class="notification-empty">No new notifications</div>';
             return;
         }
-        
+
         // Add each notification to the list
         recentNotifications.forEach(notification => {
             const item = document.createElement('a');
@@ -313,14 +313,14 @@ class NotificationSystem {
 
     markAllAsRead() {
         let changed = false;
-        
+
         this.notifications.forEach(notification => {
             if (!notification.isRead) {
                 notification.isRead = true;
                 changed = true;
             }
         });
-        
+
         if (changed) {
             this.saveNotifications();
             this.updateUI();
@@ -329,9 +329,9 @@ class NotificationSystem {
 
     updateBadge() {
         if (!this.badge) return;
-        
+
         const unreadCount = this.notifications.filter(n => !n.isRead).length;
-        
+
         if (unreadCount > 0) {
             this.badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
             this.badge.style.display = 'flex';
@@ -343,7 +343,7 @@ class NotificationSystem {
     // DEMO FUNCTION - REMOVE IN PRODUCTION
     startDemo() {
         if (!window.location.pathname.includes('dashboard.php')) return;
-        
+
         setInterval(() => {
             const types = ['info', 'success', 'warning', 'urgent'];
             const messages = [
@@ -352,7 +352,7 @@ class NotificationSystem {
                 "Delivery delayed due to traffic",
                 "Payment received for delivery #1234"
             ];
-            
+
             this.addNotification({
                 title: "New Notification",
                 message: messages[Math.floor(Math.random() * messages.length)],
@@ -365,23 +365,23 @@ class NotificationSystem {
     addNotification(notification) {
         // Generate ID if not provided
         if (!notification.id) {
-            notification.id = this.notifications.length > 0 
-                ? Math.max(...this.notifications.map(n => n.id)) + 1 
+            notification.id = this.notifications.length > 0
+                ? Math.max(...this.notifications.map(n => n.id)) + 1
                 : 1;
         }
-        
+
         // Set defaults
         notification.time = notification.time || new Date();
         notification.isRead = notification.isRead || false;
         notification.type = notification.type || 'info';
-        
+
         // Add to beginning of array
         this.notifications.unshift(notification);
-        
+
         // Update UI and save
         this.updateUI();
         this.saveNotifications();
-        
+
         // Show alert if sidebar is closed
         if (!this.sidebar.classList.contains('show')) {
             this.showNewNotificationAlert(notification);
@@ -395,14 +395,14 @@ class NotificationSystem {
             <strong>${notification.title}</strong>
             <p>${notification.message}</p>
         `;
-        
+
         alert.addEventListener('click', () => {
             this.toggleSidebar();
             alert.remove();
         });
-        
+
         document.body.appendChild(alert);
-        
+
         setTimeout(() => {
             alert.classList.add('fade-out');
             setTimeout(() => alert.remove(), 300);
@@ -442,7 +442,7 @@ function initializeNotifications() {
     // Only initialize if we're on a page with notifications
     const container = document.querySelector('.notifications-container');
     if (!container) return; // Skip if not on a notifications page
-    const apiUrl = 'api/fetch_notifications.php?limit=100';
+    const apiUrl = '../api/fetch_notifications.php?limit=100';
 
     function renderNotificationsList(items) {
         // Clear existing notifications first
@@ -584,7 +584,7 @@ function initGlobalSearch() {
     async function performSearch(query) {
         if (!query || query.trim().length < minQueryLength) { resultsBox.classList.remove('show'); return; }
         try {
-            const resp = await fetch('api/search.php?q=' + encodeURIComponent(query), { credentials: 'include' });
+            const resp = await fetch('../api/search.php?q=' + encodeURIComponent(query), { credentials: 'include' });
             if (!resp.ok) throw new Error('Search failed');
             const json = await resp.json();
             if (!json.success) throw new Error(json.error || 'Search failed');
@@ -693,7 +693,8 @@ function initDashboardCharts() {
                     callbacks: { label: context => `${context.dataset.label}: $${context.parsed.y.toLocaleString()}` }
                 }
             },
-            scales: { x: { grid: { display: false } }, y: { beginAtZero: true }
+            scales: {
+                x: { grid: { display: false } }, y: { beginAtZero: true }
             }
         }
     }));
@@ -740,7 +741,7 @@ function initKeyboardShortcuts() {
             e.preventDefault();
             const pages = [
                 'dashboard.php',
-                'outlets.php', 
+                'outlets.php',
                 'drivers.php',
                 'deliveries.php',
                 'company-reports.php'
@@ -778,13 +779,13 @@ function initKeyboardShortcuts() {
     });
 }
 
-document.addEventListener('keydown', function(event) {
-  // Check for Ctrl+Alt+N
-  if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'n') {
-    event.preventDefault();
-    // Open notification.php in the same tab
-    window.location.href = 'notifications.php';
-  }
+document.addEventListener('keydown', function (event) {
+    // Check for Ctrl+Alt+N
+    if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        // Open notification.php in the same tab
+        window.location.href = 'notifications.php';
+    }
 });
 
 // ==================== MAIN INITIALIZATION ====================
@@ -793,9 +794,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize common systems
     initMenuSystem();
     initKeyboardShortcuts();
-    
-    // Initialize notification system
-    new NotificationSystem();
+
+    // Note: NotificationSystem is defined in notifications.js for the dedicated notifications page
+    // Skipping instantiation here to avoid duplicate declaration conflicts
+    // if (document.querySelector('.notification-btn')) {
+    //     new NotificationSystem();
+    // }
 
     // Initialize page-specific functionality
     const path = window.location.pathname;

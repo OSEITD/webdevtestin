@@ -50,24 +50,32 @@ try {
         'symbol' => $currencySymbol
     ];
 
-    // Get companies with revenue data
-    $companiesData = callSupabase('companies?select=id,company_name,revenue,status&order=revenue.desc');
+    // Get companies for count, revenue, commissions, and top companies list
+    $companiesData = callSupabase('companies?select=id,company_name,revenue,commission,status&order=revenue.desc');
+    $totalRevenue = 0;
+    $platformCommissions = 0;
+    $companyEarnings = [];
+    
     if (is_array($companiesData)) {
         $response['stats']['total_companies'] = count($companiesData);
         
-        // Calculate revenue metrics
-        $totalRevenue = 0;
-        $companyEarnings = [];
-        
+        // Calculate total revenue and platform commissions from active companies
         foreach ($companiesData as $company) {
             if ($company['status'] === 'active') {
                 $revenue = $company['revenue'] ?? 0;
-                // Convert to selected currency (assume all stored in USD for this example)
+                $commission = $company['commission'] ?? 0;
+                
                 $convertedRevenue = $revenue;
+                $convertedCommission = $commission;
+                
                 if ($defaultCurrency !== 'USD' && isset($exchangeRates[$defaultCurrency])) {
                     $convertedRevenue = $revenue * $exchangeRates[$defaultCurrency];
+                    $convertedCommission = $commission * $exchangeRates[$defaultCurrency];
                 }
+                
                 $totalRevenue += $convertedRevenue;
+                $platformCommissions += $convertedCommission;
+                
                 $companyEarnings[] = [
                     'name' => $company['company_name'],
                     'earnings' => $convertedRevenue
@@ -75,46 +83,57 @@ try {
             }
         }
         
-        $response['revenue']['total'] = $totalRevenue;
-        $lastMonthRevenue = 0; // This needs to be calculated properly in the future
-        $response['revenue']['monthly_growth'] = $lastMonthRevenue > 0 
-            ? (($totalRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100 
-            : 0;
-            
         // Sort companies by earnings and get top 5
         usort($companyEarnings, fn($a, $b) => $b['earnings'] - $a['earnings']);
         $response['topCompanies'] = array_slice($companyEarnings, 0, 5);
     }
+    
+    $response['revenue']['total'] = $totalRevenue;
+    $response['revenue']['commissions'] = $platformCommissions;
+    $lastMonthRevenue = 0; // This needs to be calculated properly in the future
+    $response['revenue']['monthly_growth'] = $lastMonthRevenue > 0 
+        ? (($totalRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100 
+        : 0;
 
     // Get active users count
     try {
         error_log("Fetching active users...");
-        $activeUsersQuery = callSupabase('all_users', 'GET', ['select' => 'id', 'account_status' => 'active']);
+        // FIXED: Changed 'account_status' to 'status' to match database schema
+        $activeUsersQuery = callSupabase('all_users?select=id&status=eq.active');
         error_log("Active users query result: " . print_r($activeUsersQuery, true));
         if (is_array($activeUsersQuery)) {
             $response['stats']['active_users'] = count($activeUsersQuery);
             error_log("Updated active_users count: " . $response['stats']['active_users']);
         }
+    } catch (Exception $e) {
+        error_log("Error fetching active users: " . $e->getMessage());
+    }
 
-        // Get delivery counts
+    // Get delivery counts
+    try {
         error_log("Fetching delivered parcels...");
-        $deliveredParcelsQuery = callSupabase('parcels', 'GET', ['select' => 'id', 'status' => 'delivered']);
+        // FIXED: Changed to query 'parcels' table directly instead of view for consistency and reliability
+        $deliveredParcelsQuery = callSupabase('parcels?select=id&status=eq.delivered');
         error_log("Delivered parcels query result: " . print_r($deliveredParcelsQuery, true));
         if (is_array($deliveredParcelsQuery)) {
             $response['stats']['total_deliveries'] = count($deliveredParcelsQuery);
             error_log("Updated total_deliveries count: " . $response['stats']['total_deliveries']);
         }
+    } catch (Exception $e) {
+        error_log("Error fetching delivered parcels: " . $e->getMessage());
+    }
 
-        // Get ongoing deliveries
+    // Get ongoing deliveries
+    try {
         error_log("Fetching ongoing deliveries...");
-        $inProgressQuery = callSupabase('parcels', 'GET', ['select' => 'id', 'status.neq' => 'delivered']);
+        $inProgressQuery = callSupabase('parcels?select=id&status=neq.delivered');
         error_log("In-progress parcels query result: " . print_r($inProgressQuery, true));
         if (is_array($inProgressQuery)) {
             $response['stats']['ongoing_deliveries'] = count($inProgressQuery);
             error_log("Updated ongoing_deliveries count: " . $response['stats']['ongoing_deliveries']);
         }
     } catch (Exception $e) {
-        error_log("Error fetching stats: " . $e->getMessage());
+        error_log("Error fetching ongoing deliveries: " . $e->getMessage());
     }
 
     // Get delivery trend data for the chart

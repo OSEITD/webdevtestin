@@ -175,7 +175,7 @@ require_once '../includes/header.php';
             <div class="filter-bar">
                 <div class="search-input-container">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchUsers" placeholder="Search by name or email">
+                    <input type="text" id="searchUsers" placeholder="Search by name">
                 </div>
                 <div class="filter-dropdown">
                     <select id="filterRole">
@@ -194,10 +194,10 @@ require_once '../includes/header.php';
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Email</th>
+
                             <th>Role(s)</th>
                             <th>Status</th>
-                            <th>Company/Outlet</th>
+                            <th>Company</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -229,7 +229,7 @@ require_once '../includes/header.php';
                                     
                                     echo '<tr>';
                                     echo '<td data-label="Name">' . htmlspecialchars($user['name'] ?? 'N/A') . '</td>';
-                                    echo '<td data-label="Email">' . htmlspecialchars($user['contact_email'] ?? 'N/A') . '</td>';
+
                                     echo '<td data-label="Role(s)">' . htmlspecialchars($user['role'] ?? 'N/A') . '</td>';
                                     echo '<td data-label="Status"><span class="status-badge ' . $status_class . '">' . htmlspecialchars($user['status'] ?? 'N/A') . '</span></td>';
                                     echo '<td data-label="Company/Outlet">' . htmlspecialchars($user['associated_entity'] ?? 'N/A') . '</td>';
@@ -424,10 +424,9 @@ require_once '../includes/header.php';
 
             allUserRows.forEach(row => {
                 const name = row.querySelector('td[data-label="Name"]').textContent.toLowerCase();
-                const email = row.querySelector('td[data-label="Email"]').textContent.toLowerCase();
                 const role = row.querySelector('td[data-label="Role(s)"]').textContent.toLowerCase();
 
-                const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+                const matchesSearch = name.includes(searchTerm);
                 const matchesRole = selectedRole === '' || role.includes(selectedRole);
 
                 if (matchesSearch && matchesRole) {

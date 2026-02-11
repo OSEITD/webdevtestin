@@ -26,64 +26,22 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
+// Clear session on direct GET visit to login page (not POST)
+// This allows users to intentionally visit login.php to see the login form
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+  error_log("GET request to login page detected. Clearing session to allow fresh login.");
+  session_unset();
+  session_regenerate_id(true);
+}
+
 // Debug session info
 error_log("Session ID at start: " . session_id());
 error_log("Session path: " . session_save_path());
 error_log("Initial session data: " . print_r($_SESSION, true));
 
-// Prevent accidental redirect by clearing stale sessions immediately.
-// If a session claims to be logged in but lacks a token or last activity, reset it.
-$sessionLifetime = 86400; // 24 hours
-if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-  $hasToken = isset($_SESSION['access_token']) && !empty($_SESSION['access_token']);
-  $hasActivity = isset($_SESSION['last_activity']) && is_numeric($_SESSION['last_activity']);
-  $notExpired = $hasActivity ? (time() - (int)$_SESSION['last_activity'] <= $sessionLifetime) : false;
-  if (!($hasToken && $hasActivity && $notExpired)) {
-    error_log("Found stale or partial session data on login page. Clearing session to avoid auto-redirect.");
-    session_unset();
-    session_regenerate_id(true);
-    error_log("New session ID after clear: " . session_id());
-  }
-}
-
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 // Debug session state
 error_log("Session state at login: " . print_r($_SESSION, true));
 error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
-
-// Only redirect if the session is truly valid. Require:
-// - logged_in === true
-// - an access token present
-// - a recent last_activity timestamp (within session lifetime)
-// - not a POST request
-// - no previous error
-// - we are on the login page
-$sessionLifetime = 86400; // seconds (24h)
-$sessionValid = false;
-if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-  $hasToken = isset($_SESSION['access_token']) && !empty($_SESSION['access_token']);
-  $hasActivity = isset($_SESSION['last_activity']) && is_numeric($_SESSION['last_activity']);
-  $notExpired = $hasActivity ? (time() - (int)$_SESSION['last_activity'] <= $sessionLifetime) : false;
-  $sessionValid = $hasToken && $hasActivity && $notExpired;
-}
-
-if ($sessionValid && $_SERVER['REQUEST_METHOD'] !== 'POST' && !isset($error) && basename($_SERVER['PHP_SELF']) === 'login.php') {
-  error_log("Redirecting logged-in user to dashboard (validated session)");
-  // Redirect based on role
-  $role = $_SESSION['role'] ?? null;
-  if ($role === 'super_admin') {
-    header("Location: ../pages/dashboard.php");
-  } else {
-    // Default to company app for company users
-    header("Location: ../company-app/pages/dashboard.php");
-  }
-  exit;
-}
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 // Supabase config
 $supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
@@ -317,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login</title>
-  <link rel="manifest" href="../company-app/manifest.json">
+  <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#2e0b3f">
   <link rel="stylesheet" href="../company-app/assets/css/login-styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
@@ -325,17 +283,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <script>
-  // Temporarily disable service worker registration until paths are fixed
-  /*if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      navigator.serviceWorker.register('../../service-worker.js', {
-        scope: '/'
+      navigator.serviceWorker.register('../service-worker.js', {
+        scope: '/WDParcelSendReceiverPWA/Admins/super_admin/'
       });
     });
-  }*/
+  }
 </script>
   <div class="container">
-    <img src="../company-app/assets/images/logo.png" alt="Logo for WebDev Technologies" class="logo">
+    <img src="../assets/img/Logo.png" alt="Logo for WebDev Technologies" class="logo">
     <div class="form-box">
       
       <h2>Login</h2>
@@ -347,16 +304,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="input-container">
           <i class="fa fa-lock"></i>
-          <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+          <input type="password" name="password" id="passwordInput" placeholder="Password" required autocomplete="current-password" style="padding-right: 50px;">
+          <button type="button" id="togglePassword" class="toggle-password" aria-label="Show password" title="Show password">
+                <svg id="iconEye" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg id="iconEyeOff" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                    <path d="M17.94 17.94A10.06 10.06 0 0 1 12 20c-7 0-11-8-11-8a21.84 21.84 0 0 1 5.06-6.16"></path>
+                    <path d="M1 1l22 22"></path>
+                    <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12"></path>
+                </svg>
+            </button>
         </div>
 
         <div class="p"><a href="forgot_password.php"><u>Forgot Password</u></a></div>
 
         <div>
           <button type="submit" class="btn">Login</button>
-        </div>        <div> or </div>
-        <button type="button" class="google-btn"><img src="../company-app/assets/icons/google.png"/> Sign in with Google</button>
-        <p class="switch-link">Don't have an account? <a href="Register.php">Register</a></p>
+        </div>
       </form>
     </div>
     </div>
@@ -369,6 +335,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?= htmlspecialchars($error) ?>
     </div>
   <?php endif; ?>
+  
+  <script>
+    // Password toggle functionality
+    const togglePasswordBtn = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('passwordInput');
+    const iconEye = document.getElementById('iconEye');
+    const iconEyeOff = document.getElementById('iconEyeOff');
+
+    if (togglePasswordBtn) {
+      togglePasswordBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        iconEye.style.display = isPassword ? 'none' : 'block';
+        iconEyeOff.style.display = isPassword ? 'block' : 'none';
+        this.setAttribute('title', isPassword ? 'Hide password' : 'Show password');
+        this.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+      });
+    }
+  </script>
   </body>
   </html>
 

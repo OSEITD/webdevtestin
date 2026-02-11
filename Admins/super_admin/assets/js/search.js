@@ -34,7 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Perform search API call and render results
     async function performSearch(query) {
         try {
-            const response = await fetch(`${adminBaseUrl}/api/search.php?q=${encodeURIComponent(query)}`);
+            const response = await fetch(`${adminBaseUrl}/api/search.php?q=${encodeURIComponent(query)}`, {
+                credentials: 'include'
+            });
             if (!response.ok) throw new Error('Search failed');
             
             const data = await response.json();

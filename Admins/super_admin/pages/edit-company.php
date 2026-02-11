@@ -26,7 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'contact_phone' => $_POST['contact_phone'],
             'address' => $_POST['address'],
             'status' => $_POST['status'],
-            'subdomain' => $_POST['subdomain']
+            'subdomain' => $_POST['subdomain'],
+            'commission' => floatval($_POST['commission'] ?? 0)
         ];
 
         // Update company in Supabase (include query in endpoint to provide WHERE clause)
@@ -107,6 +108,12 @@ require_once '../includes/header.php';
                     </div>
 
                     <div class="form-group">
+                        <label for="commission">Commission (%)</label>
+                        <input type="number" id="commission" name="commission" value="<?php echo htmlspecialchars($company['commission'] ?? 0); ?>" step="0.01" min="0" max="100">
+                        <small class="help-text">Commission percentage for this company</small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="status">Status*</label>
                         <select id="status" name="status" required>
                             <option value="active" <?php echo (($company['status'] ?? '') === 'active') ? 'selected' : ''; ?>>Active</option>
@@ -114,6 +121,7 @@ require_once '../includes/header.php';
                             <option value="inactive" <?php echo (($company['status'] ?? '') === 'inactive') ? 'selected' : ''; ?>>Inactive</option>
                         </select>
                     </div>
+
 
                     <div class="button-group">
                         <button type="button" class="secondary-btn" onclick="window.location.href='view-company.php?id=<?php echo urlencode($companyId); ?>'">

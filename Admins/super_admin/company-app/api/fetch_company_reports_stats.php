@@ -83,11 +83,54 @@ class CompanyReportsStatsAPI {
 
             // Fetch core records (try authenticated then service-role fallback)
             try {
-                $outlets = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getCompanyOutlets($companyId, $token); });
-                $drivers = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getCompanyDrivers($companyId, $token); });
-                $deliveries = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getDeliveries($companyId, $token, []); });
-                $parcels = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getParcels($companyId, $token, []); });
+                $outlets = [];
+                try {
+                    $outlets = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getCompanyOutlets($companyId, $token); });
+                } catch (Exception $e) { error_log("Outlets fetch failed: " . $e->getMessage()); }
+
+                $drivers = [];
+                try {
+                    $drivers = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getCompanyDrivers($companyId, $token); });
+                } catch (Exception $e) { error_log("Drivers fetch failed: " . $e->getMessage()); }
+
+                $deliveries = [];
+                try {
+                    $deliveries = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getDeliveries($companyId, $token, []); });
+                } catch (Exception $e) { 
+                    error_log("Deliveries fetch failed (probably missing table): " . $e->getMessage());
+                    // Try fallback to parcels if deliveries table is missing
+                     try {
+                        $deliveries = $attemptSupabaseCall(function($token) use ($companyId) {
+                             $pData = $this->supabase->getParcels($companyId, $token, []); 
+                             // Map parcels to delivery structure if needed, or just use as is if compatible
+                             return $pData;
+                        });
+                    } catch (Exception $e2) { error_log("Deliveries fallback failed: " . $e2->getMessage()); }
+                }
+
+                $parcels = [];
+                try {
+                    $parcels = $attemptSupabaseCall(function($token) use ($companyId) { return $this->supabase->getParcels($companyId, $token, []); });
+                } catch (Exception $e) { error_log("Parcels fetch failed: " . $e->getMessage()); }
+
+                // Fetch company revenue directly from companies table
+                $companyRevenue = 0.0;
+                try {
+                    $companyData = $attemptSupabaseCall(function($token) use ($companyId) {
+                        return $this->supabase->getWithToken("companies?id=eq.{$companyId}&select=revenue", $token);
+                    });
+                    if (is_array($companyData) && isset($companyData[0]['revenue'])) {
+                        $companyRevenue = floatval($companyData[0]['revenue']);
+                    } elseif (is_object($companyData) && isset($companyData->data) && isset($companyData->data[0]['revenue'])) {
+                        $companyRevenue = floatval($companyData->data[0]['revenue']);
+                    }
+                } catch (Exception $e) {
+                    error_log("Company revenue fetch failed: " . $e->getMessage());
+                }
             } catch (Exception $e) {
+                file_put_contents(__DIR__ . '/debug_revenue_fatal.log', "Fatal error in main fetch block: " . $e->getMessage());
+                // Fallback logic for really catastrophic failures (e.g. auth completely broken)
+                // ... ensure we have variables defined ...
                 // fallback to service-role getRecord to ensure we can still build stats
                 try {
                         $outletsResult = $this->supabase->getRecord("outlets?company_id=eq.{$companyId}&select=*");
@@ -100,9 +143,15 @@ class CompanyReportsStatsAPI {
                             // parcels table uses origin_outlet_id / destination_outlet_id instead of outlet_id
                             $deliveriesResult = $this->supabase->getRecord("parcels?company_id=eq.{$companyId}&select=created_at,delivered_at,driver_id,origin_outlet_id,status", true);
                         }
-                        // Prefer delivery_fee for revenue calculations; include declared_value as a fallback for older schemas
-                        // Also request origin/outlet IDs so we can attribute revenue to outlets in the fallback path
-                        // Some deployments don't have parcels.outlet_id column; attempt the wider select first then fall back safely.
+                        // Fetch payment_transactions for revenue (fallback)
+                        try {
+                             $paymentTransactions = $attemptSupabaseCall(function($token) use ($companyId) {
+                                return $this->supabase->getWithToken("payment_transactions?company_id=eq.{$companyId}&select=net_amount,status", $token);
+                            });
+                        } catch (Exception $ptx) {
+                            error_log('Reports API - payment_transactions fetch failed: ' . $ptx->getMessage());
+                            $paymentTransactions = [];
+                        }
                         try {
                             $parcelsResult = $this->supabase->getRecord("parcels?company_id=eq.{$companyId}&select=delivery_fee,declared_value,status,created_at,delivered_at,origin_outlet_id,outlet_id", true);
                         } catch (Exception $pe) {
@@ -134,7 +183,18 @@ class CompanyReportsStatsAPI {
             // Counts
             $active_outlets = count($outletsArr);
             $active_drivers = count($driversArr);
-            $total_deliveries = count($deliveriesArr);
+            
+            // Total deliveries: count parcels with status = 'Delivered'
+            $total_deliveries = 0;
+            $deliveredParcelIds = [];
+            foreach ($parcelsArr as $p) {
+                $status = isset($p['status']) ? strtolower($p['status']) : '';
+                if ($status === 'delivered') {
+                    $total_deliveries++;
+                    $parcelId = $p['id'] ?? ($p->id ?? null);
+                    if ($parcelId) $deliveredParcelIds[(string)$parcelId] = true;
+                }
+            }
 
             // In-progress deliveries (status not delivered/cancelled)
             $in_progress = 0;
@@ -143,17 +203,8 @@ class CompanyReportsStatsAPI {
                 if ($status !== 'delivered' && $status !== 'cancelled' && $status !== '') $in_progress++;
             }
 
-            // Total revenue: sum ONLY of parcels.delivery_fee (or deliveryFee) to ensure consistency
-            $total_revenue = 0.0;
-            $revenueKeys = ['delivery_fee', 'deliveryFee'];
-            foreach ($parcelsArr as $p) {
-                $val = null;
-                foreach ($revenueKeys as $k) {
-                    if (is_array($p) && array_key_exists($k, $p) && $p[$k] !== null && $p[$k] !== '') { $val = $p[$k]; break; }
-                    if (is_object($p) && property_exists($p, $k) && $p->$k !== null && $p->$k !== '') { $val = $p->$k; break; }
-                }
-                if (is_numeric($val)) $total_revenue += floatval($val);
-            }
+            // Total revenue: use company revenue from companies table
+            $total_revenue = $companyRevenue ?? 0.0;
 
             // Average delivery time (in minutes) computed from deliveries delivered_at - created_at
             $totalMinutes = 0.0; $deliveredCount = 0;

@@ -28,6 +28,7 @@ try {
     ];
     $password = $_POST['password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
+    $commission = floatval($_POST['commission'] ?? 0);
 
     // Step 2: Validate required fields
     $requiredFields = ['company_name', 'subdomain', 'contact_person', 'contact_email', 'contact_phone', 'address', 'password', 'confirm_password'];
@@ -84,6 +85,7 @@ try {
         'status' => $companyData['status'],
         'created_at' => $companyData['created_at'],
         'manager_id' => $userId,
+        'commission' => $commission
     ];
     $companyResult = callSupabaseWithServiceKey('companies', 'POST', $companyRow);
 

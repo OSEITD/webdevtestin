@@ -109,15 +109,15 @@ try {
         $parcels = safeSupabaseFetch('parcels', 'GET', ['select' => 'id,created_at,delivery_date,status']);
         
         if (is_array($parcels)) {
-            $totalParcels = count($parcels);
-            $stats['delivery']['total'] = $totalParcels;
-
-            // Count delivered
+            // Count only delivered parcels for total deliveries
             $delivered = array_filter($parcels, function ($p) {
                 return isset($p['status']) && strtolower($p['status']) === 'delivered';
             });
             $deliveredCount = count($delivered);
-
+            
+            $stats['delivery']['total'] = $deliveredCount;
+            
+            $totalParcels = count($parcels);
             $stats['delivery']['success_rate'] = $totalParcels > 0 ? round(($deliveredCount / $totalParcels) * 100, 1) : 0.0;
 
             // Average delivery time in hours (only for parcels with valid timestamps)
@@ -139,47 +139,37 @@ try {
         error_log("Error processing parcels: " . $e->getMessage());
     }
 
-    // 2. Revenue: Fetch from payment_transactions with service key
-    error_log('get_report_stats.php: Fetching payment_transactions for revenue using service key');
+    // 2. Revenue: Fetch from companies table
+    error_log('get_report_stats.php: Fetching companies for revenue calculation');
     try {
         $totalRevenue = 0.0;
         $thisMonthRevenue = 0.0;
         $lastMonthRevenue = 0.0;
-        $currentMonth = date('Y-m');
-        $lastMonth = date('Y-m', strtotime('-1 month'));
 
-        // Fetch all transactions and sum total_amount in PHP (PostgREST aggregate doesn't work well)
-        try {
-            $transactions = callSupabaseWithServiceKey('payment_transactions', 'GET', ['select' => 'total_amount,created_at', 'limit' => 5000]);
+        // Fetch companies and sum revenue for active companies
+        $companies = safeSupabaseFetch('companies', 'GET', ['select' => 'id,revenue,status,created_at']);
 
-            if (is_array($transactions)) {
-                error_log('Payment transactions fetched: ' . count($transactions) . ' rows');
-                
-                foreach ($transactions as $t) {
-                    if (isset($t['total_amount']) && $t['total_amount'] !== null && $t['total_amount'] !== '') {
-                        $amt = floatval($t['total_amount']);
-                        $totalRevenue += $amt;
-                        
-                        if (!empty($t['created_at'])) {
-                            $month = date('Y-m', strtotime($t['created_at']));
-                            if ($month === $currentMonth) $thisMonthRevenue += $amt;
-                            if ($month === $lastMonth) $lastMonthRevenue += $amt;
-                        }
+        if (is_array($companies)) {
+            error_log('Companies fetched: ' . count($companies) . ' rows');
+            
+            foreach ($companies as $company) {
+                if (isset($company['status']) && $company['status'] === 'active') {
+                    if (isset($company['revenue']) && $company['revenue'] !== null && $company['revenue'] !== '') {
+                        $revenue = floatval($company['revenue']);
+                        $totalRevenue += $revenue;
                     }
                 }
-                error_log('Service row-sum totalRevenue: ' . $totalRevenue . ' (rows counted: ' . count($transactions) . ')');
-            } else {
-                error_log('Service row fetch returned non-array or empty');
             }
-        } catch (Exception $e) {
-            error_log('Service row fetch exception: ' . $e->getMessage());
+            error_log('Total revenue from active companies: ' . $totalRevenue);
+        } else {
+            error_log('Companies fetch returned non-array or empty');
         }
 
         $stats['revenue']['total_revenue'] = round($totalRevenue, 2);
-        $stats['revenue']['monthly_growth'] = $lastMonthRevenue > 0 ? round((($thisMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1) : 0.0;
+        $stats['revenue']['monthly_growth'] = 0.0; // Monthly growth calculation can be added later
 
     } catch (Exception $e) {
-        error_log('Error fetching payment_transactions for revenue: ' . $e->getMessage());
+        error_log('Error fetching companies for revenue: ' . $e->getMessage());
     }
 
     // 3. Users

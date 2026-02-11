@@ -51,6 +51,8 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- External CSS file -->
     <link rel="stylesheet" href="../assets/css/company.css">
+    <!-- PWA Manifest - Pointing to super_admin root -->
+    <link rel="manifest" href="../../manifest.json">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <script>
@@ -58,10 +60,23 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
         window.APP_CONFIG = window.APP_CONFIG || {};
         window.APP_CONFIG.currency = '<?php echo htmlspecialchars($appCurrency, ENT_QUOTES); ?>';
         window.APP_CONFIG.currency_symbol = '<?php echo htmlspecialchars($appCurrencySymbol, ENT_QUOTES); ?>';
+
+        // Register Service Worker for PWA - Pointing to super_admin root
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../../service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
     </script>
     <div class="mobile-dashboard">
         <!-- Top Header Bar -->
-           <header class="top-header">
+        <header class="top-header">
             <div class="header-content">
 <img src="../assets/images/Logo.png" alt="WebDev" class="app-logo">
                 <div class="header-search">

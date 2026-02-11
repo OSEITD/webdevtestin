@@ -1,3 +1,23 @@
 .env
 
 vapid-keys.txt
+# Log files
+*.log
+logs/
+**/logs/
+error.log
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache and temp
+cache/
+**/cache/
+*.cache

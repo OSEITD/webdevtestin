@@ -408,6 +408,24 @@ class SupabaseClient {
     }
 
     /**
+     * Delete a record or set of records
+     */
+    public function delete($endpoint, $accessToken = null) {
+        $url = "{$this->supabaseUrl}/rest/v1/{$endpoint}";
+        
+        // If access token is provided, use it. Otherwise fall back to service key or anon key
+        if ($accessToken) {
+             $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        } else {
+             $authKey = $this->serviceRoleKey ?: $this->supabaseKey;
+             $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
+        }
+        
+        $response = $this->makeRequest('DELETE', $url, null, $headers);
+        return $this->parseResponse($response);
+    }
+
+    /**
      * Get records from any table using an access token (session user)
      * This is useful for server-side endpoints that should query Supabase
      * using the currently authenticated user's JWT (respecting RLS).

@@ -80,11 +80,12 @@ try {
 
     $supabase = new SupabaseClient();
 
-    // Try to reuse logic - fetch outlets, drivers, deliveries, parcels
+    // Try to reuse logic - fetch outlets, drivers, deliveries, parcels, and payment_transactions
     $outlets = [];
     $drivers = [];
     $deliveries = [];
     $parcels = [];
+    $paymentTransactions = [];
 
     try {
         $outlets = $supabase->getCompanyOutlets($companyId, $accessToken);
@@ -101,6 +102,19 @@ try {
         }
         error_log('generate_company_report: parcelFilters before getParcels: ' . print_r($parcelFilters, true));
         $parcels = $supabase->getParcels($companyId, $accessToken, $parcelFilters);
+
+        // Fetch company revenue directly from companies table
+        $companyRevenue = 0.0;
+        try {
+            $companyData = $supabase->getWithToken("companies?id=eq.{$companyId}&select=revenue", $accessToken);
+            if (is_array($companyData) && isset($companyData[0]['revenue'])) {
+                $companyRevenue = floatval($companyData[0]['revenue']);
+            } elseif (is_object($companyData) && isset($companyData->data) && isset($companyData->data[0]['revenue'])) {
+                $companyRevenue = floatval($companyData->data[0]['revenue']);
+            }
+        } catch (Exception $e) {
+            error_log("Company revenue fetch failed in PDF generator: " . $e->getMessage());
+        }
     } catch (Exception $e) {
         // fallback to getRecord style queries (service role via client)
         try {
@@ -162,12 +176,12 @@ try {
             if (!empty($outletFilter) && $outletFilter !== 'all') {
                 $cid = rawurlencode($companyId);
                 $oid = rawurlencode($outletFilter);
-                $endpointParRec = "parcels?company_id=eq.{$cid}&or=(origin_outlet_id.eq.{$oid},outlet_id.eq.{$oid})&select=delivery_fee,status,created_at,delivered_at" . $dateQuery;
+                $endpointParRec = "parcels?company_id=eq.{$cid}&or=(origin_outlet_id.eq.{$oid},outlet_id.eq.{$oid})&select=id,delivery_fee,status,created_at,delivered_at" . $dateQuery;
                 error_log('generate_company_report: parcels revenue endpoint: ' . $endpointParRec);
                 $parRec = $supabase->getRecord($endpointParRec, true);
             } else {
                 $cid = rawurlencode($companyId);
-                $endpointParRec = "parcels?company_id=eq.{$cid}&select=delivery_fee,status,created_at,delivered_at" . $dateQuery;
+                $endpointParRec = "parcels?company_id=eq.{$cid}&select=id,delivery_fee,status,created_at,delivered_at" . $dateQuery;
                 error_log('generate_company_report: parcels revenue endpoint: ' . $endpointParRec);
                 $parRec = $supabase->getRecord($endpointParRec, true);
             }
@@ -176,6 +190,22 @@ try {
             $drivers = is_object($drvRec) && isset($drvRec->data) ? $drvRec->data : ($drvRec ?? []);
             $parcels = is_object($parRec) && isset($parRec->data) ? $parRec->data : ($parRec ?? []);
             // $deliveries already set above
+
+            // Fetch company revenue (already fetched above, but ensure it's available in fallback)
+            if (!isset($companyRevenue)) {
+                $companyRevenue = 0.0;
+                try {
+                    $cid = rawurlencode($companyId);
+                    $cRec = $supabase->getWithToken("companies?id=eq.{$cid}&select=revenue", $accessToken);
+                    if (is_array($cRec) && isset($cRec[0]['revenue'])) {
+                        $companyRevenue = floatval($cRec[0]['revenue']);
+                    } elseif (is_object($cRec) && isset($cRec->data) && isset($cRec->data[0]['revenue'])) {
+                        $companyRevenue = floatval($cRec->data[0]['revenue']);
+                    }
+                } catch (Exception $crEx) {
+                    error_log('Report generator: company revenue fetch failed: ' . $crEx->getMessage());
+                }
+            }
         } catch (Exception $e2) {
             throw new Exception('Failed to fetch data for report: ' . $e2->getMessage());
         }
@@ -190,13 +220,21 @@ try {
     // Build summary stats (similar to fetch_company_reports_stats)
     $active_outlets = count($outletsArr);
     $active_drivers = count($driversArr);
-    $total_deliveries = count($deliveriesArr);
 
-    $total_revenue = 0.0;
+    // Total deliveries: count parcels with status = 'Delivered'
+    $total_deliveries = 0;
+    $deliveredParcelIds = [];
     foreach ($parcelsArr as $p) {
-        $val = $p['delivery_fee'] ?? $p['deliveryfee'] ?? null;
-        if (is_numeric($val)) $total_revenue += floatval($val);
+        $status = isset($p['status']) ? strtolower($p['status']) : '';
+        if ($status === 'delivered') {
+            $total_deliveries++;
+            $parcelId = $p['id'] ?? ($p->id ?? null);
+            if ($parcelId) $deliveredParcelIds[(string)$parcelId] = true;
+        }
     }
+
+    // Total revenue: use company revenue from companies table
+    $total_revenue = $companyRevenue ?? 0.0;
 
     $totalMinutes = 0.0; $deliveredCount = 0;
     foreach ($deliveriesArr as $d) {
@@ -226,8 +264,13 @@ try {
     }
 
     // Compose HTML for PDF
-    $logoPath = __DIR__ . '/../assets/images/Logo.png';
-    $logoUrl = (file_exists($logoPath)) ? realpath($logoPath) : null;
+    $logoPath = __DIR__ . '/../../assets/img/Logo.png';
+    $logoUrl = null;
+    if (file_exists($logoPath)) {
+        // Convert image to base64 data URI for mPDF compatibility
+        $imageData = base64_encode(file_get_contents($logoPath));
+        $logoUrl = 'data:image/png;base64,' . $imageData;
+    }
 
     $html = '<!doctype html><html><head><meta charset="utf-8"><style>';
     $html .= 'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px} .header{display:flex;align-items:center;gap:12px} .logo{height:60px} h1{font-size:20px;margin:0} .summary{display:flex;gap:12px;margin-top:12px} .card{background:#f7f7f7;padding:12px;border-radius:6px;flex:1} table{width:100%;border-collapse:collapse;margin-top:12px} th,td{border:1px solid #e1e1e1;padding:8px;text-align:left} th{background:#fafafa}';

@@ -23,12 +23,12 @@ require_once '../includes/header.php';
                     
                 </div>
                 <div class="stat-card">
-                    <p class="label">Total Deliveries</p>
+                    <p class="label">Total Parcels</p>
                     <p class="value" id="statTotalDeliveries">—</p>
                    
                 </div>
                 <div class="stat-card">
-                    <p class="label">Deliveries In Progress</p>
+                    <p class="label">Parcels In Progress</p>
                     <p class="value" id="statInProgress">—</p>
             
                 </div>
@@ -72,14 +72,6 @@ require_once '../includes/header.php';
                                 <option value="">Filter By Outlet</option>
                                 <option value="">All Outlets</option>
                                 <!-- real outlet options will be populated dynamically if available -->
-                            </select>
-                        </div>
-                        <div class="filter-dropdown" style="width: auto;">
-                            <select id="earningsFilterService">
-                                <option value="">Filter By Service Type</option>
-                                <option value="">All Services</option>
-                                <option value="standard">Standard</option>
-                                <option value="express">Express</option>
                             </select>
                         </div>
                 </div>
@@ -240,31 +232,61 @@ require_once '../includes/header.php';
             // Re-load charts when earnings filters change
             const outletSel = document.getElementById('earningsFilterOutlet');
             const serviceSel = document.getElementById('earningsFilterService');
-            if (outletSel) outletSel.addEventListener('change', loadDashboardCharts);
-            if (serviceSel) serviceSel.addEventListener('change', loadDashboardCharts);
+            if (outletSel) {
+                outletSel.addEventListener('change', function() {
+                    console.log('Outlet filter changed to:', this.value);
+                    loadDashboardCharts();
+                });
+            }
+            if (serviceSel) {
+                serviceSel.addEventListener('change', function() {
+                    console.log('Service filter changed to:', this.value);
+                    loadDashboardCharts();
+                });
+            }
 
             // Attempt to populate outlet options from /api/fetch_company_outlets.php
             try {
                 fetch('../api/fetch_company_outlets.php')
-                    .then(r => r.ok ? r.json() : null)
+                    .then(r => {
+                        if (!r.ok) throw new Error('Response not ok: ' + r.status);
+                        return r.json();
+                    })
                     .then(j => {
-                        if (!j) return;
-                        const rows = Array.isArray(j) ? j : (Array.isArray(j.data) ? j.data : null);
-                        if (!rows || rows.length === 0) return;
+                        if (!j) {
+                            console.warn('No outlets returned from API');
+                            return;
+                        }
+                        const rows = Array.isArray(j) ? j : (Array.isArray(j.data) ? j.data : (Array.isArray(j.outlets) ? j.outlets : null));
+                        if (!rows || rows.length === 0) {
+                            console.warn('No outlet rows found');
+                            return;
+                        }
                         const sel = document.getElementById('earningsFilterOutlet');
-                        if (!sel) return;
-                        // preserve first placeholder option
-                        const placeholder = sel.options[0];
+                        if (!sel) {
+                            console.warn('Outlet select element not found');
+                            return;
+                        }
+                        // preserve first two placeholder options
+                        const firstOption = sel.options[0]; // Filter By Outlet
+                        const secondOption = sel.options[1]; // All Outlets
                         sel.innerHTML = '';
-                        if (placeholder) sel.appendChild(placeholder);
+                        if (firstOption) sel.appendChild(firstOption);
+                        if (secondOption) sel.appendChild(secondOption);
+                        
                         rows.forEach(o => {
                             const opt = document.createElement('option');
-                            opt.value = o.id || o.outlet_id || o.id;
-                            opt.textContent = o.outlet_name || o.name || o.display_name || (o.address ?? o.id);
+                            opt.value = o.id || o.outlet_id;
+                            opt.textContent = o.outlet_name || o.name || o.display_name || (o.address ?? (o.id || o.outlet_id));
                             sel.appendChild(opt);
                         });
-                    }).catch(()=>{});
-            } catch (e) {}
+                        console.log('Populated ' + rows.length + ' outlets');
+                    }).catch((err) => {
+                        console.error('Failed to load outlets:', err);
+                    });
+            } catch (e) {
+                console.error('Exception loading outlets:', e);
+            }
         });
     </script>
 

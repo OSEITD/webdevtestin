@@ -16,14 +16,12 @@ require_once '../includes/header.php';
 
             <!-- Settings Tabs -->
             <div class="settings-tabs">
-                <button class="tab-btn" data-tab="profile">Profile</button>
-                <button class="tab-btn active" data-tab="general">General</button>
-                <button class="tab-btn" data-tab="notifications">Notifications</button>
-                <button class="tab-btn" data-tab="security">Security</button>
+                <button class="tab-btn active" data-tab="profile">Profile</button>
+                <button class="tab-btn" data-tab="general">General</button>
             </div>
 
             <!-- Profile Settings -->
-            <div class="settings-tab-content" id="profile">
+            <div class="settings-tab-content active" id="profile">
                 <div class="settings-card">
                     <h3><i class="fas fa-user"></i> Your Profile</h3>
                     <div class="form-group">
@@ -50,12 +48,30 @@ require_once '../includes/header.php';
                     <button id="saveProfileBtn" class="save-btn">Save Profile</button>
                     <div id="profileMsg" style="margin-top:8px;color:#666;font-size:0.95rem"></div>
                 </div>
+
+                <div class="settings-card">
+                    <h3><i class="fas fa-lock"></i> Password</h3>
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input id="currentPassword" type="password" placeholder="Enter current password">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input id="newPassword" type="password" placeholder="Enter new password">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <input id="confirmNewPassword" type="password" placeholder="Confirm new password">
+                    </div>
+                    <button id="updatePasswordBtn" class="save-btn">Update Password</button>
+                    <div id="passwordMsg" style="margin-top:8px;color:#666;font-size:0.95rem"></div>
+                </div>
             </div>
 
             <!-- General Settings -->
-            <div class="settings-tab-content active" id="general">
+            <div class="settings-tab-content" id="general">
                 <div class="settings-card">
-                    <h3><i class="fas fa-user-cog"></i> Profile</h3>
+                    <h3><i class="fas fa-user-cog"></i> Company</h3>
                     <div class="form-group">
                         <label>Company Name</label>
                         <input id="companyName" type="text" value="WebDev Technologies" placeholder="Enter company name">
@@ -71,10 +87,7 @@ require_once '../includes/header.php';
                     </div>
                     <button id="saveCompanyBtn" class="save-btn">Save Changes</button>
                 </div>
-            </div>
 
-            <!-- Notifications Settings -->
-            <div class="settings-tab-content" id="notifications">
                 <div class="settings-card">
                     <h3><i class="fas fa-bell"></i> Alerts</h3>
                     <div class="toggle-group">
@@ -103,27 +116,6 @@ require_once '../includes/header.php';
             </div>
 
             <!-- Keyboard Shortcuts Settings -->
-    
-            <!-- Security Settings -->
-            <div class="settings-tab-content" id="security">
-                <div class="settings-card">
-                    <h3><i class="fas fa-lock"></i> Password</h3>
-                    <div class="form-group">
-                        <label>Current Password</label>
-                        <input id="currentPassword" type="password" placeholder="Enter current password">
-                    </div>
-                    <div class="form-group">
-                        <label>New Password</label>
-                        <input id="newPassword" type="password" placeholder="Enter new password">
-                    </div>
-                    <div class="form-group">
-                        <label>Confirm New Password</label>
-                        <input id="confirmNewPassword" type="password" placeholder="Confirm new password">
-                    </div>
-                    <button id="updatePasswordBtn" class="save-btn">Update Password</button>
-                    <div id="passwordMsg" style="margin-top:8px;color:#666;font-size:0.95rem"></div>
-                </div>
-            </div>
         </main>
     </div>
 

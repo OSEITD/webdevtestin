@@ -450,15 +450,29 @@ require_once '../includes/header.php';
                     // Get the PDF blob
                     const blob = await response.blob();
                     
-                    // Create a download link
+                    // Create a URL for the blob
                     const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `report_${reportType}_${new Date().getTime()}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
+                    
+                    // Open PDF in a new tab for preview
+                    const previewWindow = window.open(url, '_blank');
+                    
+                    // If popup was blocked, fallback to download
+                    if (!previewWindow) {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `report_${reportType}_${new Date().getTime()}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        showMessageBox('Popup blocked. Report downloaded instead.');
+                    } else {
+                        showMessageBox('Report opened in new tab for preview. You can download it from there.');
+                    }
+                    
+                    // Cleanup URL after a delay to allow viewing
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
                 } else {
                     // Handle error response
                     const text = await response.text();

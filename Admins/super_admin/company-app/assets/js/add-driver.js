@@ -1,7 +1,7 @@
 async function handleAddDriver(event) {
     event.preventDefault();
     console.log('Form submission started');
-    
+
     // Get form elements
     const formElements = {
         driverName: document.getElementById('driverName'),
@@ -79,16 +79,17 @@ async function handleAddDriver(event) {
         // Disable submit button while processing
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
-        
+
         // Send data to API
-        const response = await fetch('api/add_driver.php', {
+        const response = await fetch('../api/add_driver.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include',
             body: JSON.stringify(formData)
         });
-        
+
         let result;
         try {
             result = await response.json();
@@ -96,7 +97,7 @@ async function handleAddDriver(event) {
             console.error('Failed to parse JSON response:', e);
             throw new Error('Server returned invalid response. Please try again.');
         }
-        
+
         console.log('API Response:', result);
 
         if (result.success === true) {
@@ -106,19 +107,19 @@ async function handleAddDriver(event) {
             window.location.href = 'drivers.php';
             return;
         }
-        
+
         // If we get here, there was an error
         throw new Error(result.error || 'Failed to add driver');
-        
+
     } catch (error) {
         console.error('Error:', error);
         alert(error.message || 'An unexpected error occurred. Please try again.');
-        
+
         // Re-enable submit button
         submitBtn.disabled = false;
         submitBtn.textContent = 'Save';
     }
-    
+
     return false;
 }
 

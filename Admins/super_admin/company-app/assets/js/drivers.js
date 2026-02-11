@@ -158,7 +158,9 @@ async function fetchDrivers() {
             errorMessage.style.display = 'none';
         }
         
-        const response = await fetch('api/fetch_drivers.php');
+        const response = await fetch('../api/fetch_drivers.php', {
+            credentials: 'include'
+        });
         if (!response.ok) {
             const result = await response.json();
             throw new Error(result.error || `HTTP error ${response.status}`);

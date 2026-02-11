@@ -59,7 +59,9 @@ class NotificationSystem {
             // Use a page-relative path so this works whether the app is served from
             // a subfolder (e.g. /WDParcelSendReceiverPWA/) or root. The notifications
             // page lives in company-app/pages/, so the API is at ../api/fetch_notifications.php
-            const res = await fetch('../api/fetch_notifications.php');
+            const res = await fetch('../api/fetch_notifications.php', {
+                credentials: 'include'
+            });
             if (!res.ok) {
                 throw new Error('Network response was not ok: ' + res.status + ' ' + res.statusText);
             }

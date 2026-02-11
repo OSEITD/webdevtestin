@@ -21,7 +21,7 @@ try {
     
     // Get users with their active status
     $users = callSupabaseWithServiceKey('all_users', 'GET', [
-        'select' => 'id,is_active'
+        'select' => 'id,status'
     ]);
     
     if (!is_array($users)) {
@@ -30,7 +30,7 @@ try {
     }
     
     $activeUsers = array_filter($users, function($user) {
-        return isset($user['is_active']) && $user['is_active'] === true;
+        return isset($user['status']) && $user['status'] === 'active';
     });
     
     echo json_encode([

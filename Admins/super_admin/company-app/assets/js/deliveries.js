@@ -64,7 +64,9 @@ async function loadDrivers() {
     const select = document.getElementById('filterDriver');
     if (!select) return;
     try {
-        const resp = await fetch('../api/fetch_drivers.php');
+        const resp = await fetch('../api/fetch_drivers.php', {
+            credentials: 'include'
+        });
         if (!resp.ok) throw new Error('Failed to fetch drivers');
         const json = await resp.json();
         if (!json.success) throw new Error(json.error || 'API error');
@@ -84,7 +86,9 @@ async function loadOutlets() {
     const select = document.getElementById('filterOutlet');
     if (!select) return;
     try {
-        const resp = await fetch('../api/fetch_outlets.php');
+        const resp = await fetch('../api/fetch_outlets.php', {
+            credentials: 'include'
+        });
         if (!resp.ok) throw new Error('Failed to fetch outlets');
         const json = await resp.json();
         if (!json.success) throw new Error(json.error || 'API error');
@@ -252,7 +256,9 @@ async function fetchParcelsWithFilters() {
         if (params.toString()) url += '?' + params.toString();
 
         console.log('Fetching from URL:', url);
-        response = await fetch(url);
+        response = await fetch(url, {
+            credentials: 'include'
+        });
         
         // Log response headers for debugging
         console.log('Response headers:', {
@@ -337,7 +343,9 @@ async function viewParcelDetails(parcelId) {
     if (!parcelId) return;
 
     try {
-        const response = await fetch(`../api/fetch_parcel_details.php?id=${encodeURIComponent(parcelId)}`);
+        const response = await fetch(`../api/fetch_parcel_details.php?id=${encodeURIComponent(parcelId)}`, {
+            credentials: 'include'
+        });
         const result = await response.json();
 
         if (!result.success) {

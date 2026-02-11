@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function handleAddVehicle(event) {
     event.preventDefault();
     console.log('Form submission started');
-    
+
     // Get form elements
     const formElements = {
         name: document.getElementById('name'),
@@ -62,16 +62,17 @@ async function handleAddVehicle(event) {
         // Disable submit button while processing
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-        
+
         // Send data to API
-        const response = await fetch('api/add_vehicle.php', {
+        const response = await fetch('../api/add_vehicle.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include',
             body: JSON.stringify(formData)
         });
-        
+
         let result;
         try {
             result = await response.json();
@@ -79,7 +80,7 @@ async function handleAddVehicle(event) {
             console.error('Failed to parse JSON response:', e);
             throw new Error('Server returned invalid response. Please try again.');
         }
-        
+
         console.log('API Response:', result);
 
         if (result.success === true) {
@@ -88,18 +89,18 @@ async function handleAddVehicle(event) {
             window.location.href = 'company-vehicles.php';
             return;
         }
-        
+
         // If we get here, there was an error
         throw new Error(result.error || 'Failed to add vehicle');
-        
+
     } catch (error) {
         console.error('Error:', error);
         alert(error.message || 'An unexpected error occurred. Please try again.');
-        
+
         // Re-enable submit button
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Vehicle';
     }
-    
+
     return false;
 }

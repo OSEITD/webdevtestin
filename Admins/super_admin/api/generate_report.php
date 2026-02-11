@@ -379,11 +379,15 @@ function generateDeliveryReport($startDate, $endDate) {
         $completedDeliveries = array_filter($deliveries, function($delivery) {
             return isset($delivery['status']) && strtolower($delivery['status']) === 'delivered';
         });
+        
+        $totalParcels = count($deliveries);
+        $deliveredCount = count($completedDeliveries);
 
         $stats = [
-            'total_deliveries' => count($deliveries),
-            'completed_deliveries' => count($completedDeliveries),
-            'pending_deliveries' => count($deliveries) - count($completedDeliveries),
+            'total_deliveries' => $deliveredCount,  // Only count delivered parcels
+            'completed_deliveries' => $deliveredCount,
+            'pending_deliveries' => $totalParcels - $deliveredCount,
+            'all_parcels' => $totalParcels,  // Total parcels including non-delivered
             'period' => [
                 'start' => $startDate,
                 'end' => $endDate
@@ -402,40 +406,41 @@ function generateDeliveryReport($startDate, $endDate) {
 
 function generateRevenueReport($startDate, $endDate) {
     try {
-        // Fetch transactions from payment_transactions table with date range
-        $query = "payment_transactions?select=*&created_at=gte.{$startDate}&created_at=lte.{$endDate}";
-        $transactions = callSupabaseWithServiceKey($query, 'GET', []);
+        // Fetch companies and calculate revenue from active companies
+        $query = "companies?select=id,company_name,revenue,status,created_at";
+        $companies = callSupabase($query);
 
-        if (!is_array($transactions)) {
-            throw new Exception('Failed to fetch payment transaction data');
+        if (!is_array($companies)) {
+            throw new Exception('Failed to fetch company data');
         }
 
-        $total = 0;
-        $transactionCount = 0;
+        $totalRevenue = 0;
+        $companyCount = 0;
+        $activeCompanyData = [];
 
-        // Sum total_amount from all transactions
-        foreach ($transactions as $transaction) {
-            if (isset($transaction['total_amount']) && $transaction['total_amount'] !== null) {
-                $total += floatval($transaction['total_amount']);
-                $transactionCount++;
+        // Sum revenue from active companies
+        foreach ($companies as $company) {
+            if (isset($company['status']) && $company['status'] === 'active') {
+                if (isset($company['revenue']) && $company['revenue'] !== null) {
+                    $revenue = floatval($company['revenue']);
+                    $totalRevenue += $revenue;
+                    $companyCount++;
+                    
+                    // Store for detailed report
+                    $activeCompanyData[] = [
+                        'company_name' => $company['company_name'] ?? 'Unknown',
+                        'revenue' => $revenue,
+                        'status' => $company['status']
+                    ];
+                }
             }
         }
 
-        // Remove Lenco-related fields from report display
-        $filteredTransactions = array_map(function($t) {
-            $filtered = $t;
-            unset($filtered['lenco_tx_id']);
-            unset($filtered['lenco_tx_ref']);
-            unset($filtered['Lenco Tx Id']);
-            unset($filtered['Lenco Tx Ref']);
-            return $filtered;
-        }, $transactions);
-
         $stats = [
-            'total_revenue' => round($total, 2),
-            'total_transactions' => count($transactions),
-            'transactions_with_amount' => $transactionCount,
-            'average_transaction' => $transactionCount > 0 ? round($total / $transactionCount, 2) : 0,
+            'total_revenue' => round($totalRevenue, 2),
+            'total_companies' => count($companies),
+            'active_companies' => $companyCount,
+            'average_revenue_per_company' => $companyCount > 0 ? round($totalRevenue / $companyCount, 2) : 0,
             'period' => [
                 'start' => $startDate,
                 'end' => $endDate
@@ -444,7 +449,7 @@ function generateRevenueReport($startDate, $endDate) {
 
         return [
             'statistics' => $stats,
-            'data' => $filteredTransactions
+            'data' => $activeCompanyData
         ];
     } catch (Exception $e) {
         error_log("Error generating revenue report: " . $e->getMessage());

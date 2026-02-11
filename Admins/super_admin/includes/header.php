@@ -27,10 +27,31 @@ $adminBaseUrl = '..';
     <link rel="stylesheet" href="<?php echo $adminBaseUrl; ?>/assets/css/dashboard-improvements.css">
     <link rel="stylesheet" href="<?php echo $adminBaseUrl; ?>/assets/css/view-details.css">
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="<?php echo $adminBaseUrl; ?>/manifest.json">
+    <meta name="theme-color" content="#2e0b3f">
+    <link rel="apple-touch-icon" href="<?php echo $adminBaseUrl; ?>/assets/images/icon-192x192.png">
+    
     <!-- Core scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="<?php echo $adminBaseUrl; ?>/assets/js/admin-scripts.js" defer></script>
     <script src="<?php echo $adminBaseUrl; ?>/assets/js/search.js" defer></script>
+    
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swPath = '<?php echo $adminBaseUrl; ?>/service-worker.js';
+                navigator.serviceWorker.register(swPath)
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
     
     <title><?php echo $pageTitle ?? 'Admin Dashboard'; ?></title>
 </head>
@@ -63,11 +84,14 @@ $adminBaseUrl = '..';
 
 <?php include 'sidebar.php'; ?>
     <!-- Temporary debug status (visible on page for troubleshooting) -->
+    <!-- Temporary debug status (visible on page for troubleshooting) -->
+    <!--
     <div id="debugStatus" style="position:fixed;bottom:10px;right:10px;z-index:2000;background:rgba(0,0,0,0.75);color:#fff;padding:8px 12px;border-radius:6px;font-size:0.85rem;display:none;max-width:320px;">
         <strong style="display:block;margin-bottom:6px;">Debug</strong>
         <pre id="debugStatusContent" style="white-space:pre-wrap;margin:0;font-size:0.85rem;"></pre>
         <div style="margin-top:6px;text-align:right;"><button id="debugCloseBtn" style="background:transparent;border:1px solid #fff;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;">Close</button></div>
     </div>
+    -->
 
     <script>
         (function(){

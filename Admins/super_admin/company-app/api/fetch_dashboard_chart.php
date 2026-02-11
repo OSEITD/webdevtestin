@@ -96,7 +96,10 @@ class DashboardChartAPI {
                     // service role fallback
                     $svc = new SupabaseClient();
                     $query = "parcels?company_id=eq.{$companyId}&select=created_at,delivery_fee,fee,amount,price";
-                    if (!empty($outletFilter)) $query .= "&outlet_id=eq.{$outletFilter}";
+                    if (!empty($outletFilter)) {
+                        // Use origin_outlet_id since that's the correct field in parcels table
+                        $query .= "&or=(origin_outlet_id.eq.{$outletFilter},outlet_id.eq.{$outletFilter})";
+                    }
                     if (!empty($serviceFilter)) $query .= "&service_type=eq.{$serviceFilter}";
                     $res = $svc->getRecord($query, true);
                     if (is_object($res) && isset($res->data)) return $res->data;
