@@ -236,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $_SESSION['user_fullname'] = $profile['full_name'];
           $_SESSION['role'] = $userRole;
           $_SESSION['id'] = $company['id']; // Using company's actual id
-          $_SESSION['company_name'] = $company['name'];
+          $_SESSION['company_name'] = $company['company_name'];
           $_SESSION['access_token'] = $accessToken;
           if ($refreshToken) {
             $_SESSION['refresh_token'] = $refreshToken;

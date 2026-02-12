@@ -624,26 +624,236 @@ body {
 }
 
 /* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+/* Tablet and below (768px) */
 @media (max-width: 768px) {
+    /* Header adjustments */
+    .header-search {
+        max-width: 400px;
+    }
+    
     .header-icons .search-btn {
         display: none;
     }
+    
+    /* Filter bar */
     .filter-bar {
         flex-direction: column;
         align-items: stretch;
+        padding: 15px;
+        gap: 12px;
     }
+    
     .filter-dropdown {
         width: 100%;
     }
+    
+    /* Main content */
+    .main-content {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 70px;
+    }
+    
+    .content-header h1 {
+        font-size: 24px;
+    }
+    
+    /* Dashboard grid */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    /* Tables - reduce padding */
     .data-table th, .data-table td {
         padding: 12px 15px;
-    }
-    .data-table {
         font-size: 13px;
     }
+    
     .status-badge {
         font-size: 10px;
         padding: 3px 8px;
+    }
+    
+    /* Touch-friendly buttons */
+    .action-link {
+        padding: 8px 12px;
+        display: inline-block;
+        margin-bottom: 4px;
+    }
+    
+    .add-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+    
+    .icon-btn {
+        width: 44px;
+        height: 44px;
+    }
+    
+    /* Stat cards */
+    .stat-card {
+        padding: 20px;
+    }
+    
+    .stat-card .value {
+        font-size: 24px;
+    }
+}
+
+/* Mobile landscape and small tablets (640px) */
+@media (max-width: 640px) {
+    /* Typography scaling */
+    html {
+        font-size: 15px;
+    }
+    
+    .content-header h1 {
+        font-size: 22px;
+    }
+    
+    /* Dashboard grid - single column */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .earnings-summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Tables - Card layout for mobile */
+    .data-table {
+        border: 0;
+        box-shadow: none;
+    }
+    
+    .data-table thead {
+        display: none;
+    }
+    
+    .data-table tbody {
+        display: block;
+    }
+    
+    .data-table tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .data-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        text-align: right;
+    }
+    
+    .data-table td:last-child {
+        border-bottom: none;
+    }
+    
+    .data-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-primary);
+        text-align: left;
+        flex: 1;
+    }
+    
+    /* Action links in mobile cards */
+    .data-table td:last-child {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }
+    
+    .data-table td:last-child::before {
+        display: none;
+    }
+}
+
+/* Mobile portrait (480px) */
+@media (max-width: 480px) {
+    /* Hide header search on very small screens */
+    .header-search {
+        display: none;
+    }
+    
+    /* Smaller logo */
+    .app-logo {
+        height: 24px;
+    }
+    
+    /* Reduce header padding */
+    .top-header {
+        padding: 10px 12px;
+    }
+    
+    .header-content {
+        gap: 10px;
+    }
+    
+    /* Typography */
+    html {
+        font-size: 14px;
+    }
+    
+    .content-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .content-header h1 {
+        font-size: 20px;
+    }
+    
+    /* Main content */
+    .main-content {
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-top: 65px;
+    }
+    
+    /* Stat cards */
+    .stat-card {
+        padding: 16px;
+    }
+    
+    .stat-card .value {
+        font-size: 22px;
+    }
+    
+    .stat-card .label {
+        font-size: 14px;
+    }
+    
+    /* Buttons */
+    .add-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Filter bar */
+    .filter-bar {
+        padding: 12px;
+    }
+    
+    /* Chart cards */
+    .chart-card, .earnings-section {
+        padding: 16px;
+    }
+    
+    .chart-placeholder {
+        height: 200px;
+        font-size: 14px;
     }
 }
  /* Main Content Area Admin dashboard */
