@@ -78,7 +78,7 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
         <!-- Top Header Bar -->
         <header class="top-header">
             <div class="header-content">
-<img src="../assets/images/Logo.png" alt="WebDev" class="app-logo">
+<img src="../assets/images/logo.png" alt="WebDev" class="app-logo">
                 <div class="header-search">
                     <div class="search-container">
                         <input id="globalSearchInput" type="text" placeholder="Search companies, parcels, users..." aria-label="Search">
