@@ -14,11 +14,13 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode', 1);
     ini_set('session.use_only_cookies', 1);
     ini_set('session.use_trans_sid', 0);
+    ini_set('session.gc_maxlifetime', 604800); // 7 days
+    ini_set('session.cookie_lifetime', 604800); // 7 days
 
     // Set session cookie parameters (use root path for consistency)
     $isLocalhost = in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']);
     $cookieParams = [
-        'lifetime' => 86400, // 24 hours - matches login.php
+        'lifetime' => 604800, // 7 days (extended from 24 hours) - matches login.php
         'path' => '/',
         'domain' => '',
         'secure' => !$isLocalhost,

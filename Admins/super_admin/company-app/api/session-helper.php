@@ -14,9 +14,9 @@ class SessionHelper {
      * - Secure flag (HTTPS only in production)
      * - HttpOnly (no JS access, prevents XSS token theft)
      * - SameSite=Strict (prevents CSRF via cross-site requests)
-     * - Reasonable lifetime (1 hour default)
+     * - Reasonable lifetime (7 days default, extended from 1 hour)
      */
-    public static function initializeSecureSession($lifetime = 3600) {
+    public static function initializeSecureSession($lifetime = 604800) {
         if (session_status() === PHP_SESSION_ACTIVE) {
             // Session already started, do not reinitialize
             return;
@@ -31,7 +31,7 @@ class SessionHelper {
 
         // Configure secure session cookie parameters
         $cookieParams = [
-            'lifetime' => $lifetime,      // Session expires after 1 hour of inactivity
+            'lifetime' => $lifetime,      // Session expires after 7 days of inactivity (extended from 1 hour)
             'path' => '/',
             'httponly' => true,           // No JavaScript access (prevents XSS token theft)
             'samesite' => 'Strict',       // Prevent CSRF via cross-site requests
@@ -53,6 +53,8 @@ class SessionHelper {
         ini_set('session.use_strict_mode', '1');       // Prevent session fixation
         ini_set('session.use_only_cookies', '1');      // Only use cookies, no URL-based sessions
         ini_set('session.cookie_httponly', '1');       // Already set via params, but enforce in INI
+        ini_set('session.gc_maxlifetime', '604800');   // 7 days garbage collection
+        ini_set('session.cookie_lifetime', '604800');  // 7 days cookie lifetime
         ini_set('session.sid_length', '32');           // Use longer session ID
         ini_set('session.sid_bits_per_character', '6'); // Use more entropy bits
 

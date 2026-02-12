@@ -13,7 +13,7 @@ function checkSession() {
     }
 
     // Check session age
-    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 86400)) {
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 604800)) {
         error_log("Session expired due to inactivity");
         session_unset();
         session_destroy();

@@ -8,11 +8,13 @@ ini_set('display_startup_errors', 1);
 ini_set('session.use_strict_mode', 1);
 ini_set('session.use_only_cookies', 1);
 ini_set('session.use_trans_sid', 0);
+ini_set('session.gc_maxlifetime', 604800); // 7 days
+ini_set('session.cookie_lifetime', 604800); // 7 days
 
 // Determine appropriate cookie params for environment
 $isLocalhost = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1']);
 $cookieParams = [
-  'lifetime' => 86400, // 24 hours
+  'lifetime' => 604800, // 7 days (extended from 24 hours)
   'path' => '/', // use root path for consistency across the app
   'domain' => '',
   'secure' => !$isLocalhost, // secure only in production
@@ -175,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $params = session_get_cookie_params();
         $isLocalhost = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1']);
         setcookie(session_name(), session_id(), [
-          'expires' => time() + 86400, // 24 hours
+          'expires' => time() + 604800, // 7 days (extended from 24 hours)
           'path' => '/',
           'secure' => !$isLocalhost,
           'httponly' => true,
