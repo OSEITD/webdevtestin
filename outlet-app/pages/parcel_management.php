@@ -988,5 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="../assets/js/sidebar-toggle.js"></script>
 <script src="../assets/js/notifications.js"></script>
 
+<?php include __DIR__ . '/../includes/pwa_install_button.php'; ?>
+<script src="../js/pwa-install.js"></script>
 </body>
 </html>

@@ -1588,6 +1588,9 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             }
         })();
     </script>
+    
+    <?php include __DIR__ . '/../includes/pwa_install_button.php'; ?>
+    <script src="../js/pwa-install.js"></script>
 </body>
 <script src="../assets/js/sidebar-toggle.js?v=<?php echo time(); ?>" defer></script>
 </html>

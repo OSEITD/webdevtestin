@@ -1453,5 +1453,8 @@ $companyId = $_SESSION['company_id'];
             }
         });
     </script>
+    
+    <?php include __DIR__ . '/../../includes/pwa_install_button.php'; ?>
+    <script src="../../js/pwa-install.js"></script>
 </body>
 </html>
