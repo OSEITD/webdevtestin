@@ -67,11 +67,14 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     
     <style>
         
+        /* Make company header align with dashboard grid width */
         .company-header {
             background: linear-gradient(135deg, <?php echo $brandingColors['primary']; ?> 0%, <?php echo $brandingColors['secondary']; ?> 100%);
             color: white;
             padding: 1.5rem 2rem;
-            margin: 0 0 2rem 0;
+            margin: 0 auto 2rem; /* center and keep bottom spacing */
+            max-width: 1400px; /* match .dashboard-grid */
+            width: 95%; /* same responsive width */
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             position: relative;
             overflow: hidden;
