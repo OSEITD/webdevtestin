@@ -390,6 +390,7 @@ require_once '../includes/header.php';
                 </div>
 
                 <form class="settings-form" id="settingsForm">
+                    <input type="hidden" id="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                     <div class="settings-grid">
                         <!-- General Settings Card -->
                         <div class="settings-card">
@@ -562,7 +563,11 @@ require_once '../includes/header.php';
         // Function to load settings from the server
         async function loadSettings() {
             try {
-                const response = await fetch('../api/manage_settings.php');
+                const response = await fetch('../api/manage_settings.php', {
+                    headers: {
+                        'X-CSRF-TOKEN': document.getElementById('csrf_token').value
+                    }
+                });
                 const data = await response.json();
                 
                 if (!response.ok) {
@@ -609,6 +614,7 @@ require_once '../includes/header.php';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.getElementById('csrf_token').value
                     },
                     body: JSON.stringify({
                         platformName: formData.get('platformName'),

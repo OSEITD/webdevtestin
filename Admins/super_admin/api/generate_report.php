@@ -316,7 +316,7 @@ try {
 
     // Make PDF
     $companyData = [
-        'company_name' => 'SwiftShip',
+        'company_name' => 'WEBDEV TECHNOLOGIES',
         'generated_by' => $_SESSION['email'] ?? $_SESSION['user_id'] ?? 'System'
     ];
     $pdfBinary = generatePDF(ucfirst($reportType) . ' Report', $reportData, $companyData);

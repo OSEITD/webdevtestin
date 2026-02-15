@@ -233,7 +233,8 @@ try {
             $parcelData = [
                 'trip_id' => $tripId,
                 'parcel_id' => $pid,
-                'company_id' => $companyIdForInserts
+                'company_id' => $companyIdForInserts,
+                'outlet_id' => $input['origin_outlet_id'] ?? $input['origin_outlet'] ?? null
             ];
 
             $assign = $supabase->createParcelListAssignment($parcelData);

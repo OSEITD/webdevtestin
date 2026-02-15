@@ -37,11 +37,33 @@ class ErrorHandler {
             ]
         );
         
-        // Send sanitized response to client
+        // Determine if this is a user-friendly error message that can be shown
+        $message = $e->getMessage();
+        $showActualMessage = false;
+        
+        // User-friendly errors that should be shown directly
+        $userFriendlyPatterns = [
+            '/already exists/i',
+            '/already registered/i',
+            '/not found/i',
+            '/invalid email/i',
+            '/password/i',
+            '/missing required/i',
+            '/do not match/i'
+        ];
+        
+        foreach ($userFriendlyPatterns as $pattern) {
+            if (preg_match($pattern, $message)) {
+                $showActualMessage = true;
+                break;
+            }
+        }
+        
+        // Send response to client
         http_response_code($httpCode);
         echo json_encode([
             'success' => false,
-            'error' => self::getPublicErrorMessage($httpCode)
+            'error' => $showActualMessage ? $message : self::getPublicErrorMessage($httpCode)
         ]);
         exit;
     }

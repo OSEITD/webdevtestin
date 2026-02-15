@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'address' => $_POST['address'],
             'status' => $_POST['status'],
             'subdomain' => $_POST['subdomain'],
-            'commission' => floatval($_POST['commission'] ?? 0)
+            'commission_rate' => floatval($_POST['commission_rate'] ?? 0)
         ];
 
         // Update company in Supabase (include query in endpoint to provide WHERE clause)
@@ -77,6 +77,7 @@ require_once '../includes/header.php';
 
             <div class="edit-form-container">
                 <form method="POST" class="edit-form" id="editCompanyForm">
+                    <input type="hidden" id="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                     <div class="form-group">
                         <label for="name">Company Name*</label>
                         <input type="text" id="name" name="name" value="<?php echo htmlspecialchars($company['company_name'] ?? ''); ?>" required>
@@ -108,8 +109,8 @@ require_once '../includes/header.php';
                     </div>
 
                     <div class="form-group">
-                        <label for="commission">Commission (%)</label>
-                        <input type="number" id="commission" name="commission" value="<?php echo htmlspecialchars($company['commission'] ?? 0); ?>" step="0.01" min="0" max="100">
+                        <label for="commission_rate">Commission Rate (%)</label>
+                        <input type="number" id="commission_rate" name="commission_rate" value="<?php echo htmlspecialchars($company['commission_rate'] ?? 0); ?>" step="0.01" min="0" max="100">
                         <small class="help-text">Commission percentage for this company</small>
                     </div>
 

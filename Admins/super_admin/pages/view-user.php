@@ -128,6 +128,7 @@ require_once '../includes/header.php';
     <!-- Link to the external JavaScript file -->
     <script src="../assets/js/admin-scripts.js" defer></script>
     <script>
+        const csrfToken = '<?php echo CSRFHelper::getToken(); ?>';
         // Specific JavaScript for this page
         document.addEventListener('DOMContentLoaded', () => {
             const backToUsersBtn = document.getElementById('backToUsersBtn');
@@ -152,6 +153,7 @@ require_once '../includes/header.php';
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
                             },
                             body: JSON.stringify({ email: userEmail, id: userId, role: userRole }),
                         })

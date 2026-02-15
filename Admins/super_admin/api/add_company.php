@@ -28,7 +28,7 @@ try {
     ];
     $password = $_POST['password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
-    $commission = floatval($_POST['commission'] ?? 0);
+    $commissionRate = floatval($_POST['commission_rate'] ?? 0);
 
     // Step 2: Validate required fields
     $requiredFields = ['company_name', 'subdomain', 'contact_person', 'contact_email', 'contact_phone', 'address', 'password', 'confirm_password'];
@@ -55,12 +55,17 @@ try {
         ],
         'email_confirm' => true
     ];
-    $authResult = callSupabaseWithServiceKey('auth/v1/admin/users', 'POST', $userData);
-
-    if (!$authResult || !isset($authResult['id'])) {
-        if (isset($authResult['message']) && strpos($authResult['message'], 'already registered') !== false) {
+    try {
+        $authResult = callSupabaseWithServiceKey('auth/v1/admin/users', 'POST', $userData);
+    } catch (Exception $e) {
+        $msg = $e->getMessage();
+        if (strpos($msg, 'email_exists') !== false || strpos($msg, 'already been registered') !== false) {
             throw new Exception('A user with this email already exists.');
         }
+        throw $e;
+    }
+
+    if (!$authResult || !isset($authResult['id'])) {
         throw new Exception('Failed to create auth user: ' . json_encode($authResult));
     }
     $userId = $authResult['id'];
@@ -85,7 +90,7 @@ try {
         'status' => $companyData['status'],
         'created_at' => $companyData['created_at'],
         'manager_id' => $userId,
-        'commission' => $commission
+        'commission_rate' => $commissionRate
     ];
     $companyResult = callSupabaseWithServiceKey('companies', 'POST', $companyRow);
 
@@ -115,5 +120,13 @@ try {
     ]);
 
 } catch (Exception $e) {
+    if ($e->getMessage() === 'A user with this email already exists.') {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+        exit;
+    }
     ErrorHandler::handleException($e, 'add_company.php', 400);
 }

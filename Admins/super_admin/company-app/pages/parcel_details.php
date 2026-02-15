@@ -114,7 +114,9 @@ require_once '../includes/header.php';
     // ====== CONFIG: Supabase ======
     const SUPABASE_URL = 'https://xerpchdsykqafrsxbqef.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Use let instead of const to allow redeclaration if included multiple times
+    // Use a unique name to avoid conflicts with global 'supabase' identifier
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Session outlet id from PHP
   const CURRENT_OUTLET_ID = <?php echo isset($outletId) ? json_encode($outletId) : 'null'; ?>;
@@ -218,7 +220,7 @@ require_once '../includes/header.php';
       }
 
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('parcels')
         .update({
           destination_outlet_id: selectedOutlet.id,

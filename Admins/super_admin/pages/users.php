@@ -15,7 +15,23 @@ $offset = ($currentPage - 1) * $itemsPerPage;
 
 // Fetch users data
 try {
-    $allUsers = callSupabase('all_users?select=*');
+    $endpoint = 'all_users?select=*';
+    
+    // Apply Filters
+    if (isset($_GET['search']) && !empty($_GET['search'])) {
+        $search = urlencode('%' . $_GET['search'] . '%');
+        $endpoint .= "&name=ilike.{$search}";
+    }
+    
+    if (isset($_GET['role']) && !empty($_GET['role'])) {
+        $role = urlencode($_GET['role']);
+        $endpoint .= "&role=eq.{$role}";
+    }
+    
+    // Order by created_at desc if available, or just default (optional)
+    // $endpoint .= "&order=created_at.desc"; 
+
+    $allUsers = callSupabase($endpoint);
     $totalUsers = count($allUsers);
     $totalPages = ceil($totalUsers / $itemsPerPage);
     
@@ -175,16 +191,16 @@ require_once '../includes/header.php';
             <div class="filter-bar">
                 <div class="search-input-container">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchUsers" placeholder="Search by name">
+                    <input type="text" id="searchUsers" placeholder="Search by name" value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
                 </div>
                 <div class="filter-dropdown">
                     <select id="filterRole">
                         <option value="">Role</option>
-                        <option value="Admin">Admin</option>
-                        <option value="Company">Company</option>
-                        <option value="Outlet">Outlet</option>
-                        <option value="Driver">Driver</option>
-                        <option value="Customer">Customer</option>
+                        <option value="Admin" <?php echo (isset($_GET['role']) && $_GET['role'] === 'Admin') ? 'selected' : ''; ?>>Admin</option>
+                        <option value="Company" <?php echo (isset($_GET['role']) && $_GET['role'] === 'Company') ? 'selected' : ''; ?>>Company</option>
+                        <option value="Outlet" <?php echo (isset($_GET['role']) && $_GET['role'] === 'Outlet') ? 'selected' : ''; ?>>Outlet</option>
+                        <option value="Driver" <?php echo (isset($_GET['role']) && $_GET['role'] === 'Driver') ? 'selected' : ''; ?>>Driver</option>
+                        <option value="Customer" <?php echo (isset($_GET['role']) && $_GET['role'] === 'Customer') ? 'selected' : ''; ?>>Customer</option>
                     </select>
                 </div>
             </div>
@@ -416,30 +432,38 @@ require_once '../includes/header.php';
         const usersTableBody = document.getElementById('usersTableBody');
         const allUserRows = Array.from(usersTableBody.querySelectorAll('tr')); // Store all rows initially
 
-        function filterUsers() {
-            const searchTerm = searchUsersInput.value.toLowerCase();
-            const selectedRole = filterRoleSelect.value.toLowerCase();
-
-            usersTableBody.innerHTML = ''; // Clear current table body
-
-            allUserRows.forEach(row => {
-                const name = row.querySelector('td[data-label="Name"]').textContent.toLowerCase();
-                const role = row.querySelector('td[data-label="Role(s)"]').textContent.toLowerCase();
-
-                const matchesSearch = name.includes(searchTerm);
-                const matchesRole = selectedRole === '' || role.includes(selectedRole);
-
-                if (matchesSearch && matchesRole) {
-                    usersTableBody.appendChild(row);
-                }
-            });
+        function applyFilters() {
+            const searchTerm = searchUsersInput.value;
+            const selectedRole = filterRoleSelect.value;
+            
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', '1'); // Reset to page 1 on filter change
+            
+            if (searchTerm) {
+                url.searchParams.set('search', searchTerm);
+            } else {
+                url.searchParams.delete('search');
+            }
+            
+            if (selectedRole) {
+                url.searchParams.set('role', selectedRole);
+            } else {
+                url.searchParams.delete('role');
+            }
+            
+            window.location.href = url.toString();
         }
 
-        searchUsersInput.addEventListener('input', filterUsers);
-        filterRoleSelect.addEventListener('change', filterUsers);
+        // Debounce search
+        let timeout = null;
+        searchUsersInput.addEventListener('input', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(applyFilters, 500);
+        });
+        
+        filterRoleSelect.addEventListener('change', applyFilters);
 
-        // Initial filter on page load (to apply any default selections)
-        filterUsers();
+        // No need for initial filterUsers() call as PHP handles rendering filtered data
 
         // Menu functionality (guarded attachments)
         const menuBtn = document.getElementById('menuBtn');

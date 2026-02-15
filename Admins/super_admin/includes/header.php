@@ -63,7 +63,7 @@ $adminBaseUrl = '..';
                 </div>
                 <div class="header-search">
                     <div class="search-container">
-                        <input type="text" id="globalSearch" placeholder="Search companies, parcels, users...">
+                        <input type="text" id="globalSearch" placeholder="Search">
                         <button type="button" id="searchBtn">
                             <i class="fas fa-search"></i>
                         </button>

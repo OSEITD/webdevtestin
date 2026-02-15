@@ -32,7 +32,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Session validation: super admin pages require user_id and logged_in session vars
+// Initialize CSRF token
+require_once __DIR__ . '/csrf-helper.php';
+CSRFHelper::getToken();
 // If invalid, clear and redirect to login
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     error_log("Invalid or missing session data in super_admin init.php");

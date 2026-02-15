@@ -132,6 +132,7 @@ require_once '../includes/header.php';
 
             <div class="form-container">
                 <form id="addDriverForm" onsubmit="return handleSubmit(event)">
+                    <input type="hidden" id="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                     <!-- Company Selection -->
                     <div class="form-section">
                         <h2>Company Information</h2>
@@ -252,6 +253,9 @@ require_once '../includes/header.php';
                 url: '../api/add_driver.php',
                 type: 'POST',
                 data: formData,
+                headers: {
+                    'X-CSRF-TOKEN': $('#csrf_token').val()
+                },
                 processData: false,  // Don't process the data
                 contentType: false,  // Don't set content type (browser will set it with boundary)
                 dataType: 'json',

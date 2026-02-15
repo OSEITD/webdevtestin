@@ -127,6 +127,7 @@ require_once '../includes/header.php';
 
             <div class="form-container">
                 <form id="addCustomerForm" method="POST" action="../api/add_customer.php">
+                    <input type="hidden" id="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                       <!-- Company Selection -->
                     <div class="form-section">
                         <h2>Company Information</h2>

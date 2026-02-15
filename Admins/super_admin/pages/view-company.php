@@ -227,6 +227,17 @@ require_once '../includes/header.php';
                             </div>
                         </div>
 
+                        <div class="mb-4">
+                            <div class="row align-items-center">
+                                <div class="col-sm-2">
+                                    <span class="text-muted">Commission Rate:</span>
+                                </div>
+                                <div class="col-sm-10">
+                                    <?php echo htmlspecialchars($company['commission_rate'] ?? '0'); ?>%
+                                </div>
+                            </div>
+                        </div>
+
                         <h3 class="h5 mb-3">Contact Information</h3>
 
                         <div class="mb-4">

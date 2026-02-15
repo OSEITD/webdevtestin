@@ -187,6 +187,7 @@ if (!$driver_email && !$driver_id) {
     <!-- Link to the external JavaScript file -->
     <script src="../assets/js/admin-scripts.js" defer></script>
     <script>
+        const csrfToken = '<?php echo CSRFHelper::getToken(); ?>';
         // Specific JavaScript for this page
         document.addEventListener('DOMContentLoaded', () => {
             const backToUsersBtn = document.getElementById('backToUsersBtn');
@@ -213,6 +214,7 @@ if (!$driver_email && !$driver_id) {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken
                             },
                             body: JSON.stringify({ email: driverEmail, id: driverId, role: driverRole }),
                         });

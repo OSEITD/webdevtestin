@@ -1,21 +1,6 @@
 // admin-scripts.js
 
 document.addEventListener('DOMContentLoaded', function () {
-    const supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
-
-    // Use singleton pattern to prevent multiple client instances
-    let supabase = null;
-    if (window.supabase) {
-        // Check if client already exists globally
-        if (!window._supabaseClient) {
-            window._supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-        }
-        supabase = window._supabaseClient;
-    } else {
-        console.warn('Supabase library not loaded, some features may not work');
-    }
-
     // Get all required elements
     const menuBtn = document.getElementById('menuBtn');
     const closeBtn = document.getElementById('closeMenu');
@@ -216,7 +201,10 @@ document.addEventListener('DOMContentLoaded', function () {
     async function fetchNotificationCount() {
         try {
             const response = await fetch('../api/fetch_notifications.php', {
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'X-CSRF-TOKEN': '<?php echo CSRFHelper::getToken(); ?>'
+                }
             });
             const data = await response.json();
 

@@ -239,7 +239,8 @@ try {
             $parcelListData = [
                 'trip_id' => $tripId,
                 'parcel_id' => $parcelIdVal,
-                'company_id' => $tripData['company_id']
+                'company_id' => $tripData['company_id'],
+                'outlet_id' => $originOutletId // Add outlet_id from the trip's origin outlet
             ];
 
             // Debug: log the payload we're about to insert

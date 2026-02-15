@@ -132,6 +132,7 @@ require_once '../includes/header.php';
 
             <div class="form-container">
                 <form id="addAdminForm" onsubmit="return handleSubmit(event)">
+                    <input type="hidden" id="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                     <div class="form-group">
                         <label for="name">Full Name</label>
                         <input type="text" id="name" name="name" required>
@@ -197,6 +198,9 @@ require_once '../includes/header.php';
                 url: '../api/add_admin.php',
                 type: 'POST',
                 data: form.serialize(),
+                headers: {
+                    'X-CSRF-TOKEN': $('#csrf_token').val()
+                },
                 dataType: 'json',
                 success: function(result) {
                     console.log('Success:', result);

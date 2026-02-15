@@ -1,17 +1,18 @@
 <?php
-// Turn off display errors for production, but enable logging
-ini_set("display_errors", "0");
-error_reporting(E_ALL);
-ini_set("log_errors", "1");
+require_once __DIR__ . '/../../../outlet-app/includes/env.php';
 
-// Basic Supabase client setup for PHP API calls
-global $supabaseUrl, $supabaseKey, $supabaseServiceKey;
+// Load .env from root
+try {
+    EnvLoader::load(__DIR__ . '/../../../.env');
+} catch (Exception $e) {
+    error_log("Failed to load .env: " . $e->getMessage());
+}
 
-$supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
+$supabaseUrl = EnvLoader::get('SUPABASE_URL');
 // Anonymous key for public operations
-$supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
+$supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
 // Service role key for admin operations
-$supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
+$supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
 
 class SupabaseClient {
     private $url;
@@ -100,7 +101,10 @@ class SupabaseClient {
                 CURLOPT_SSL_VERIFYHOST => $verifyHost,
                 CURLOPT_VERBOSE => true,
                 CURLOPT_HEADER => false,
-                CURLOPT_TIMEOUT => 30
+                CURLOPT_TIMEOUT => 60, // Increased timeout
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1, // Force HTTP/1.1 to avoid h2 stream resets
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4, // Force IPv4 to avoid IPv6 timeouts
+                CURLOPT_TCP_KEEPALIVE => 1, // Enable TCP keep-alive
             ]);
 
             if ($data && in_array($method, ['POST', 'PATCH', 'PUT'])) {

@@ -27,7 +27,7 @@ try {
             'sms_alerts' => $input['smsAlerts'] ?? false,
             'critical_alerts' => $input['criticalAlerts'] ?? true,
             'payment_gateway' => $input['paymentGateway'] ?? 'Stripe',
-            'commission_percent' => isset($input['commissionPercent']) ? $input['commissionPercent'] : 0,
+            // 'commission_percent' => isset($input['commissionPercent']) ? $input['commissionPercent'] : 0,
             'sms_provider' => $input['smsProvider'] ?? 'Twilio',
             'updated_at' => date('Y-m-d H:i:s')
         ];

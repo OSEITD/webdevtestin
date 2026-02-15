@@ -71,6 +71,7 @@ require_once '../includes/header.php';
                 </div>
                 <div class="report-actions">
                     <form onsubmit="return generateReport(event, 'delivery')" class="report-form">
+                        <input type="hidden" id="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                         <input type="hidden" name="report_type" value="delivery">
                         <div class="date-range">
                             <input type="date" name="start_date" required>
@@ -102,6 +103,7 @@ require_once '../includes/header.php';
                 </div>
                 <div class="report-actions">
                     <form onsubmit="return generateReport(event, 'revenue')" class="report-form">
+                        <input type="hidden" id="csrf_token_revenue" value="<?php echo CSRFHelper::getToken(); ?>">
                         <input type="hidden" name="report_type" value="revenue">
                         <div class="date-range">
                             <input type="date" name="start_date" required>
@@ -133,6 +135,7 @@ require_once '../includes/header.php';
                 </div>
                 <div class="report-actions">
                     <form onsubmit="return generateReport(event, 'user')" class="report-form">
+                        <input type="hidden" id="csrf_token_user" value="<?php echo CSRFHelper::getToken(); ?>">
                         <input type="hidden" name="report_type" value="user">
                         <div class="date-range">
                             <input type="date" name="start_date" required>
@@ -164,6 +167,7 @@ require_once '../includes/header.php';
                 </div>
                 <div class="report-actions">
                     <form onsubmit="return generateReport(event, 'outlet')" class="report-form">
+                        <input type="hidden" id="csrf_token_outlet" value="<?php echo CSRFHelper::getToken(); ?>">
                         <input type="hidden" name="report_type" value="outlet">
                         <div class="date-range">
                             <input type="date" name="start_date" required>
@@ -442,6 +446,9 @@ require_once '../includes/header.php';
 
                 const response = await fetch('../api/generate_report.php', {
                     method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.getElementById('csrf_token').value
+                    },
                     body: formData,
                     credentials: 'include'
                 });

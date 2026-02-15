@@ -130,11 +130,15 @@ require_once '../includes/header.php';
         </div>
 
     <script>
+    const csrfToken = '<?php echo CSRFHelper::getToken(); ?>';
     async function markAsRead(notificationId) {
         const item = document.querySelector(`.notification-item[data-id='${notificationId}']`);
         try {
             const response = await fetch(`${adminBaseUrl}/api/notifications.php?action=mark_read&id=${notificationId}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken
+                }
             });
             const data = await response.json();
             if (data.success) {

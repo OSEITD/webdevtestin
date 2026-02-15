@@ -74,7 +74,71 @@ try {
         throw new Exception('An outlet with this name already exists in your company');
     }
 
-    // If we get here, the outlet name is unique for this company
+    // Step 1: Create the auth user first
+    $authUrl = $supabaseUrl . '/auth/v1/signup';
+    $authPayload = [
+        'email' => $data['contact_email'],
+        'password' => $data['password'],
+        'data' => [
+            'full_name' => $data['contactPerson'],
+            'role' => 'outlet_manager'
+        ]
+    ];
+
+    error_log("Creating auth user at: " . $authUrl);
+    $ch = curl_init($authUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($authPayload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "apikey: $supabaseKey",
+        "Content-Type: application/json"
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    $authData = json_decode($response, true);
+    curl_close($ch);
+    
+    // Debug information
+    error_log("Auth Response Code: " . $httpCode);
+    error_log("Auth Curl Error (if any): " . $curlError);
+    error_log("Auth Response: " . $response);
+    error_log("Auth Data: " . print_r($authData, true));
+    
+    if ($httpCode !== 200) {
+        $errorMsg = 'Failed to create user account';
+        if ($curlError) {
+            $errorMsg .= ': ' . $curlError;
+        } else if (isset($authData['msg'])) {
+            // Supabase uses 'msg' field for auth errors
+            if (isset($authData['error_code']) && $authData['error_code'] === 'user_already_exists') {
+                $errorMsg = 'This email address is already registered. Please use a different email address.';
+            } else {
+                $errorMsg .= ': ' . $authData['msg'];
+            }
+        } else if (isset($authData['message'])) {
+            $errorMsg .= ': ' . $authData['message'];
+        } else if (isset($authData['error_description'])) {
+            $errorMsg .= ': ' . $authData['error_description'];
+        } else if (isset($authData['error'])) {
+            $errorMsg .= ': ' . $authData['error'];
+        } else {
+            $errorMsg .= '. Status code: ' . $httpCode;
+        }
+        throw new Exception($errorMsg);
+    }
+    
+    if (!isset($authData['user']) || !isset($authData['user']['id'])) {
+        error_log("Invalid auth response structure: " . print_r($authData, true));
+        throw new Exception('Invalid authentication response structure');
+    }
+    
+    $userId = $authData['user']['id'];
+    error_log("User created successfully with ID: " . $userId);
+
+    // Step 2: Create the outlet with the manager_id
     $outletData = [
         'outlet_name' => $data['outletName'],
         'address' => $data['address'],
@@ -82,11 +146,21 @@ try {
         'contact_email' => $data['contact_email'],
         'contact_phone' => $data['contact_phone'],
         'status' => $data['status'],
-        'company_id' => $_SESSION['id'] // Using the company ID from session
+        'company_id' => $_SESSION['id'],
+        'manager_id' => $userId
     ];
 
+    // Add optional opening/closing times if provided
+    if (!empty($data['openingTime'])) {
+        $outletData['opening_time'] = $data['openingTime'];
+    }
+
+    if (!empty($data['closingTime'])) {
+        $outletData['closing_time'] = $data['closingTime'];
+    }
+
     $apiEndpoint = $supabaseUrl . '/rest/v1/outlets';
-    error_log("Attempting to create outlet at: " . $apiEndpoint);
+    error_log("Creating outlet at: " . $apiEndpoint);
     error_log("Outlet data: " . json_encode($outletData));
 
     $ch = curl_init($apiEndpoint);
@@ -104,110 +178,41 @@ try {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     $result = json_decode($response, true);
+    curl_close($ch);
 
-    error_log("Supabase Response Code: " . $httpCode);
-    error_log("Curl Error (if any): " . $curlError);
-    error_log("Raw Response: " . $response);
-    error_log("Decoded Response: " . print_r($result, true));
+    error_log("Outlet Response Code: " . $httpCode);
+    error_log("Outlet Curl Error (if any): " . $curlError);
+    error_log("Outlet Raw Response: " . $response);
+    error_log("Outlet Decoded Response: " . print_r($result, true));
     
     if ($httpCode !== 201 || !$result || !is_array($result) || empty($result[0]['id'])) {
-        $errorMsg = '';
+        $errorMsg = 'Failed to create outlet';
         if ($curlError) {
-            $errorMsg = "Curl error: " . $curlError;
+            $errorMsg .= ': ' . $curlError;
         } else if ($httpCode !== 201) {
-            $errorMsg = "API returned status code " . $httpCode;
+            $errorMsg .= ': API returned status code ' . $httpCode;
         } else if (!$result || !is_array($result)) {
-            $errorMsg = "Invalid response format";
+            $errorMsg .= ': Invalid response format';
         } else if (empty($result[0]['id'])) {
-            $errorMsg = "No outlet ID in response";
+            $errorMsg .= ': No outlet ID in response';
         }
 
         if (is_array($result)) {
             if (isset($result['message'])) {
-                $errorMsg .= " - " . $result['message'];
+                $errorMsg .= ' - ' . $result['message'];
             } else if (isset($result['error'])) {
-                $errorMsg .= " - " . $result['error'];
+                $errorMsg .= ' - ' . $result['error'];
             }
         }
 
-        error_log("Failed to create outlet. " . $errorMsg);
+        error_log("Outlet creation failed: " . $errorMsg);
         throw new Exception($errorMsg);
     }
 
-    $outletId = $result[0]['id']; // Get the new outlet ID
-    curl_close($ch);
+    $outletId = $result[0]['id'];
+    error_log("Outlet created successfully with ID: " . $outletId);
 
-    // Now create the auth user
-    $authUrl = $supabaseUrl . '/auth/v1/signup';
-    $authPayload = [
-        'email' => $data['contact_email'],
-        'password' => $data['password'],
-        'data' => [
-            'full_name' => $data['contactPerson'],
-            'role' => 'outlet_manager',
-            'outlet_id' => $outletId // Link the user to the outlet
-        ]
-    ];
-
-    $ch = curl_init($authUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($authPayload));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "apikey: $supabaseKey",
-        "Content-Type: application/json"
-    ]);
-    
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $authData = json_decode($response, true);
-    
-    // Debug information
-    error_log("Auth Response: " . print_r($response, true));
-    error_log("HTTP Code: " . $httpCode);
-    error_log("Auth Data: " . print_r($authData, true));
-    
-    if ($httpCode !== 200) {
-        if (isset($authData['message'])) {
-            throw new Exception('Auth error: ' . $authData['message']);
-        } else if (isset($authData['error_description'])) {
-            throw new Exception('Auth error: ' . $authData['error_description']);
-        } else if (isset($authData['error'])) {
-            throw new Exception('Auth error: ' . $authData['error']);
-        } else {
-            throw new Exception('Failed to create user account. Status code: ' . $httpCode);
-        }
-    }
-    
-    if (!isset($authData['user']) || !isset($authData['user']['id'])) {
-        error_log("Invalid auth response structure: " . print_r($authData, true));
-        throw new Exception('Invalid authentication response structure');
-    }
-    
-    $userId = $authData['user']['id'];
-
-    // Now create the outlet record
-    $outletData = [
-        'name' => $data['outletName'],
-        'address' => $data['address'],
-        'contact_person' => $data['contactPerson'],
-        'contact_email' => $data['contact_email'],
-        'contact_phone' => $data['contact_phone'],
-        'status' => $data['status'],
-        'company_id' => $_SESSION['id'], // Use the company ID from session
-        'manager_id' => $userId
-    ];
-
-    // Add optional opening/closing times if provided
-    if (!empty($data['openingTime'])) {
-        $outletData['opening_time'] = $data['openingTime'];
-    }
-
-    if (!empty($data['closingTime'])) {
-        $outletData['closing_time'] = $data['closingTime'];
-    }
-
-    // Return success response with both outlet and user data
+    // Return success response
     http_response_code(200);
     echo json_encode([
         'success' => true,

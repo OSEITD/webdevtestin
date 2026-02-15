@@ -35,6 +35,7 @@ require_once '../includes/header.php';
             <div class="form-container">
                 <h2>Outlet Details</h2>
                 <form id="addOutletForm">
+                    <input type="hidden" id="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                     <div class="form-group">
                         <label for="outletName">Outlet Name</label>
                         <input type="text" id="outletName" class="form-input-field" placeholder="e.g., Downtown Branch" required>
@@ -200,7 +201,8 @@ require_once '../includes/header.php';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.getElementById('csrf_token').value
                     },
                     body: JSON.stringify({
                         outlet_name: outletName.trim(),

@@ -26,7 +26,6 @@ $adminBaseUrl = '..';
     <link rel="stylesheet" href="<?php echo $adminBaseUrl; ?>/assets/css/view-details.css">
     
     <!-- Core scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="<?php echo $adminBaseUrl; ?>/assets/js/admin-scripts.js" defer></script>
     <script src="<?php echo $adminBaseUrl; ?>/assets/js/search.js" defer></script>
     

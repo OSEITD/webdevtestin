@@ -94,11 +94,14 @@ self.addEventListener('fetch', event => {
                     }
 
                     // Clone the response and put it in the cache (Runtime Caching)
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            cache.put(event.request, responseToCache);
-                        });
+                    // Only cache GET requests
+                    if (event.request.method === 'GET') {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                cache.put(event.request, responseToCache);
+                            });
+                    }
 
                     return response;
                 })
@@ -120,8 +123,8 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
-                    // Cache successful API responses
-                    if (response.ok) {
+                    // Only cache successful GET requests (POST/PUT/DELETE cannot be cached)
+                    if (response.ok && event.request.method === 'GET') {
                         const responseToCache = response.clone();
                         caches.open(CACHE_NAME).then(cache => {
                             cache.put(event.request, responseToCache);
@@ -130,7 +133,7 @@ self.addEventListener('fetch', event => {
                     return response;
                 })
                 .catch(() => {
-                    // If network fails, try cache
+                    // If network fails, try cache (only works for GET requests)
                     return caches.match(event.request);
                 })
         );
@@ -147,7 +150,8 @@ self.addEventListener('fetch', event => {
                 return fetch(event.request)
                     .then(response => {
                         // Cache the fetched resource
-                        if (response && response.status === 200) {
+                        // Only cache GET requests
+                        if (response && response.status === 200 && event.request.method === 'GET') {
                             const responseToCache = response.clone();
                             caches.open(CACHE_NAME).then(cache => {
                                 cache.put(event.request, responseToCache);

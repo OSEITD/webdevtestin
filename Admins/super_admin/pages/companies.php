@@ -59,9 +59,8 @@ require_once '../includes/header.php';
                 <table class="data-table">
                     <thead>
                          <tr>
-        <th>#</th>
+
         <th>Name</th>
-        <th>Revenue</th>
         <th>Mananger</th>
         <th>Email</th>
         <th>Status</th>
@@ -70,12 +69,12 @@ require_once '../includes/header.php';
                     <tbody>
             <?php foreach ($companies as $index => $company): ?>
                 <tr data-company-id="<?= htmlspecialchars($company['id'] ?? '') ?>">
-                    <td><?= $index + 1 ?></td>
-                    <td><?= htmlspecialchars($company['company_name'] ?? '') ?></td>
-                    <td>$<?= number_format($company['revenue'] ?? 0, 2) ?></td>
-          <td><?= htmlspecialchars($company['contact_person'] ?? '') ?></td>
-          <td><?= htmlspecialchars($company['contact_email'] ?? '') ?></td>
-          <td style="color: <?php 
+
+                    <td data-label="Name"><?= htmlspecialchars($company['company_name'] ?? '') ?></td>
+
+          <td data-label="Manager"><?= htmlspecialchars($company['contact_person'] ?? '') ?></td>
+          <td data-label="Email"><?= htmlspecialchars($company['contact_email'] ?? '') ?></td>
+          <td data-label="Status" style="color: <?php 
             $status = strtolower($company['status'] ?? '');
             if ($status === 'active') {
                 echo 'green';

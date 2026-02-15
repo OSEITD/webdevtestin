@@ -22,6 +22,7 @@ require_once '../includes/header.php';
             <div class="form-container">
                 <h2>Company Details</h2>
                 <form id="addCompanyForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo CSRFHelper::getToken(); ?>">
                     <div class="form-group">
                         <label for="name">Company Name</label>
 
@@ -61,13 +62,9 @@ require_once '../includes/header.php';
                         <input type="number" id="revenue" name="revenue" class="form-input-field" placeholder="0.00" step="0.01" value="0">
                     </div>
                     <div class="form-group">
-                        <label for="commission">Commission (%)</label>
-                        <input type="number" id="commission" name="commission" class="form-input-field" placeholder="0.00" step="0.01" min="0" max="100" value="0">
-                        <small class="help-text">Commission percentage for this company</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="progress">Progress (%)</label>
-                        <input type="number" id="progress" name="progress" class="form-input-field" placeholder="0" min="0" max="100" value="0">
+                        <label for="commission_rate">Commission Rate (%)</label>
+                        <input type="number" id="commission_rate" name="commission_rate" class="form-input-field" placeholder="0.00" step="0.01" min="0" max="100" value="0">
+                        <small class="help-text">Commission rate percentage for this company</small>
                     </div>
                     <div class="form-group">
                         <label for="status">Status</label>
@@ -168,8 +165,7 @@ require_once '../includes/header.php';
                 password: password,
                 confirm_password: confirmPassword,
                 revenue: parseFloat(document.getElementById('revenue').value) || 0,
-                commission: parseFloat(document.getElementById('commission').value) || 0,
-                progress: parseInt(document.getElementById('progress').value) || 0,
+                commission_rate: parseFloat(document.getElementById('commission_rate').value) || 0,
                 status: document.getElementById('status').value
             };
 
@@ -178,6 +174,7 @@ require_once '../includes/header.php';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name="csrf_token"]').value
                     },
                     body: JSON.stringify(formData)
                 });

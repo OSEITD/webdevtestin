@@ -46,7 +46,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Set standard API response headers
+// CSRF Validation for state-changing requests
+require_once __DIR__ . '/../includes/csrf-helper.php';
+if (CSRFHelper::isStateChangingRequest()) {
+    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!CSRFHelper::validateToken($token)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']);
+        exit;
+    }
+}
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
