@@ -352,12 +352,65 @@ $current_user = getCurrentUser();
                 justify-content: center;
             }
 
+            /* Keep horizontal scroll as a fallback, but provide a stacked mobile layout for better UX */
             .parcels-table-container {
                 overflow-x: auto;
             }
 
+            /* Remove fixed min-width and make rows stack on small screens */
             .parcels-table {
-                min-width: 800px;
+                width: 100%;
+                border: 0;
+            }
+
+            .parcels-table thead {
+                display: none; /* hide header on small screens */
+            }
+
+            .parcels-table, .parcels-table tbody, .parcels-table tr, .parcels-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .parcels-table tbody tr {
+                margin-bottom: 0.75rem;
+                border-radius: 8px;
+                border: 1px solid rgba(0,0,0,0.04);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+                padding: 0.75rem 0.75rem;
+                background: #fff;
+            }
+
+            .parcels-table td {
+                padding: 0.5rem 0.75rem;
+                text-align: right;
+                position: relative;
+                border: 0;
+                vertical-align: top;
+                font-size: 0.95rem;
+            }
+
+            .parcels-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0.75rem;
+                top: 50%;
+                transform: translateY(-50%);
+                font-weight: 600;
+                color: #6c757d;
+                text-transform: uppercase;
+                font-size: 0.72rem;
+                white-space: nowrap;
+            }
+
+            /* Make action column align to the right without the label overlay */
+            .parcels-table td:last-child {
+                text-align: right;
+                padding-left: 0.75rem;
+            }
+
+            .track-number, .status-badge, .priority-badge {
+                display: inline-block;
             }
         }
     </style>
@@ -705,34 +758,34 @@ $current_user = getCurrentUser();
 
             tbody.innerHTML = parcels.map(parcel => `
                 <tr>
-                    <td>
+                    <td data-label="Track Number">
                         <span class="track-number">${escapeHtml(parcel.track_number)}</span>
                     </td>
-                    <td>
+                    <td data-label="Status">
                         <span class="status-badge status-${parcel.status || 'unknown'}">
                             ${formatStatus(parcel.status)}
                         </span>
                     </td>
-                    <td>
+                    <td data-label="Sender">
                         <div class="customer-info">
                             <div class="customer-name">${escapeHtml(parcel.sender_name || 'Unknown')}</div>
                             ${parcel.sender_phone ? `<div class="customer-phone">${escapeHtml(parcel.sender_phone)}</div>` : ''}
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Receiver">
                         <div class="customer-info">
                             <div class="customer-name">${escapeHtml(parcel.receiver_name || 'Unknown')}</div>
                             ${parcel.receiver_phone ? `<div class="customer-phone">${escapeHtml(parcel.receiver_phone)}</div>` : ''}
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Relation">
                         <span class="priority-badge priority-${getRelationType(parcel)}">
                             ${formatRelationType(parcel)}
                         </span>
                     </td>
-                    <td>${parcel.parcel_weight || 0} kg</td>
-                    <td>${formatDate(parcel.created_at)}</td>
-                    <td>
+                    <td data-label="Weight">${parcel.parcel_weight || 0} kg</td>
+                    <td data-label="Created">${formatDate(parcel.created_at)}</td>
+                    <td data-label="Actions">
                         <button class="btn btn-secondary" onclick="viewParcelDetails('${parcel.id}')" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
