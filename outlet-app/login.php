@@ -317,13 +317,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         
                         if (!empty($profile) && !empty($company)) {
-                            
-                            $userRole = $profile['role'] ?? 'outlet_manager';
+                            // Get role from profile - DO NOT default to outlet_manager (security issue)
+                            $userRole = $profile['role'] ?? null;
                             $allowedRoles = ['outlet_manager', 'outlet_admin', 'driver', 'admin', 'super_admin'];
                             
-                            if (!in_array($userRole, $allowedRoles)) {
-                                $userRole = 'outlet_manager'; 
+                            echo "<!-- DEBUG: Raw role from profile: " . var_export($userRole, true) . " -->";
+                            
+                            // If role is missing or invalid, show error instead of defaulting
+                            if (empty($userRole) || !in_array($userRole, $allowedRoles)) {
+                                $error = "Invalid or missing user role. Please contact administrator. Role: " . var_export($userRole, true);
+                                echo "<!-- ERROR: Invalid role for user $userId: " . var_export($userRole, true) . " -->";
+                            } else {
+                                echo "<!-- DEBUG: Valid role assigned: $userRole -->";
                             }
+                            
+                            // Only proceed if we have a valid role
+                            if (empty($error)) {
                             
                             
                             $_SESSION['user_id'] = $userId;
@@ -400,54 +409,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                             
                             
-                            if (empty($profile['password_last_updated'])) {
-                                
-                                $_SESSION['requires_password_change'] = true;
-                                $_SESSION['user_id'] = $userId;
-                                $_SESSION['email'] = $email;
-                                $_SESSION['access_token'] = $accessToken;
-                                $_SESSION['full_name'] = $profile['full_name'] ?? '';
-                                
-                                
-                                header('Location: change_password.php');
-                                exit();
-                            }
-                            
-                            
-                            $redirectUrl = 'pages/outlet_dashboard.php'; 
+                            // Role-based redirect - CRITICAL: ensure correct dashboard per role
+                            $redirectUrl = '';
                             switch ($userRole) {
+                                case 'driver':
+                                    $redirectUrl = 'drivers/dashboard.php';
+                                    echo "<!-- DEBUG: Driver role detected - redirecting to drivers/dashboard.php -->";
+                                    break;
                                 case 'outlet_manager':
                                 case 'outlet_admin':
                                     $redirectUrl = 'pages/outlet_dashboard.php';
-                                    break;
-                                case 'driver':
-                                    $redirectUrl = 'drivers/dashboard.php'; 
+                                    echo "<!-- DEBUG: Manager/Admin role detected - redirecting to pages/outlet_dashboard.php -->";
                                     break;
                                 case 'admin':
                                 case 'super_admin':
                                     $redirectUrl = 'pages/outlet_dashboard.php';
+                                    echo "<!-- DEBUG: Super Admin role detected - redirecting to pages/outlet_dashboard.php -->";
                                     break;
                                 default:
-                                    $redirectUrl = 'pages/outlet_dashboard.php';
+                                    $error = "Unknown role: $userRole. Cannot determine dashboard.";
+                                    echo "<!-- ERROR: Unknown role $userRole - cannot redirect -->";
                             }
                             
-                            echo "<!-- DEBUG: Attempting redirect to: $redirectUrl -->";
-                            
-                            
-                            if (!headers_sent()) {
-                                header("Location: $redirectUrl");
-                                exit();
-                            } else {
+                            if (!empty($redirectUrl)) {
+                                echo "<!-- DEBUG: Final redirect URL: $redirectUrl for role: $userRole -->";
                                 
-                                echo "<script>";
-                                echo "console.log('Headers already sent, using JavaScript redirect');";
-                                echo "window.location.href = '$redirectUrl';";
-                                echo "</script>";
-                                echo "<p>Redirecting to dashboard... <a href='$redirectUrl'>Click here if not redirected</a></p>";
-                                exit();
+                                if (!headers_sent()) {
+                                    header("Location: $redirectUrl");
+                                    exit();
+                                } else {
+                                    echo "<script>window.location.href = '$redirectUrl';</script>";
+                                    echo "<p>Redirecting to dashboard... <a href='$redirectUrl'>Click here if not redirected</a></p>";
+                                    exit();
+                                }
                             }
                             
-                            } 
+                            } // end if (empty($error)) // end if (empty($_SESSION['user_id']))
                         } else {
                             $error = "Unable to complete login setup. Please try again or contact administrator.";
                         }
