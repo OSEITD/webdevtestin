@@ -26,6 +26,19 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     exit(); 
 }
 
+// RBAC: Prevent drivers from accessing manager dashboard
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'driver') {
+    header('Location: ../drivers/dashboard.php');
+    exit();
+}
+
+// Only allow manager/admin roles
+$allowedRoles = ['outlet_manager', 'outlet_admin', 'admin', 'super_admin'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowedRoles)) {
+    header('Location: ../login.php?error=insufficient_permissions');
+    exit();
+}
+
 $current_user = getCurrentUser();
 
 $companyInfo = null;
