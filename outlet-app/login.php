@@ -444,7 +444,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                             }
                             
-                            } // end if (empty($error)) // end if (empty($_SESSION['user_id']))
+                            } // end if (empty($_SESSION['user_id']))
+                            } // end if (empty($error))
                         } else {
                             $error = "Unable to complete login setup. Please try again or contact administrator.";
                         }
