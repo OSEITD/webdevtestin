@@ -1241,22 +1241,33 @@ function validateForm() {
         'itemDescription', 'parcelWeight', 'destinationOutletId'
     ];
     let isValid = true;
+    const missingFields = [];
+
     required.forEach(fieldId => {
         const field = document.getElementById(fieldId);
-        if (!field || !field.value.trim()) {
-            field?.classList.add('error');
+        const value = field ? field.value.trim() : '';
+        if (!field || !value) {
+            if (field) field.classList.add('error');
+            missingFields.push(fieldId);
             isValid = false;
         } else {
-            field?.classList.remove('error');
+            field.classList.remove('error');
         }
     });
+
+    if (!isValid && missingFields.length > 0) {
+        console.warn('Validation failed, missing:', missingFields);
+        showError('Please fill in all required fields: ' + missingFields.join(', '));
+    }
+
     // Delivery fee must be > 0
     const deliveryFee = document.getElementById('deliveryFee');
     if (deliveryFee && (parseFloat(deliveryFee.value) <= 0 || !deliveryFee.value)) {
         deliveryFee.classList.add('error');
         isValid = false;
+        missingFields.push('deliveryFee');
     }
-    
+
     // Validate trip-destination compatibility
     const tripSelect = document.getElementById('tripId');
     const destinationSelect = document.getElementById('destinationOutletId');
@@ -1643,30 +1654,8 @@ function initializePaymentHandlers() {
 }
 
 async function verifyFlutterwavePayment(transactionId) {
-    try {
-        
-        const response = await fetch('../api/payments/verify_flutterwave.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                transaction_id: transactionId
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            console.log('✅ Payment verified:', result);
-            return result;
-        } else {
-            throw new Error(result.error || 'Payment verification failed');
-        }
-    } catch (error) {
-        console.error('❌ Payment verification error:', error);
-        throw error;
-    }
+    console.warn('verifyFlutterwavePayment: Flutterwave integration removed.');
+    return Promise.reject(new Error('Flutterwave integration removed'));
 }
 
 document.addEventListener('DOMContentLoaded', function() {
