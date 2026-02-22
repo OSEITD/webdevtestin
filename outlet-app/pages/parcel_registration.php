@@ -329,7 +329,7 @@ $lencoEnv = LENCO_ENV;
                                     <option value="lenco_mobile">Mobile Money (MTN, Airtel) - Lenco</option>
                                     <option value="lenco_card">Card Payment (Visa/Mastercard) - Lenco</option>
                                 </select>
-                                <small class="form-help">Online payments powered by Lenco <?php echo $lencoEnv === 'sandbox' ? '<span class="badge-sandbox">(Sandbox Mode)</span>' : ''; ?></small>
+                                <small class="form-help">Online payments powered by Lenco <?php echo $lencoEnv === 'sandbox' ? '<span class="badge-sandbox">(Sandbox Mode)</span>' : '<span style="color:#16a34a;font-weight:600;">&#x1f512; Secure</span>'; ?></small>
                             </div>
 
                             <!-- Cash Payment Section -->

@@ -1,7 +1,7 @@
 
-console.log(' Lenco Payment Handler Loading...');
+// Lenco Payment Handler — Production-ready
 
-//  payment state
+// Payment state (kept in closure-like scope)
 let lencoPaymentState = {
     reference: null,
     amount: 0,
@@ -9,15 +9,16 @@ let lencoPaymentState = {
     inProgress: false
 };
 
-// Lenco payment handlers when DOM is ready
+// Only log in non-production
+const _lencoDebug = (window.LENCO_CONFIG?.environment === 'sandbox');
+function lencoLog(...args) { if (_lencoDebug) console.log('[Lenco]', ...args); }
+function lencoWarn(...args) { console.warn('[Lenco]', ...args); }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Lenco Payment Handler Initialized');
+    lencoLog('Payment handler initialised');
     
     if (typeof LencoPay === 'undefined') {
-        console.warn(' Lenco widget not loaded. Payment features may not work.');
-    } else {
-        console.log('Lenco widget loaded successfully');
+        lencoWarn('Widget not loaded — payment features unavailable');
     }
  
     setupPaymentMethodHandler();
@@ -38,7 +39,7 @@ function setupPaymentMethodHandler() {
     const codAmountField = document.getElementById('codAmount');
     
     if (!paymentMethodSelect) {
-        console.error('Payment method select not found');
+        lencoWarn('Payment method select not found');
         return;
     }
     
@@ -125,6 +126,7 @@ function setupPaymentMethodHandler() {
 function setupLencoFeeCalculation() {
     const deliveryFeeInput = document.getElementById('deliveryFee');
     const insuranceInput = document.getElementById('insuranceAmount');
+    const mobileNumberInput = document.getElementById('mobileNumber');
     
     if (deliveryFeeInput) {
         deliveryFeeInput.addEventListener('input', () => {
@@ -137,6 +139,24 @@ function setupLencoFeeCalculation() {
         insuranceInput.addEventListener('input', () => {
             updatePaymentSummary('mobile');
             updatePaymentSummary('card');
+        });
+    }
+    
+    // Auto-detect mobile network when user types mobile money number
+    if (mobileNumberInput) {
+        mobileNumberInput.addEventListener('input', function() {
+            const val = this.value.replace(/\D/g, '');
+            if (val.length >= 3) {
+                const network = detectZambianNetwork(val);
+                if (network) {
+                    const radioId = network.toLowerCase(); // 'mtn', 'airtel', 'zamtel'
+                    const radio = document.getElementById(radioId);
+                    if (radio) {
+                        radio.checked = true;
+                        lencoLog('Auto-detected network:', network);
+                    }
+                }
+            }
         });
     }
 }
@@ -166,22 +186,48 @@ function updatePaymentSummary(type) {
     }
 }
 
-// unique payment reference
+// Crypto-secure payment reference
 function generatePaymentReference() {
     const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const random = Array.from(randomBytes, b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
     return `WDP-${timestamp}-${random}`;
 }
 
 // customer information from form
-
 function collectCustomerInfo() {
     return {
         firstName: document.getElementById('senderName')?.value.split(' ')[0] || '',
         lastName: document.getElementById('senderName')?.value.split(' ').slice(1).join(' ') || '',
         email: document.getElementById('senderEmail')?.value || 'customer@example.com',
-        phone: document.getElementById('senderPhone')?.value || document.getElementById('mobileNumber')?.value || ''
+        phone: document.getElementById('senderPhone')?.value || '',
+        mobileMoneyNumber: document.getElementById('mobileNumber')?.value || ''
     };
+}
+
+/**
+ * Convert Zambian local phone number to international format for Lenco.
+ * 09XXXXXXXX  -> 260XXXXXXXXX
+ * +260XXXXXXX -> 260XXXXXXXXX
+ * Already in 260... format -> pass through
+ */
+function toInternationalPhone(phone) {
+    if (!phone) return '';
+    let cleaned = phone.replace(/[\s\-\(\)\+]/g, '');
+    // Local 10-digit starting with 0
+    if (cleaned.length === 10 && cleaned.startsWith('0')) {
+        return '260' + cleaned.substring(1);
+    }
+    // Already international 12-digit
+    if (cleaned.length === 12 && cleaned.startsWith('260')) {
+        return cleaned;
+    }
+    // 9 digits without leading 0
+    if (cleaned.length === 9 && /^[5-9]/.test(cleaned)) {
+        return '260' + cleaned;
+    }
+    return cleaned;
 }
 
 /**
@@ -190,10 +236,10 @@ function collectCustomerInfo() {
  * @param {string} channel - Payment channel: 'card' or 'mobile-money'
  */
 function initiateLencoPayment(channel) {
-    console.log(` Initiating Lenco payment - Channel: ${channel}`);
+    lencoLog('Initiating payment - Channel:', channel);
     
     if (lencoPaymentState.inProgress) {
-        console.warn('Payment already in progress');
+        lencoWarn('Payment already in progress');
         return;
     }
     
@@ -204,13 +250,13 @@ function initiateLencoPayment(channel) {
     
     if (typeof LencoPay === 'undefined') {
         alert('Payment system is not available. Please refresh the page and try again.');
-        console.error('LencoPay widget not loaded');
+        lencoWarn('LencoPay widget not loaded');
         return;
     }
     
     if (!window.LENCO_CONFIG || !window.LENCO_CONFIG.publicKey) {
         alert('Payment configuration error. Please contact support.');
-        console.error('Lenco configuration not found');
+        lencoWarn('Lenco configuration not found');
         return;
     }
     
@@ -245,20 +291,21 @@ function initiateLencoPayment(channel) {
         button.disabled = true;
     }
     
-    console.log('Payment Details:', {
-        reference,
-        amount,
-        channel,
-        customer,
-        currency: window.LENCO_CONFIG.currency
-    });
+    lencoLog('Payment initiating:', { reference, amount, channel });
     
     try {
         //  channels array based on selected method
         const channels = channel === 'card' ? ['card'] : ['mobile-money'];
         
+        // For mobile money, use the dedicated mobile number field in international format
+        const phoneForPayment = channel === 'mobile-money'
+            ? toInternationalPhone(customer.mobileMoneyNumber || customer.phone)
+            : toInternationalPhone(customer.phone);
+        
+        lencoLog('Phone for payment (intl):', phoneForPayment);
+        
         //  Lenco popup widget
-        LencoPay.getPaid({
+        const paymentConfig = {
             key: window.LENCO_CONFIG.publicKey,
             reference: reference,
             email: customer.email || 'customer@parcel.co.zm',
@@ -270,24 +317,34 @@ function initiateLencoPayment(channel) {
             customer: {
                 firstName: customer.firstName || 'Customer',
                 lastName: customer.lastName || '',
-                phone: customer.phone || ''
+                phone: phoneForPayment
             },
             onSuccess: function(response) {
-                console.log(' Lenco Payment Success:', response);
+                lencoLog('Payment success callback received');
                 handlePaymentSuccess(response);
             },
             onClose: function() {
-                console.log('Payment window closed');
+                lencoLog('Payment window closed');
                 handlePaymentClose();
             },
             onConfirmationPending: function() {
-                console.log('⏳ Payment confirmation pending');
+                lencoLog('Payment confirmation pending');
                 handlePaymentPending();
             }
-        });
+        };
+        
+        // For mobile money, attach phone number as metadata so Lenco routes the USSD push
+        if (channel === 'mobile-money' && phoneForPayment) {
+            paymentConfig.metadata = {
+                mobileMoneyNumber: phoneForPayment,
+                mobileNetwork: detectZambianNetwork(customer.mobileMoneyNumber || customer.phone) || 'Unknown'
+            };
+        }
+        
+        LencoPay.getPaid(paymentConfig);
         
     } catch (error) {
-        console.error(' Error initiating Lenco payment:', error);
+        lencoWarn('Error initiating Lenco payment:', error);
         alert('Failed to initiate payment. Please try again.');
         resetPaymentState(buttonId);
     }
@@ -367,7 +424,7 @@ function validatePaymentForm(channel) {
             return false;
         }
         
-        console.log(` Detected network: ${network} for number ${cleaned}`);
+        lencoLog('Detected network:', network, 'for number ending', cleaned.slice(-4));
     }
     
     return true;
@@ -376,19 +433,20 @@ function validatePaymentForm(channel) {
 //  successful payment
 async function handlePaymentSuccess(response) {
     const reference = response.reference || lencoPaymentState.reference;
-    console.log('Processing successful payment - Reference:', reference);
+    lencoLog('Verifying payment:', reference);
     
     try {
-        // Verifying  payment with backend
+        // Server-side verification (includes session cookie for auth)
         const verifyResponse = await fetch(window.LENCO_CONFIG.verifyUrl + '?reference=' + encodeURIComponent(reference), {
             method: 'GET',
+            credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
         
         const verifyData = await verifyResponse.json();
-        console.log('Payment verification result:', verifyData);
+        lencoLog('Verification result:', verifyData.success ? 'OK' : 'FAILED');
         
         if (verifyData.success && verifyData.verified) {
             // Payment verified successfully
@@ -401,12 +459,12 @@ async function handlePaymentSuccess(response) {
             
         } else {
             // Verification failed but payment might still be processing
-            console.warn('Payment verification returned:', verifyData);
+            lencoWarn('Payment verification status:', verifyData.success);
             alert('Payment is being processed. Please wait for confirmation or check your payment status.');
         }
         
     } catch (error) {
-        console.error('Error verifying payment:', error);
+        lencoWarn('Error verifying payment:', error.message);
         alert('Payment completed but verification failed. Reference: ' + reference + '. Please contact support if needed.');
     }
     
@@ -415,7 +473,7 @@ async function handlePaymentSuccess(response) {
 
 
 function handlePaymentClose() {
-    console.log('Payment cancelled by user');
+    lencoLog('Payment cancelled by user');
     alert('Payment was not completed. Please try again when ready.');
     resetPaymentState();
 }
@@ -423,7 +481,7 @@ function handlePaymentClose() {
 
 function handlePaymentPending() {
     const reference = lencoPaymentState.reference;
-    console.log('Payment pending confirmation - Reference:', reference);
+    lencoLog('Payment pending — Reference:', reference);
     
     alert('Your payment is being processed. Reference: ' + reference + '. You will receive confirmation shortly.');
     
@@ -515,10 +573,10 @@ function enableFormSubmission() {
         submitBtn.classList.add('payment-complete');
     }
     
-    console.log('Form submission enabled after successful payment');
+    lencoLog('Form submission enabled after successful payment');
 }
 
 window.initiateLencoPayment = initiateLencoPayment;
 window.detectZambianNetwork = detectZambianNetwork;
 
-console.log(' Lenco Payment Handler Ready');
+lencoLog('Payment handler ready');

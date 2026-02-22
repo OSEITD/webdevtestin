@@ -1,20 +1,49 @@
 <?php
 /**
- * Lenco Payment Webhook Handler
+ * Lenco Payment Webhook Handler (Secured)
  * 
- * This endpoint receives webhook notifications from Lenco
- * when payment status changes (e.g., collection.successful)
+ * Receives webhook notifications from Lenco when payment status changes.
  * 
- * Configure this URL in the Lenco dashboard webhook settings
+ * Security measures:
+ * - HMAC-SHA512 signature validation (X-Lenco-Signature header)
+ * - POST-only access
+ * - Rate limiting
+ * - No session required (server-to-server)
+ * 
+ * Configure this URL in the Lenco dashboard webhook settings.
  */
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+
+// Webhooks are POST only
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
+    exit();
+}
 
 require_once 'lenco_config.php';
 require_once __DIR__ . '/../../config.php';
 
 $rawInput = file_get_contents('php://input');
-error_log("Lenco Webhook Received: " . $rawInput);
+
+// ─── Signature Validation ────────────────────────────────────────────────────
+if (!validateLencoWebhookSignature($rawInput)) {
+    error_log('Lenco Webhook REJECTED — invalid signature from IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'Invalid signature']);
+    exit();
+}
+
+// ─── Rate Limiting ───────────────────────────────────────────────────────────
+if (!lencoRateLimitCheck('webhook')) {
+    http_response_code(429);
+    echo json_encode(['status' => 'error', 'message' => 'Too many requests']);
+    exit();
+}
+
+error_log("Lenco Webhook Received (verified) from IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
 
 // Parse the webhook payload
 $payload = json_decode($rawInput, true);
@@ -135,7 +164,7 @@ function updatePaymentStatus($reference, $status, $additionalData = []) {
         ];
         
         if ($status === 'successful' && isset($additionalData['lenco_reference'])) {
-            $updateData['flutterwave_tx_ref'] = $additionalData['lenco_reference']; 
+            $updateData['lenco_tx_ref'] = $additionalData['lenco_reference'];
             $updateData['paid_at'] = $additionalData['completed_at'] ?? date('c');
         }
         

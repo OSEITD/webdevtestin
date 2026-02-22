@@ -1,193 +1,179 @@
 <?php
+/**
+ * Lenco Payment Gateway Configuration — apiWDLenco1
+ * 
+ * SECURITY NOTES:
+ * - Secret key is NEVER exposed to frontend; only used server-side (verify / webhook).
+ * - Public key is safe for client-side widget initialization.
+ * - Set LENCO_ENV to 'sandbox' to fall back to sandbox keys for testing.
+ * - This file should be excluded from public version control (.gitignore).
+ */
 
+// ─── Environment Toggle ──────────────────────────────────────────────────────
+// 'live' = production (real money), 'sandbox' = test mode
+define('LENCO_ENV', 'live');
 
-// Environment: 'sandbox' for testing, 'live' for production
-define('LENCO_ENV', 'sandbox');
+// ─── Live / Production Credentials (apiWDLenco1) ────────────────────────────
+define('LENCO_PUBLIC_KEY_LIVE', 'pub-345dbaaf4e6865deb9f3beab0718afe457762dab73afd0a0');
+define('LENCO_SECRET_KEY_LIVE', 'ec3d5d3db51765c794f9f70ba7fb12131be4844939e3837966aacae47693db5e');
 
-// Sandbox/Test Credentials
+// ─── Sandbox / Test Credentials ──────────────────────────────────────────────
 define('LENCO_PUBLIC_KEY_SANDBOX', 'pub-88dd921c0ecd73590459a1dd5a9343c77db0f3c344f222b9');
 define('LENCO_SECRET_KEY_SANDBOX', '993bed87f9d592566a6cce2cefd79363d1b7e95af3e1e6642b294ce5fc8c59f6');
 
-// Production Credentials (Replace with actual keys when going live)
-define('LENCO_PUBLIC_KEY_LIVE', 'YOUR_LIVE_PUBLIC_KEY');
-define('LENCO_SECRET_KEY_LIVE', 'YOUR_LIVE_SECRET_KEY');
-
-// API Base URLs
-define('LENCO_SANDBOX_BASE_URL', 'https://sandbox.lenco.co/access/v2');
+// ─── API Base URLs ───────────────────────────────────────────────────────────
 define('LENCO_LIVE_BASE_URL', 'https://api.lenco.co/access/v2');
+define('LENCO_SANDBOX_BASE_URL', 'https://sandbox.lenco.co/access/v2');
 
-// Widget Script URLs
-define('LENCO_WIDGET_SANDBOX_URL', 'https://pay.sandbox.lenco.co/js/v1/inline.js');
+// ─── Widget Script URLs ─────────────────────────────────────────────────────
 define('LENCO_WIDGET_LIVE_URL', 'https://pay.lenco.co/js/v1/inline.js');
+define('LENCO_WIDGET_SANDBOX_URL', 'https://pay.sandbox.lenco.co/js/v1/inline.js');
 
-// Default Currency
+// ─── Currency ────────────────────────────────────────────────────────────────
 define('LENCO_CURRENCY', 'ZMW');
 
-// Fee Configuration (adjust based on your Lenco dashboard settings)
+// ─── Fee Configuration ──────────────────────────────────────────────────────
 define('LENCO_MOBILE_MONEY_FEE_PERCENTAGE', 2.5);
 define('LENCO_CARD_FEE_PERCENTAGE', 2.9);
 
-// Payment Channels
+// ─── Payment Channels & Statuses ────────────────────────────────────────────
 define('LENCO_PAYMENT_CHANNELS', ['card', 'mobile-money']);
-
-// Payment Statuses
 define('LENCO_STATUS_SUCCESSFUL', 'successful');
 define('LENCO_STATUS_PENDING', 'pending');
 define('LENCO_STATUS_FAILED', 'failed');
 
-/**
- * Get Lenco public key based on environment
- */
+// ─── Security: Rate-limit window (seconds) & max requests per window ────────
+define('LENCO_RATE_LIMIT_WINDOW', 60);
+define('LENCO_RATE_LIMIT_MAX', 10);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Helper functions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Public key (safe for client-side) */
 function getLencoPublicKey() {
     return LENCO_ENV === 'live' ? LENCO_PUBLIC_KEY_LIVE : LENCO_PUBLIC_KEY_SANDBOX;
 }
 
-/**
- * Get Lenco secret key based on environment
- */
+/** Secret key (server-side only — never echo to frontend) */
 function getLencoSecretKey() {
     return LENCO_ENV === 'live' ? LENCO_SECRET_KEY_LIVE : LENCO_SECRET_KEY_SANDBOX;
 }
 
-/**
- * Get Lenco API base URL based on environment
- */
+/** API base URL */
 function getLencoBaseUrl() {
     return LENCO_ENV === 'live' ? LENCO_LIVE_BASE_URL : LENCO_SANDBOX_BASE_URL;
 }
 
-/**
- * Get Lenco widget script URL based on environment
- */
+/** Widget JS URL */
 function getLencoWidgetUrl() {
     return LENCO_ENV === 'live' ? LENCO_WIDGET_LIVE_URL : LENCO_WIDGET_SANDBOX_URL;
 }
 
 /**
  * Calculate transaction fee
- * 
- * @param float $amount The transaction amount
- * @param string $method Payment method ('card' or 'mobile-money')
- * @return float The calculated fee
  */
 function calculateLencoTransactionFee($amount, $method = 'mobile-money') {
     if ($method === 'mobile-money') {
         return ($amount * LENCO_MOBILE_MONEY_FEE_PERCENTAGE) / 100;
-    } else if ($method === 'card') {
+    } elseif ($method === 'card') {
         return ($amount * LENCO_CARD_FEE_PERCENTAGE) / 100;
     }
     return 0;
 }
 
 /**
- * Generate a unique payment reference
- * 
- * @param string $prefix 
- * @return string 
+ * Generate a unique, unpredictable payment reference
  */
 function generateLencoReference($prefix = 'WDP') {
-    return $prefix . '-' . date('Ymd') . '-' . uniqid();
+    return $prefix . '-' . date('Ymd') . '-' . bin2hex(random_bytes(8));
 }
 
 /**
- *  Zambian phone number for mobile money
- * 
- * @param string $phoneNumber 
- * @return bool 
+ * Validate Zambian phone number for mobile money
  */
 function validateLencoPhoneNumber($phoneNumber) {
-
     $cleaned = preg_replace('/[^0-9]/', '', $phoneNumber);
-    
-    // Check for valid Zambian format (10 digits starting with 09)
+
     if (strlen($cleaned) === 10 && substr($cleaned, 0, 2) === '09') {
         return true;
     }
-    
-    // Check for format without leading 0
     if (strlen($cleaned) === 9 && in_array(substr($cleaned, 0, 1), ['7', '6', '5', '9'])) {
         return true;
     }
-    
     return false;
 }
 
 /**
  * Get mobile operator from phone number
- * 
- * @param string $phoneNumber Phone number
- * @return string|null Operator name or null
  */
 function getLencoMobileOperator($phoneNumber) {
     $cleaned = preg_replace('/[^0-9]/', '', $phoneNumber);
-    
-    // Normalize to 9 digits
+
     if (strlen($cleaned) === 10 && substr($cleaned, 0, 1) === '0') {
         $cleaned = substr($cleaned, 1);
     }
-    
-    // First two digits after country code
+
     $prefix = substr($cleaned, 0, 2);
-    
-    // MTN Zambia prefixes
-    if (in_array($prefix, ['96', '76'])) {
-        return 'mtn';
-    }
-    
-    // Airtel Zambia prefixes
-    if (in_array($prefix, ['97', '77'])) {
-        return 'airtel';
-    }
-    
-    // Zamtel prefixes
-    if (in_array($prefix, ['95', '55'])) {
-        return 'zamtel';
-    }
-    
+
+    if (in_array($prefix, ['96', '76'])) return 'mtn';
+    if (in_array($prefix, ['97', '77'])) return 'airtel';
+    if (in_array($prefix, ['95', '55'])) return 'zamtel';
+
     return null;
 }
 
 /**
- * Mobile Money Test Accounts for Sandbox
- * 
- * MTN:
- * - 0961111111 - Successful
- * - 0962222222 - Failed (Not enough funds)
- * - 0963333333 - Failed (Limit exceeded)
- * - 0964444444 - Failed (Unauthorized)
- * - 0966666666 - Failed (Timeout)
- * 
- * Airtel (ZM):
- * - 0971111111 - Successful
- * - 0972222222 - Failed (Incorrect Pin)
- * - 0975555555 - Failed (Not enough funds)
- * - 0977777777 - Failed (Timeout)
- * 
- * Test Cards:
- * - Visa: 4622 9431 2701 3705, CVV: 838, Expiry: Any future date
- * - Visa: 4622 9431 2701 3747, CVV: 370, Expiry: Any future date
- * - Mastercard: 5555 5555 5555 4444, CVV: Any 3 digits, Expiry: Any future date
+ * Simple file-based rate limiter (per IP).
+ * Returns true if the request is allowed, false if rate-limited.
  */
-function getLencoTestAccounts() {
-    return [
-        'mobile_money' => [
-            'mtn' => [
-                ['phone' => '0961111111', 'response' => 'Successful'],
-                ['phone' => '0962222222', 'response' => 'Failed - Not enough funds'],
-                ['phone' => '0963333333', 'response' => 'Failed - Limit exceeded'],
-            ],
-            'airtel' => [
-                ['phone' => '0971111111', 'response' => 'Successful'],
-                ['phone' => '0972222222', 'response' => 'Failed - Incorrect Pin'],
-                ['phone' => '0975555555', 'response' => 'Failed - Not enough funds'],
-            ]
-        ],
-        'card' => [
-            ['type' => 'Visa', 'number' => '4622 9431 2701 3705', 'cvv' => '838', 'expiry' => 'Any future date'],
-            ['type' => 'Visa', 'number' => '4622 9431 2701 3747', 'cvv' => '370', 'expiry' => 'Any future date'],
-            ['type' => 'Mastercard', 'number' => '5555 5555 5555 4444', 'cvv' => 'Any 3 digits', 'expiry' => 'Any future date'],
-        ]
-    ];
+function lencoRateLimitCheck($action = 'payment') {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $key = md5($ip . $action);
+    $file = sys_get_temp_dir() . '/lenco_rl_' . $key . '.json';
+
+    $window = LENCO_RATE_LIMIT_WINDOW;
+    $max = LENCO_RATE_LIMIT_MAX;
+    $now = time();
+
+    $data = ['requests' => [], 'blocked_until' => 0];
+    if (file_exists($file)) {
+        $data = json_decode(file_get_contents($file), true) ?: $data;
+    }
+
+    // If currently blocked
+    if ($data['blocked_until'] > $now) {
+        return false;
+    }
+
+    // Prune old entries
+    $data['requests'] = array_values(array_filter($data['requests'], fn($t) => $t > ($now - $window)));
+
+    if (count($data['requests']) >= $max) {
+        $data['blocked_until'] = $now + $window;
+        file_put_contents($file, json_encode($data), LOCK_EX);
+        return false;
+    }
+
+    $data['requests'][] = $now;
+    file_put_contents($file, json_encode($data), LOCK_EX);
+    return true;
+}
+
+/**
+ * Validate HMAC signature from Lenco webhook (if header is present).
+ * Lenco sends X-Lenco-Signature with HMAC-SHA512 of raw body using secret key.
+ */
+function validateLencoWebhookSignature($rawBody) {
+    $signature = $_SERVER['HTTP_X_LENCO_SIGNATURE'] ?? '';
+    if (empty($signature)) {
+        // If no signature header, log warning but allow in dev
+        error_log('Lenco Webhook: No X-Lenco-Signature header present');
+        return LENCO_ENV !== 'live'; // reject in live, allow in sandbox
+    }
+
+    $expectedSignature = hash_hmac('sha512', $rawBody, getLencoSecretKey());
+    return hash_equals($expectedSignature, $signature);
 }
 
 ?>
