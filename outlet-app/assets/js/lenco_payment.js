@@ -358,17 +358,16 @@ function initiateLencoPayment(channel) {
 function detectZambianNetwork(phoneNumber) {
     const cleaned = phoneNumber.replace(/\D/g, '');
     
-    if (cleaned.startsWith('097') || cleaned.startsWith('077')) {
+    if (cleaned.startsWith('097') || cleaned.startsWith('077') || cleaned.startsWith('057')) {
         return 'Airtel';
     }
-    
+
     if (cleaned.startsWith('096') || cleaned.startsWith('076')) {
         return 'MTN';
     }
-    
-    if (cleaned.startsWith('095') || cleaned.startsWith('075')) {
-        return 'Zamtel';
-    }
+
+    // Zamtel and others are not supported by allowed prefixes
+    return null;
     
     return null;
 }
@@ -408,23 +407,22 @@ function validatePaymentForm(channel) {
             return false;
         }
         
-        //  Zambian mobile number format
+        //  Zambian mobile number format (accept +260 or local), then use network detection
         const cleaned = mobileNumber.replace(/\D/g, '');
-        if (cleaned.length !== 10) {
-            alert('Please enter a valid 10-digit Zambian mobile number (e.g., 0971234567).');
-            document.getElementById('mobileNumber')?.focus();
-            return false;
+        // convert to local 0XXXXXXXX format for detection
+        let networkNumber = cleaned;
+        if (networkNumber.startsWith('260') && networkNumber.length === 12) {
+            networkNumber = '0' + networkNumber.slice(3);
         }
-        
-        //  supported network prefixes
-        const network = detectZambianNetwork(cleaned);
+        const network = detectZambianNetwork(networkNumber);
         if (!network) {
-            alert('Unsupported mobile network. Please use:\n• Airtel: 097xxxxxxx or 077xxxxxxx\n• MTN: 096xxxxxxx or 076xxxxxxx\n• Zamtel: 095xxxxxxx or 075xxxxxxx');
+            alert('Please enter a valid Zambian mobile money number using MTN (096,076) or Airtel (097,077,057) prefixes.');
             document.getElementById('mobileNumber')?.focus();
             return false;
         }
+        lencoLog('Detected network:', network, 'for number ending', networkNumber.slice(-4));
         
-        lencoLog('Detected network:', network, 'for number ending', cleaned.slice(-4));
+        lencoLog('Detected network:', network, 'for number ending', networkNumber.slice(-4));
     }
     
     return true;

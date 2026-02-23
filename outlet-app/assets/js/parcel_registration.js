@@ -1080,9 +1080,11 @@ async function handleParcelSubmission(event) {
     }
     
     try {
-        // Validate form
-        if (!validateForm()) {
-            throw new Error('Please fill in all required fields');
+        // Validate form; validator now returns true or an error string
+        const validation = validateForm();
+        if (validation !== true) {
+            // show the specific message rather than generic
+            throw new Error(validation);
         }
         
         // Prepare form data
@@ -1241,11 +1243,14 @@ function validateForm() {
         'itemDescription', 'parcelWeight', 'destinationOutletId'
     ];
     let isValid = true;
+    let message = '';
+
     required.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (!field || !field.value.trim()) {
             field?.classList.add('error');
             isValid = false;
+            message = 'Please fill in all required fields.';
         } else {
             field?.classList.remove('error');
         }
@@ -1255,6 +1260,7 @@ function validateForm() {
     if (deliveryFee && (parseFloat(deliveryFee.value) <= 0 || !deliveryFee.value)) {
         deliveryFee.classList.add('error');
         isValid = false;
+        message = 'Delivery fee must be greater than zero.';
     }
     
     // Validate trip-destination compatibility
@@ -1272,9 +1278,11 @@ function validateForm() {
         const allStops = [selectedOption.getAttribute('data-origin'), ...intermediateStops, tripDestination];
         
         if (!allStops.includes(destinationName)) {
-            showError('⚠️ The selected trip does not go to the selected destination outlet. Please choose a different trip or destination.');
+            const err = '⚠️ The selected trip does not go to the selected destination outlet. Please choose a different trip or destination.';
+            showError(err);
             tripSelect.classList.add('error');
             isValid = false;
+            message = err;
         } else {
             tripSelect.classList.remove('error');
         }
@@ -1288,27 +1296,37 @@ function validateForm() {
         const mobileVal = mobileNumberField?.value?.trim() || '';
 
         if (!mobileProviderChecked) {
-            showError('Please select your mobile network provider for mobile money payment.');
+            const err = 'Please select your mobile network provider for mobile money payment.';
+            showError(err);
             const providerContainer = document.querySelector('.mobile-money-providers');
             if (providerContainer) providerContainer.classList.add('error');
             isValid = false;
+            message = err;
         } else {
             const providerContainer = document.querySelector('.mobile-money-providers');
             if (providerContainer) providerContainer.classList.remove('error');
         }
 
-        // Basic validation for Zambian numbers
+        // Basic validation for Zambian numbers using network detection helper
         const cleaned = mobileVal.replace(/\D/g, '');
-        if (!mobileVal || cleaned.length !== 10 || !cleaned.startsWith('09')) {
+        let networkNumber = cleaned;
+        // if international, convert to local leading zero
+        if (networkNumber.startsWith('260') && networkNumber.length === 12) {
+            networkNumber = '0' + networkNumber.slice(3);
+        }
+        const network = typeof detectZambianNetwork === 'function' ? detectZambianNetwork(networkNumber) : null;
+        if (!mobileVal || !network) {
             if (mobileNumberField) mobileNumberField.classList.add('error');
-            showError('Please enter a valid 10-digit mobile money number (e.g., 0971234567).');
+            const err = 'Please enter a valid Zambian mobile money number using MTN (096,076) or Airtel (097,077,057) prefixes.';
+            showError(err);
             isValid = false;
+            message = err;
         } else {
             if (mobileNumberField) mobileNumberField.classList.remove('error');
         }
     }
 
-    return isValid;
+    return isValid ? true : (message || 'Please fill in all required fields');
 }
 
 function showError(message) {
