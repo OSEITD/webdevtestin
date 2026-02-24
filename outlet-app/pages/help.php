@@ -35,7 +35,33 @@ $current_user = getCurrentUser();
     <link rel="stylesheet" href="../css/help.css">
     <style>
         /* Page container */
-        .content-container { max-width: 900px; margin: 20px auto; padding: 0 12px; }
+        .content-container { max-width: 1400px; margin: 20px auto; padding: 0 12px; }
+
+        /* match parcel pool header look */
+        .page-header {
+            background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
+            max-width: 1400px;
+            text-align: center;
+        }
+        .page-header .page-title-section h1,
+        .page-header .page-title-section .page-subtitle {
+            color: white;
+        }
+        .page-header .page-title-section h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        .page-header .page-title-section .page-subtitle {
+            opacity: 0.9;
+            font-size: 1.1rem;
+            margin: 0;
+        }
 
         /* Search input (use site-wide classes for consistent look) */
         .search-input-container { position: relative; }
@@ -76,7 +102,7 @@ $current_user = getCurrentUser();
 
     <main class="main-content">
         <div class="page-header">
-            <div class="page-header-content">
+            <div class="page-header-content" style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:1rem;position:relative;">
                 <div class="page-title-section">
                     <h1 class="page-title">
                         <i class="fas fa-question-circle"></i>
@@ -85,13 +111,15 @@ $current_user = getCurrentUser();
                     <p class="page-subtitle">Find answers to common questions or contact our support team</p>
                 </div>
 
-                <?php if (in_array($current_user['role'] ?? 'customer', ['admin', 'outlet_manager', 'super_admin'])): ?>
-                <a href="manage_help.php" class="btn btn-primary">
-                    <i class="fas fa-cogs"></i> Manage Content
-                </a>
-                <?php endif; ?>
             </div>
         </div>
+<?php if (in_array($current_user['role'] ?? 'customer', ['admin', 'outlet_manager', 'super_admin'])): ?>
+    <div class="manage-btn-container" style="text-align:right; margin: 20px auto 20px auto; max-width:1400px; padding: 0 24px;">
+        <a href="manage_help.php" class="btn btn-primary">
+            <i class="fas fa-cogs"></i> Manage Content
+        </a>
+    </div>
+<?php endif; ?>
 
         <div class="content-container">
 
