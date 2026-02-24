@@ -59,6 +59,7 @@ body {
 
 /* For pages that should stretch wider (notifications) */
 .content-container.notifications-wide {
+    /* span full width of viewport */
     max-width: none;
     width: 100%;
     padding: 16px 20px;
@@ -111,8 +112,8 @@ body {
 
 .notifications-shell {
     width: 100%;
-    /* limit width like parcel-pool-container */
-    max-width: 1400px;
+    /* truly full width */
+    max-width: none;
     box-sizing: border-box;
     background: var(--bg-primary);
     border-radius: 20px;
