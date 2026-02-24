@@ -1632,7 +1632,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
         /* Collapsible section styles */
         .collapsible-section { margin-bottom: 1.6rem; border-radius:8px; background: #fff; padding: 0.6rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:1.05rem; margin:0; padding:0.5rem 0.6rem; }
+        .section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:1.05rem; margin:0; padding:0.5rem 0.6rem; cursor: pointer; }
         .section-title span { display:flex; align-items:center; gap:10px; font-weight:600; color:#111827; }
         .collapse-toggle { background:transparent; border:0; font-size:1rem; cursor:pointer; padding:6px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; color:#374151; }
         .collapse-toggle i { transition: transform 0.25s ease; }
@@ -2930,6 +2930,18 @@ header('Content-Type: text/html; charset=UTF-8');
                         content.setAttribute('aria-hidden', 'true');
                     }
                 });
+            
+                // make header itself toggle when clicked, avoiding double toggle when arrow clicked
+                const header = section.querySelector('.section-title');
+                if (header) {
+                    header.addEventListener('click', function(e) {
+                        // if the original click happened on the button itself, let the button handler handle it
+                        if (e.target.closest('.collapse-toggle')) {
+                            return;
+                        }
+                        btn.click();
+                    });
+                }
             });
         });
     </script>

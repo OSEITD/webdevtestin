@@ -1,15 +1,11 @@
-/**
- * PWA Install Manager
- * Handles the beforeinstallprompt event and shows custom install UI
- */
+
 
 (function() {
     let deferredPrompt = null;
     const installBanner = document.getElementById('pwa-install-banner');
     const installBtn = document.getElementById('pwa-install-btn');
     const dismissBtn = document.getElementById('pwa-install-dismiss');
-    
-    // Check if already installed or dismissed
+
     const isDismissed = localStorage.getItem('pwa-install-dismissed');
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
         || window.navigator.standalone 
