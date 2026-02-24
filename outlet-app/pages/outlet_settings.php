@@ -38,7 +38,7 @@ $current_user = getCurrentUser();
         }
 
         .outlet-status-indicator span {
-            color: #374151;
+            color: #fff;
             font-weight: 500;
         }
 
