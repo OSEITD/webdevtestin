@@ -182,25 +182,20 @@ try {
     
     
     
+    // fetch transactions from payment_transactions table scoped to company and outlet
     $todays_payments = makeApiCall(
-        "$supabaseUrl/rest/v1/payments?created_at=gte.$today_start&created_at=lte.$today_end&status=eq.paid&select=amount,method,parcel_id,parcels(origin_outlet_id)", 
+        "$supabaseUrl/rest/v1/payment_transactions?company_id=eq.$company_id&outlet_id=eq.$outlet_id&status=eq.successful&paid_at=gte.$today_start&paid_at=lte.$today_end&select=amount,payment_method,parcel_id", 
         $supabaseKey
     );
-    
-    
-    $outlet_payments_today = array_filter($todays_payments, function($payment) use ($outlet_id) {
-        return isset($payment['parcels']['origin_outlet_id']) && $payment['parcels']['origin_outlet_id'] === $outlet_id;
-    });
-    
-    
+
+    $outlet_payments_today = $todays_payments; // already filtered by outlet
+
     $weeks_payments = makeApiCall(
-        "$supabaseUrl/rest/v1/payments?created_at=gte.$week_start&status=eq.paid&select=amount,method,parcel_id,parcels(origin_outlet_id)", 
+        "$supabaseUrl/rest/v1/payment_transactions?company_id=eq.$company_id&outlet_id=eq.$outlet_id&status=eq.successful&paid_at=gte.$week_start&paid_at=lte.$today_end&select=amount,payment_method,parcel_id", 
         $supabaseKey
     );
-    
-    $outlet_payments_week = array_filter($weeks_payments, function($payment) use ($outlet_id) {
-        return isset($payment['parcels']['origin_outlet_id']) && $payment['parcels']['origin_outlet_id'] === $outlet_id;
-    });
+
+    $outlet_payments_week = $weeks_payments;
     
     
     $cod_collections = makeApiCall(

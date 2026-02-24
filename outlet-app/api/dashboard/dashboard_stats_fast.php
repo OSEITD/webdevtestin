@@ -138,16 +138,32 @@ class LightweightDashboardAPI {
     private function getQuickRevenue() {
         $company = $this->companyId;
         $today = date('Y-m-d');
-        
-        
-        $todayPayments = $this->simpleSum('payments', 'amount', "company_id=eq.$company&status=eq.paid&paid_at=gte.{$today}T00:00:00");
-        $transactionCount = $this->quickCount('payments', "company_id=eq.$company&status=eq.paid&paid_at=gte.{$today}T00:00:00");
-        
+        $outlet = $_SESSION['outlet_id'] ?? null;
+        $outletFilter = $outlet ? "&outlet_id=eq.$outlet" : '';
+
+        // count successful payments from payment_transactions
+        $paidFilter = "company_id=eq.$company" . $outletFilter . "&status=eq.successful&paid_at=gte.{$today}T00:00:00";
+        $todayPayments = $this->simpleSum('payment_transactions', 'amount', $paidFilter);
+        $transactionCount = $this->quickCount('payment_transactions', $paidFilter);
+
+        // cod collections: amount where payment_method=eq.cod and same date
+        $codFilter = $paidFilter . "&payment_method=eq.cod";
+        $codCollected = $this->simpleSum('payment_transactions', 'amount', $codFilter);
+
+        // week/month approximated by another query instead of multiplication
+        $weekStart = date('Y-m-d', strtotime('monday this week'));
+        $weekFilter = "company_id=eq.$company" . $outletFilter . "&status=eq.successful&paid_at=gte.{$weekStart}T00:00:00";
+        $weekPayments = $this->simpleSum('payment_transactions', 'amount', $weekFilter);
+
+        $monthStart = date('Y-m-01');
+        $monthFilter = "company_id=eq.$company" . $outletFilter . "&status=eq.successful&paid_at=gte.{$monthStart}T00:00:00";
+        $monthPayments = $this->simpleSum('payment_transactions', 'amount', $monthFilter);
+
         return [
             'today' => $todayPayments,
-            'week' => $todayPayments * 5, 
-            'month' => $todayPayments * 20, 
-            'cod_collections' => 0,
+            'week' => $weekPayments,
+            'month' => $monthPayments,
+            'cod_collections' => $codCollected,
             'transactions_today' => $transactionCount,
             'pending_payments' => 0
         ];

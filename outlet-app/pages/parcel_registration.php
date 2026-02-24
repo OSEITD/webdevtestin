@@ -36,7 +36,7 @@ $lencoEnv = LENCO_ENV;
     
     <!-- Styles -->
     <link rel="stylesheet" href="../css/outlet-dashboard.css">
-    <link rel="stylesheet" href="../css/parcel_registration.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../css/parcel_registration_v2.css?v=<?php echo time(); ?>">
     
     <!-- Lenco Payment Widget (Sandbox) - loaded async so it doesn't block rendering -->
     <script src="<?php echo htmlspecialchars($lencoWidgetUrl); ?>" async></script>

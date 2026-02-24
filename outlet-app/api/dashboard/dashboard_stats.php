@@ -302,65 +302,60 @@ class AccurateDashboardAPI {
             'transactions_today' => 0,
             'pending_payments' => 0
         ];
-        
+
         $companyFilter = 'company_id=eq.' . urlencode($this->companyId);
-        
-        
-        $allPayments = $this->supabase->get('payments', 
-            $companyFilter,
-            'amount,status,paid_at,method'
+        $outletFilter  = $this->outletId ? '&outlet_id=eq.' . urlencode($this->outletId) : '';
+
+        $allPayments = $this->supabase->get('payment_transactions',
+            $companyFilter . $outletFilter,
+            'amount,status,paid_at,payment_method,outlet_id,settlement_status,created_at'
         );
-        
+
         if (empty($allPayments)) {
+            error_log('RevenueStats: no payments returned by supabase query');
             return $stats;
         }
-        
-        
-        $weekStart = date('Y-m-d', strtotime('monday this week'));
+        error_log('RevenueStats: fetched ' . count($allPayments) . ' payments');
+
+        $weekStart  = date('Y-m-d', strtotime('monday this week'));
         $monthStart = date('Y-m-01');
-        
-        
+
         foreach ($allPayments as $payment) {
-            $amount = floatval($payment['amount'] ?? 0);
-            $status = $payment['status'] ?? '';
-            $paidAt = $payment['paid_at'] ?? '';
-            $method = $payment['method'] ?? '';
-            
-            
-            if ($status === 'pending') {
+            $amount   = floatval($payment['amount'] ?? 0);
+            $status   = $payment['status'] ?? '';
+            $paidAt   = $payment['paid_at'] ?? '';
+            $method   = $payment['payment_method'] ?? '';
+            $created  = substr($payment['created_at'] ?? '', 0, 10);
+
+            error_log("RevenueStats payment row: status=$status paidAt=$paidAt created=$created amount=$amount method=$method");
+
+            // pending or unsettled
+            if ($status !== 'successful' || ($payment['settlement_status'] ?? '') !== 'settled') {
                 $stats['pending_payments'] += $amount;
-                continue;
             }
-            
-            
-            if ($status !== 'paid' || !$paidAt) {
-                continue;
-            }
-            
-            $paidDate = substr($paidAt, 0, 10); 
-            
-            
-            if ($paidDate === $this->currentDate) {
-                $stats['today'] += $amount;
-                $stats['transactions_today']++;
-                
-                
-                if ($method === 'cod') {
-                    $stats['cod_collections'] += $amount;
+
+            // include in totals only if status successful and has paid date
+            if ($status === 'successful' && $paidAt) {
+                $paidDate = substr($paidAt, 0, 10);
+
+                if ($paidDate === $this->currentDate) {
+                    $stats['today'] += $amount;
+                    $stats['transactions_today']++;
+                    if ($method === 'cod') {
+                        $stats['cod_collections'] += $amount;
+                    }
+                }
+
+                if ($paidDate >= $weekStart && $paidDate <= $this->currentDate) {
+                    $stats['week'] += $amount;
+                }
+
+                if ($paidDate >= $monthStart && $paidDate <= $this->currentDate) {
+                    $stats['month'] += $amount;
                 }
             }
-            
-            
-            if ($paidDate >= $weekStart && $paidDate <= $this->currentDate) {
-                $stats['week'] += $amount;
-            }
-            
-            
-            if ($paidDate >= $monthStart && $paidDate <= $this->currentDate) {
-                $stats['month'] += $amount;
-            }
         }
-        
+
         return $stats;
     }
 }
