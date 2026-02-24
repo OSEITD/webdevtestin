@@ -41,25 +41,25 @@ $current_user = getCurrentUser();
         }
 
         .wizard-header {
-            background: white;
-            color: #2E0D2A;
+            background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
+            color: white;
             padding: 30px;
             text-align: center;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: none;
         }
 
         .wizard-header h1 {
             margin: 0 0 10px 0;
             font-size: 2rem;
             font-weight: 700;
-            color: #2E0D2A;
+            color: white;
         }
 
         .wizard-header p {
             margin: 0;
-            opacity: 0.7;
+            opacity: 0.9;
             font-size: 1.1rem;
-            color: #666;
+            color: white;
         }
 
         .wizard-steps {

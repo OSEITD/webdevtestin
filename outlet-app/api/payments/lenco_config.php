@@ -83,15 +83,13 @@ function calculateLencoTransactionFee($amount, $method = 'mobile-money') {
 }
 
 /**
- * Generate a unique, unpredictable payment reference
+ * Generatting a unique, unpredictable payment reference
  */
 function generateLencoReference($prefix = 'WDP') {
     return $prefix . '-' . date('Ymd') . '-' . bin2hex(random_bytes(8));
 }
 
-/**
- * Validate Zambian phone number for mobile money
- */
+// Zambian phone number for mobile money
 function validateLencoPhoneNumber($phoneNumber) {
     $cleaned = preg_replace('/[^0-9]/', '', $phoneNumber);
 
@@ -104,9 +102,7 @@ function validateLencoPhoneNumber($phoneNumber) {
     return false;
 }
 
-/**
- * Get mobile operator from phone number
- */
+
 function getLencoMobileOperator($phoneNumber) {
     $cleaned = preg_replace('/[^0-9]/', '', $phoneNumber);
 
@@ -123,10 +119,8 @@ function getLencoMobileOperator($phoneNumber) {
     return null;
 }
 
-/**
- * Simple file-based rate limiter (per IP).
- * Returns true if the request is allowed, false if rate-limited.
- */
+// file-based rate limiter (per IP).
+ 
 function lencoRateLimitCheck($action = 'payment') {
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     $key = md5($ip . $action);
@@ -141,12 +135,12 @@ function lencoRateLimitCheck($action = 'payment') {
         $data = json_decode(file_get_contents($file), true) ?: $data;
     }
 
-    // If currently blocked
+   
     if ($data['blocked_until'] > $now) {
         return false;
     }
 
-    // Prune old entries
+   
     $data['requests'] = array_values(array_filter($data['requests'], fn($t) => $t > ($now - $window)));
 
     if (count($data['requests']) >= $max) {
@@ -161,7 +155,7 @@ function lencoRateLimitCheck($action = 'payment') {
 }
 
 /**
- * Validate HMAC signature from Lenco webhook (if header is present).
+ * Validatining HMAC signature from Lenco webhook (if header is present).
  * Lenco sends X-Lenco-Signature with HMAC-SHA512 of raw body using secret key.
  */
 function validateLencoWebhookSignature($rawBody) {
@@ -169,7 +163,7 @@ function validateLencoWebhookSignature($rawBody) {
     if (empty($signature)) {
         // If no signature header, log warning but allow in dev
         error_log('Lenco Webhook: No X-Lenco-Signature header present');
-        return LENCO_ENV !== 'live'; // reject in live, allow in sandbox
+        return LENCO_ENV !== 'live'; 
     }
 
     $expectedSignature = hash_hmac('sha512', $rawBody, getLencoSecretKey());

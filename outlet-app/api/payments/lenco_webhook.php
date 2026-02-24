@@ -16,7 +16,6 @@
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
-// Webhooks are POST only
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
@@ -28,7 +27,6 @@ require_once __DIR__ . '/../../config.php';
 
 $rawInput = file_get_contents('php://input');
 
-// ─── Signature Validation ────────────────────────────────────────────────────
 if (!validateLencoWebhookSignature($rawInput)) {
     error_log('Lenco Webhook REJECTED — invalid signature from IP: ' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
     http_response_code(403);
@@ -36,7 +34,7 @@ if (!validateLencoWebhookSignature($rawInput)) {
     exit();
 }
 
-// ─── Rate Limiting ───────────────────────────────────────────────────────────
+
 if (!lencoRateLimitCheck('webhook')) {
     http_response_code(429);
     echo json_encode(['status' => 'error', 'message' => 'Too many requests']);
@@ -45,7 +43,7 @@ if (!lencoRateLimitCheck('webhook')) {
 
 error_log("Lenco Webhook Received (verified) from IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
 
-// Parse the webhook payload
+
 $payload = json_decode($rawInput, true);
 
 if (!$payload) {
@@ -77,7 +75,6 @@ try {
             error_log("Unhandled Lenco webhook event: {$event}");
     }
     
-    // Always returns 200 to acknowledge receipt
     http_response_code(200);
     echo json_encode(['status' => 'success', 'message' => 'Webhook processed']);
     
@@ -297,5 +294,4 @@ function updateParcelPaymentStatus($reference) {
         return false;
     }
 }
-
 ?>

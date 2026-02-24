@@ -22,22 +22,18 @@
         return;
     }
     
-    // Listen for the beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
         console.log('[PWA Install] Before install prompt event fired');
-        
-        // Prevent the default mini-infobar
+       
         e.preventDefault();
-        
-        // Store the event for later use
+      
         deferredPrompt = e;
         
-        // Show the custom install banner if not dismissed
         if (!isDismissed && installBanner) {
             setTimeout(() => {
                 installBanner.style.display = 'block';
                 console.log('[PWA Install] Banner displayed');
-            }, 2000); // Show after 2 seconds
+            }, 2000); 
         }
     });
     
