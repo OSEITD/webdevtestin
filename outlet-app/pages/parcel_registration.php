@@ -36,7 +36,7 @@ $lencoEnv = LENCO_ENV;
     
     <!-- Styles -->
     <link rel="stylesheet" href="../css/outlet-dashboard.css">
-    <link rel="stylesheet" href="../css/parcel_registration_v2.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../css/parcel_registration.css?v=<?php echo time(); ?>">
     
     <!-- Lenco Payment Widget (Sandbox) - loaded async so it doesn't block rendering -->
     <script src="<?php echo htmlspecialchars($lencoWidgetUrl); ?>" async></script>
@@ -148,6 +148,48 @@ $lencoEnv = LENCO_ENV;
                                 <textarea id="specialInstructions" name="specialInstructions" placeholder="Any special handling instructions"></textarea>
                             </div>
                         </div>
+
+                        <!-- Photo Upload & Submit - Full Width -->
+                        <div class="form-section photo-upload-section">
+                            <h3><i class="fas fa-camera"></i> Parcel Photos & Submit</h3>
+                            
+                            <div class="photo-upload-grid">
+                                <div class="upload-area">
+                                    <div class="form-group">
+                                        <label for="parcelPhotos"><i class="fas fa-images"></i> Upload Parcel Photos</label>
+                                        <small class="form-help">Max 5 photos, 5MB each. Supported: JPG, PNG, GIF</small>
+                                        <input type="file" id="parcelPhotos" name="parcelPhotos[]" accept="image/*" multiple style="display:none;">
+                                        <div id="uploadZone" class="upload-zone">
+                                            <span class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></span>
+                                            <p id="uploadZoneText">Click here or drag and drop images</p>
+                                            <small>Supported formats: JPG, PNG, GIF</small>
+                                        </div>
+                                    </div>
+                                    <button type="button" id="cameraBtn" class="btn-secondary">
+                                        <i class="fas fa-camera"></i> Take Photo
+                                    </button>
+                                    <div id="photoPreview" class="photo-preview"></div>
+                                </div>
+                                
+                                <div class="submit-area">
+                                    <!-- Form Actions -->
+                                    <div class="form-actions">
+                                        <button type="button" class="btn-secondary" onclick="window.history.back()">
+                                            <i class="fas fa-arrow-left"></i> Cancel
+                                        </button>
+                                        <button type="submit" class="btn-primary" id="submitBtn">
+                                            <i class="fas fa-paper-plane"></i> Register Parcel
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="submit-info">
+                                        <p><i class="fas fa-info-circle"></i> Please review all information before submitting.</p>
+                                        <p><i class="fas fa-shield-alt"></i> Your parcel will be assigned a tracking number upon registration.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                     
                     <!-- Right Column -->
@@ -261,8 +303,9 @@ $lencoEnv = LENCO_ENV;
                             window.COMPANY_COMMISSION = <?php echo json_encode($companyCommission); ?>;
                         </script>
 
-                        <div class="form-section">
-                            <h3><i class="fas fa-dollar-sign"></i> Financial Information</h3>
+                        <div class="form-section collapsible">
+                            <h3><i class="fas fa-dollar-sign"></i> Financial Information <i class="fas fa-chevron-down toggle-icon"></i></h3>
+                            <div class="section-content">
                             
                             <div class="form-row">
                                 <div class="form-group">
@@ -294,6 +337,7 @@ $lencoEnv = LENCO_ENV;
                             </div>
 
                             <!-- Payment Summary -->
+                            </div>
                             <div class="payment-summary-box" id="paymentSummaryBox">
                                 <h4><i class="fas fa-receipt"></i> Payment Summary</h4>
                                 <div class="summary-rows">
@@ -563,6 +607,7 @@ $lencoEnv = LENCO_ENV;
                         </div>
                         
                         <!-- Trip Assignment -->
+                        <!-- Trip Assignment -->
                         <div class="trip-assignment-container" id="tripAssignmentSection">
                             <h3><i class="fas fa-route"></i> Trip Assignment <span class="optional-badge">(Optional)</span></h3>
                             
@@ -719,51 +764,81 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.form-section').forEach(section => {
+            section.classList.add('collapsible');
+            const header = section.querySelector('h3');
+            if (!header) return;
+            header.style.cursor = 'pointer';
+            header.setAttribute('role', 'button');
+            header.setAttribute('aria-expanded', 'false');
+            let icon = header.querySelector('.toggle-icon');
+            if (!icon) {
+                icon = document.createElement('i');
+                icon.className = 'fas fa-chevron-down toggle-icon';
+                header.appendChild(icon);
+            }
+            // prepare content container
+            const content = document.createElement('div');
+            content.className = 'section-content collapsed';
+            content.setAttribute('aria-hidden', 'true');
+            // move siblings into content until next section or end
+            let sibling = header.nextSibling;
+            while (sibling) {
+                const next = sibling.nextSibling;
+                content.appendChild(sibling);
+                sibling = next;
+            }
+            section.appendChild(content);
+
+            // initialize height if expanded (none by default)
+            header.addEventListener('click', () => {
+                const expanded = header.getAttribute('aria-expanded') === 'true';
+                header.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+
+                if (expanded) {
+                    // collapse
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    icon.style.transform = 'rotate(-90deg)';
+                    // force reflow
+                    content.offsetHeight;
+                    content.style.maxHeight = '0px';
+                    content.classList.add('collapsed');
+                    content.setAttribute('aria-hidden', 'true');
+                } else {
+                    // expand
+                    content.classList.remove('collapsed');
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    icon.style.transform = 'rotate(0deg)';
+                    content.setAttribute('aria-hidden', 'false');
+                }
+            });
+
+            // allow clicking the whole section area (outside header) to toggle when header is empty
+            section.addEventListener('click', e => {
+                if (e.target === section) {
+                    header.click();
+                }
+            });
+
+            content.addEventListener('transitionend', function() {
+                if (header.getAttribute('aria-expanded') === 'true') {
+                    content.style.maxHeight = '';
+                    content.setAttribute('aria-hidden', 'false');
+                } else {
+                    content.style.maxHeight = '0px';
+                    content.setAttribute('aria-hidden', 'true');
+                }
+            });
+        });
+    });
+</script>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Photo Upload & Submit - Full Width -->
-                    <div class="form-section photo-upload-section">
-                        <h3><i class="fas fa-camera"></i> Parcel Photos & Submit</h3>
-                        
-                        <div class="photo-upload-grid">
-                            <div class="upload-area">
-                                <div class="form-group">
-                                    <label for="parcelPhotos"><i class="fas fa-images"></i> Upload Parcel Photos</label>
-                                    <small class="form-help">Max 5 photos, 5MB each. Supported: JPG, PNG, GIF</small>
-                                    <input type="file" id="parcelPhotos" name="parcelPhotos[]" accept="image/*" multiple style="display:none;">
-                                    <div id="uploadZone" class="upload-zone">
-                                        <span class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></span>
-                                        <p id="uploadZoneText">Click here or drag and drop images</p>
-                                        <small>Supported formats: JPG, PNG, GIF</small>
-                                    </div>
-                                </div>
-                                <button type="button" id="cameraBtn" class="btn-secondary">
-                                    <i class="fas fa-camera"></i> Take Photo
-                                </button>
-                                <div id="photoPreview" class="photo-preview"></div>
-                            </div>
-                            
-                            <div class="submit-area">
-                                <!-- Form Actions -->
-                                <div class="form-actions">
-                                    <button type="button" class="btn-secondary" onclick="window.history.back()">
-                                        <i class="fas fa-arrow-left"></i> Cancel
-                                    </button>
-                                    <button type="submit" class="btn-primary" id="submitBtn">
-                                        <i class="fas fa-paper-plane"></i> Register Parcel
-                                    </button>
-                                </div>
-                                
-                                <div class="submit-info">
-                                    <p><i class="fas fa-info-circle"></i> Please review all information before submitting.</p>
-                                    <p><i class="fas fa-shield-alt"></i> Your parcel will be assigned a tracking number upon registration.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </form>
             </div>
         </main>
