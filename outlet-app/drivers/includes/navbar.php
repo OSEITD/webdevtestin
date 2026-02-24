@@ -61,7 +61,15 @@ $notificationCount = 0;
             <span>Delivery History</span>
         </a>
         <div class="menu-divider"></div>
-        <a href="/logout.php" class="menu-item logout">
+        <?php
+            // compute logout path relative to current script location
+            $base = dirname($_SERVER['SCRIPT_NAME']);
+            if ($base === '/' || $base === '.') {
+                $base = '';
+            }
+            $logoutUrl = $base . '/logout.php';
+        ?>
+        <a href="<?php echo $logoutUrl; ?>" class="menu-item logout">
             <i class="fas fa-sign-out-alt"></i>
             <span>Logout</span>
         </a>
