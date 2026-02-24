@@ -12,10 +12,11 @@
     --primary-300: #a5b4fc;
     --primary-400: #818cf8;
     --primary-500: #6366f1;
-    --primary-600: #4f46e5;
-    --primary-700: #4338ca;
-    --primary-800: #3730a3;
-    --primary-900: #312e81;
+    /* override for navbar purple theme */
+    --primary-600: #2E0D2A;
+    --primary-700: #3A0E36; /* slightly lighter/darker as needed */
+    --primary-800: #4A1C40;
+    --primary-900: #591B4E;
     
     /* Neutral Colors */
     --gray-50: #f9fafb;
