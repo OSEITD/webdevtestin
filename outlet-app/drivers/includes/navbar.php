@@ -61,15 +61,7 @@ $notificationCount = 0;
             <span>Delivery History</span>
         </a>
         <div class="menu-divider"></div>
-        <a href="<?php 
-            
-            $currentPath = $_SERVER['PHP_SELF'];
-            if (strpos($currentPath, '/drivers/') !== false || strpos($currentPath, '/pages/') !== false) {
-                echo '../logout.php';
-            } else {
-                echo 'logout.php';
-            }
-        ?>" class="menu-item logout">
+        <a href="/logout.php" class="menu-item logout">
             <i class="fas fa-sign-out-alt"></i>
             <span>Logout</span>
         </a>
