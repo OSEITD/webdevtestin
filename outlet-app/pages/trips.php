@@ -37,6 +37,24 @@ $current_user = getCurrentUser();
     </script>
     
     <style>
+        /* header card matching parcel-pool style */
+        .page-header {
+            background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
+            max-width: 1400px;
+            text-align: center;
+        }
+        .page-header h1,
+        .page-header .subtitle {
+            color: white;
+        }
+
+        /* expand content area to match trip wizard page width */
+        .content-container { max-width: 1400px; }
         .filters-container {
             background: white;
             border-radius: 12px;
@@ -488,10 +506,11 @@ $current_user = getCurrentUser();
         <div class="menu-overlay" id="menuOverlay"></div>
 
         <main class="main-content">
-            <div class="content-container">
+            <div class="page-header">
                 <h1><i class="fas fa-route"></i> Trips at Outlet</h1>
                 <p class="subtitle">View and manage all trips that start from or pass through your outlet and their parcel contents.</p>
-
+            </div>
+            <div class="content-container">
                 <div class="trips-summary" id="tripsSummary" style="display: none;">
                     <div class="summary-card">
                         <span class="summary-card-label">Total Trips</span>
