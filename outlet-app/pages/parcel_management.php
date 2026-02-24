@@ -128,15 +128,39 @@ $current_user = getCurrentUser();
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
+        .scanner-container h1,
+        .scanner-header {
+           
+            background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
         .scanner-container h1 {
-            color: #2d3748;
-            margin-bottom: 10px;
+            font-size: 1.75rem;
+            font-weight: 700;
+            display: block;
+            margin: 0;
+            width: 100%;
+        }
+
+        .scanner-header {
+            display: block;
+            width: 100%;
         }
 
         .scan-instructions {
-            color: #718096;
-            font-size: 16px;
-            margin-bottom: 25px;
+            
+            opacity: 0.9;
+            font-size: 1.1rem;
+            margin: 0;
+            color: white;
+            padding-top: 0.5rem;
         }
 
         .scan-history {
@@ -248,8 +272,10 @@ $current_user = getCurrentUser();
         <div id="scanner" class="content-section active">
             <div class="content-body">
                 <div class="scanner-container">
-                    <h1>Parcel Management</h1>
-                    <p class="scan-instructions">Use the device's camera to scan parcel barcodes for check-in or check-out, or enter manually.</p>
+                    <div class="scanner-header">
+                        <h1>Parcel Management</h1>
+                        <p class="scan-instructions">Use the device's camera to scan parcel barcodes for check-in or check-out, or enter manually.</p>
+                    </div>
                     <div id="reader" style="width: 300px; margin: 0 auto 20px;"></div>
                     <div id="qr-reader-results" style="display:none; margin-bottom: 20px; text-align: left; max-width: 900px; margin-left: auto; margin-right: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px;">
