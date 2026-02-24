@@ -52,6 +52,8 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     </script>
     
     <style>
+        /* match trip wizard width */
+        .content-container { max-width: 1400px; }
         
         .loading-overlay {
             position: fixed;
