@@ -22,6 +22,18 @@ $current_user = getCurrentUser();
     <link rel="stylesheet" href="../css/notifications.css">
 
     <style>
+        /* make scan history wrapper match navbar color and add padding */
+        .scan-history .table-wrapper { background: var(--primary-color); padding: 0.5rem; border-radius: 8px; }
+        .scan-history .table-wrapper table { background: white; border-radius: 6px; }
+
+        /* improve responsiveness for scanner area */
+        #reader { width: 100% !important; max-width: 400px !important; }
+        .scanner-container { padding: 1rem; }
+        @media (max-width: 768px) {
+            .scanner-container { padding: 0.75rem; }
+            .scanner-container h1 { font-size: 1.5rem; }
+        }
+
         .notifications-popup.show {
             opacity: 1 !important;
             visibility: visible !important;
@@ -136,6 +148,7 @@ $current_user = getCurrentUser();
 
         .scan-history .table-wrapper {
             overflow-x: auto;
+            /* background now set above */
         }
 
         .scan-history table {
@@ -174,28 +187,30 @@ $current_user = getCurrentUser();
             .scan-history td {
                 border: none;
                 position: relative;
-                padding-left: 50%;
+                padding: 12px 15px 12px 15px;
                 white-space: normal;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
             }
             .scan-history td::before {
-                position: absolute;
-                left: 12px;
-                top: 12px;
-                width: 45%;
-                padding-right: 10px;
-                white-space: nowrap;
+                position: relative;
+                left: 0;
+                top: 0;
+                width: auto;
+                padding-right: 0;
+                white-space: normal;
                 font-weight: 600;
                 color: #4a5568;
+                margin-bottom: 5px;
+                content: attr(data-label);
             }
-            .scan-history td:nth-of-type(1)::before { content: "Tracking Number"; }
-            .scan-history td:nth-of-type(2)::before { content: "Action Type"; }
-            .scan-history td:nth-of-type(3)::before { content: "Status Details"; }
-            .scan-history td:nth-of-type(4)::before { content: "Time"; }
-            .scan-history td:nth-of-type(5)::before { content: "Staff & Customer"; }
+            /* use data-label attributes on td instead of nth-of-type */
         }
 
         .scan-history th {
-            background: #4a5568;
+            /* use primary theme colour for header */
+            background: var(--primary-color);
             color: white;
             padding: 12px 15px;
             font-weight: 600;
@@ -722,21 +737,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             '<i class="fas fa-plus" style="color: #48bb78; margin-right: 5px;"></i>';
 
                         row.innerHTML = `
-                            <td style="font-family: monospace; font-weight: 600; color: #2d3748;">
+                            <td data-label="Tracking Number" style="font-family: monospace; font-weight: 600; color: #2d3748;">
                                 ${item.track_number || '-'}${recentIndicator}
                             </td>
-                            <td>
+                            <td data-label="Action Type">
                                 <span style="padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;
                                     background: ${getActionColor(item.action)};">
                                     ${item.action || 'Unknown'}
                                 </span>
                             </td>
-                            <td style="color: #4a5568; font-weight: 500;">
+                            <td data-label="Status Details" style="color: #4a5568; font-weight: 500;">
                                 ${changeIndicator}${item.status_change || '-'}
                                 ${item.action_description ? `<br><small style="color: #718096; font-style: italic;">${item.action_description}</small>` : ''}
                             </td>
-                            <td style="color: #718096; font-size: 13px;" title="${item.timestamp || 'Unknown'}">${timeDisplay}</td>
-                            <td style="color: #4a5568;">
+                            <td data-label="Time" style="color: #718096; font-size: 13px;" title="${item.timestamp || 'Unknown'}">${timeDisplay}</td>
+                            <td data-label="Staff & Customer" style="color: #4a5568;">
                                 ${item.staff_name || 'System'}
                                 ${item.customer_info ? `<br><small style="color: #718096;">${item.customer_info}</small>` : ''}
                             </td>
