@@ -35,6 +35,7 @@ $current_user = getCurrentUser();
             border-radius: 1rem;
             margin-bottom: 2rem;
             box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
+            text-align: center;
         }
 
         .pool-header h1 {
