@@ -111,8 +111,8 @@ body {
 
 .notifications-shell {
     width: 100%;
-    /* stretch almost full width while leaving breathing room */
-    max-width: calc(100% - 40px);
+    /* limit width like parcel-pool-container */
+    max-width: 1400px;
     box-sizing: border-box;
     background: var(--bg-primary);
     border-radius: 20px;
@@ -196,6 +196,7 @@ body {
     gap: 14px;
     letter-spacing: -0.02em;
     text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+    color: #fff;
 }
 
 .notifications-hero h1 i {
