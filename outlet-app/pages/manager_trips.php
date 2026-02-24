@@ -52,6 +52,21 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     </script>
     
     <style>
+        /* header card matching parcel-pool style */
+        .page-header {
+            background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
+            max-width: 1400px;
+            text-align: center;
+        }
+        .page-header h1, .page-header .subtitle {
+            color: white;
+        }
+
         /* match trip wizard width */
         .content-container { max-width: 1400px; }
         
@@ -771,9 +786,11 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         <div class="menu-overlay" id="menuOverlay"></div>
         
         <main class="main-content">
-            <div class="content-container">
+            <div class="page-header">
                 <h1><i class="fas fa-tasks"></i> My Active Trips</h1>
                 <p class="subtitle">Manage and track all trips assigned to you as a manager.</p>
+            </div>
+            <div class="content-container">
 
                 <!-- Summary Cards -->
                 <div class="trips-summary" id="tripsSummary" style="display: none;">
