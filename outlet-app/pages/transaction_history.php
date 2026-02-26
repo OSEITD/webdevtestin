@@ -16,10 +16,11 @@ $filter = 'company_id=eq.' . urlencode($companyId);
 if ($outletId) {
     $filter .= '&outlet_id=eq.' . urlencode($outletId);
 }
-$filter .= '&order=paid_at.desc&limit=100';
+// order by payment date first (most recent at top) but fall back to created_at
+$filter .= '&order=paid_at.desc,created_at.desc&limit=100';
 
 $txns = $sup->get('payment_transactions', $filter,
-    'id,tx_ref,amount,payment_method,status,paid_at,user_id,customer_name');
+    'id,tx_ref,amount,payment_method,mobile_network,mobile_number,status,paid_at,created_at,user_id,customer_name');
 
 // gather user ids to resolve names
 $userIds = array_filter(array_column($txns, 'user_id'));
@@ -148,6 +149,8 @@ if (!empty($userIds)) {
                                 <th>Reference</th>
                                 <th>Amount</th>
                                 <th>Method</th>
+                                <th>Network</th>
+                                <th>Phone</th>
                                 <th>Status</th>
                                 <th>By</th>
                                 <th>Customer</th>
@@ -164,6 +167,8 @@ if (!empty($userIds)) {
                                 <td><?php echo htmlspecialchars($t['tx_ref']); ?></td>
                                 <td><?php echo 'ZMW ' . number_format($t['amount'],2); ?></td>
                                 <td><?php echo htmlspecialchars($t['payment_method']); ?></td>
+                                <td><?php echo htmlspecialchars($t['mobile_network'] ?? '-'); ?></td>
+                                <td><?php echo htmlspecialchars($t['mobile_number'] ?? '-'); ?></td>
                                 <td><?php 
                                     $stat = $t['status'] ?? '';
                                     $class = strtolower(str_replace([' ', '_'], '-', $stat));

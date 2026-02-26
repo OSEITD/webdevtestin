@@ -1176,6 +1176,13 @@ async function handleParcelSubmission(event) {
             // Send both normalized and original provider info
             formData.append('paymentMethod', normalizedPaymentMethod);
             formData.append('paymentProvider', paymentMethod);
+            // include mobile money details so backend can store them
+            if (normalizedPaymentMethod === 'mobile_money' || paymentMethod === 'lenco_mobile') {
+                const providerVal = document.querySelector('input[name="mobileProvider"]:checked')?.value || '';
+                const mobileNumVal = document.getElementById('mobileNumber')?.value || '';
+                formData.append('mobileProvider', providerVal);
+                formData.append('mobileNumber', mobileNumVal);
+            }
         const uniquePhotos = [];
         selectedPhotos.forEach(photo => {
             if (!uniquePhotos.some(f => f.name === photo.name && f.lastModified === photo.lastModified)) {
@@ -1285,6 +1292,22 @@ function validateForm() {
             message = err;
         } else {
             tripSelect.classList.remove('error');
+        }
+    }
+
+    // Validate dimensions format (if provided) - should be three positive numbers
+    const dimField = document.getElementById('dimensions');
+    if (dimField) {
+        const dimVal = dimField.value.trim();
+        if (dimVal !== '') {
+            const parts = dimVal.split(/[x×,\s]+/).map(s => s.trim()).filter(Boolean);
+            if (parts.length !== 3 || parts.some(d => isNaN(d) || parseFloat(d) <= 0)) {
+                dimField.classList.add('error');
+                isValid = false;
+                message = 'Please enter valid parcel dimensions in cm (L x W x H).';
+            } else {
+                dimField.classList.remove('error');
+            }
         }
     }
 

@@ -95,13 +95,22 @@ function handleSuccessfulCollection($data) {
     error_log("Processing successful payment - Reference: {$reference}, Amount: {$amount} {$currency}");
 
     // Updating payment transaction status
-    $paymentUpdated = updatePaymentStatus($reference, 'successful', [
+    // carry mobile money fields up top so updatePaymentStatus can write them directly
+    $extra = [];
+    if (!empty($data['mobileNetwork'])) {
+        $extra['mobile_network'] = strtoupper($data['mobileNetwork']);
+    }
+    if (!empty($data['mobileNumber'])) {
+        $extra['mobile_number'] = $data['mobileNumber'];
+    }
+
+    $paymentUpdated = updatePaymentStatus($reference, 'successful', array_merge($extra, [
         'lenco_reference' => $lencoReference,
         'amount' => $amount,
         'currency' => $currency,
         'completed_at' => $completedAt,
         'payment_data' => $data
-    ]);
+    ]));
 
     if ($paymentUpdated) {
         // Updating the corresponding parcel's payment status to 'paid'
@@ -160,6 +169,15 @@ function updatePaymentStatus($reference, $status, $additionalData = []) {
             'metadata' => json_encode($additionalData)
         ];
         
+        // if the webhook payload includes mobile money details, copy them to the record
+        if (!empty($additionalData['payment_data']['mobileNetwork'])) {
+            $updateData['mobile_network'] = strtoupper($additionalData['payment_data']['mobileNetwork']);
+        }
+        if (!empty($additionalData['payment_data']['mobileNumber'])) {
+            // do not mask here – earlier code masks when creating the transaction
+            $updateData['mobile_number'] = $additionalData['payment_data']['mobileNumber'];
+        }
+
         if ($status === 'successful' && isset($additionalData['lenco_reference'])) {
             $updateData['lenco_tx_ref'] = $additionalData['lenco_reference'];
             $updateData['paid_at'] = $additionalData['completed_at'] ?? date('c');

@@ -662,7 +662,7 @@ textarea.error {
 }
 
 .trip-assignment-container h3 {
-    color: var(--gray-800) !important;
+    color: #000 !important;
     border-bottom: 2px solid var(--gray-100) !important;
 }
 
@@ -679,8 +679,11 @@ textarea.error {
 .trip-assignment-container .trip-selector {
     color: var(--gray-800) !important;
 }
+/* ensure label text remains black even if dark CSS is inadvertently used */
+.trip-assignment-container label { color: #000 !important; }
 .trip-assignment-container select {
     background: white !important;
+    color: #000 !important;
 }
 
 .optional-badge {
@@ -732,7 +735,7 @@ textarea.error {
 }
 
 .trip-selector label {
-    color: white !important;
+    color: #000 !important;
     font-weight: 600 !important;
 }
 

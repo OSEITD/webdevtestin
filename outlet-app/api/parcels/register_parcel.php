@@ -272,6 +272,15 @@ try {
         }
     }
 
+    // validate parsed dimensions
+    if ($parsedDimensions) {
+        foreach (['L' => 'Length', 'W' => 'Width', 'H' => 'Height'] as $key => $name) {
+            if (!isset($parsedDimensions[$key]) || !is_numeric($parsedDimensions[$key]) || $parsedDimensions[$key] <= 0) {
+                jsonResponse(["success" => false, "error" => "$name must be a positive number"], 400);
+            }
+        }
+    }
+
     
     $parcelData = [
         'id' => $parcelId,

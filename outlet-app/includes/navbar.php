@@ -100,7 +100,6 @@
 <script>
 
 function toggleSidebar() {
-    console.log('🎯 Sidebar toggle clicked!');
     const sidebar = document.getElementById('sidebar');
     const menuOverlay = document.getElementById('menuOverlay');
 
@@ -110,14 +109,12 @@ function toggleSidebar() {
         if (isOpen) {
             sidebar.classList.remove('show');
             menuOverlay.classList.remove('show');
-            console.log('📤 Sidebar closed');
         } else {
             sidebar.classList.add('show');
             menuOverlay.classList.add('show');
-            console.log('📥 Sidebar opened');
         }
     } else {
-        console.error('❌ Sidebar elements not found');
+        console.error('Sidebar elements not found');
     }
 }
 

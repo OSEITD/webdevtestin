@@ -620,6 +620,15 @@ try {
     if ($parcelWidth === null && isset($input['parcelWidth'])) $parcelWidth = (float)$input['parcelWidth'];
     if ($parcelHeight === null && isset($input['parcelHeight'])) $parcelHeight = (float)$input['parcelHeight'];
 
+    // validate that if any dimension was provided it is positive and numeric
+    foreach (['Length' => $parcelLength, 'Width' => $parcelWidth, 'Height' => $parcelHeight] as $name => $val) {
+        if ($val !== null && (!is_numeric($val) || $val <= 0)) {
+            http_response_code(400);
+            echo json_encode(["success" => false, "error" => "$name must be a positive number"]);
+            exit;
+        }
+    }
+
     $parcelData['parcel_length'] = $parcelLength;
     $parcelData['parcel_width'] = $parcelWidth;
     $parcelData['parcel_height'] = $parcelHeight;

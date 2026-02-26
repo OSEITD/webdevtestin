@@ -33,6 +33,7 @@
         <li><a href="notifications.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'notifications.php' ? 'active' : ''; ?>"><i class="fas fa-bell"></i> Notifications</a></li>
         <li><a href="outlet_settings.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'outlet_settings.php' ? 'active' : ''; ?>"><i class="fas fa-cog"></i> Outlet Settings</a></li>
         <li><a href="help.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'help.php' ? 'active' : ''; ?>"><i class="fas fa-question-circle"></i> Help</a></li>
+        <li><a href="transaction_history.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'transaction_history.php' ? 'active' : ''; ?>"><i class="fas fa-receipt"></i> Transactions</a></li>
         <?php
             $base = dirname($_SERVER['SCRIPT_NAME']);
             if ($base === '/' || $base === '.') { $base = ''; }

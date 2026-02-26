@@ -28,6 +28,8 @@ class PaymentTransactionDB {
             $vatPercentage = $data['vat_percentage'] ?? 16.00;
             $vatAmount = $data['vat_amount'] ?? ($amount * $vatPercentage / 100);
             
+            // assemble transaction data; defaults are used when not provided
+            // and we will trim any null values below so only relevant columns are sent
             $transactionData = [
                 'tx_ref' => $data['tx_ref'],
                 'company_id' => $data['company_id'],
@@ -68,6 +70,8 @@ class PaymentTransactionDB {
                 'paid_at' => $data['paid_at'] ?? null,
                 'expires_at' => date('Y-m-d H:i:s', strtotime('+1 hour'))
             ];
+            // strip out null entries so database only sees fields we care about
+            $transactionData = array_filter($transactionData, function($v) { return $v !== null; });
             
             // Use raw HTTP request since custom Supabase client doesn't support insert
             $url = $this->supabaseUrl . '/rest/v1/payment_transactions';

@@ -14,7 +14,8 @@ try {
 
     
     $input = json_decode(file_get_contents('php://input'), true);
-    $tripId = $input['trip_id'] ?? $_GET['trip_id'] ?? $_POST['trip_id'] ?? null;
+    // POST body preferred
+    $tripId = $input['trip_id'] ?? $_POST['trip_id'] ?? $_GET['trip_id'] ?? null;
     if (empty($tripId)) {
         throw new Exception('trip_id is required');
     }

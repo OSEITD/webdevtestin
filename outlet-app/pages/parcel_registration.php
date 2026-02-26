@@ -133,7 +133,10 @@ $lencoEnv = LENCO_ENV;
 
                                 <div class="form-group">
                                     <label for="dimensions">Dimensions (cm)</label>
-                                    <input type="text" id="dimensions" name="dimensions" placeholder="L x W x H">
+                                    <input type="text" id="dimensions" name="dimensions" placeholder="e.g. 30 x 20 x 10"
+                                           pattern="^\s*\d{1,4}(\.\d+)?\s*[x×,]\s*\d{1,4}(\.\d+)?\s*[x×,]\s*\d{1,4}(\.\d+)?\s*$"
+                                           title="Enter length, width and height separated by x (e.g. 30 x 20 x 10)">
+                                    <small class="form-help"><i class="fas fa-info-circle"></i> Please enter three positive numbers in centimetres, separated by x (L × W × H).</small>
                                 </div>
                             </div>
 

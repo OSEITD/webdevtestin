@@ -357,7 +357,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         .filter-toggle-btn {
             background: none;
             border: none;
-            color: #3b82f6;
+             color: #3A0E36;
             cursor: pointer;
             padding: 0.25rem 0.5rem;
             font-size: 0.875rem;
@@ -451,13 +451,13 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             padding: 1.5rem;
             margin-bottom: 1rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid #3A0E36;
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .manager-trip-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);  
         }
         
         .trip-header {
@@ -484,7 +484,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         }
         
         .route-arrow {
-            color: #3b82f6;
+            color: #3A0E36;
             font-size: 1.2rem;
         }
         
@@ -556,27 +556,27 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         }
         
         .btn-accept {
-            background: #3b82f6;
+            background: #3A0E36;
         }
         
         .btn-accept:hover {
-            background: #2563eb;
+            background: #290926;
         }
         
         .btn-track {
-            background: #8b5cf6;
+            background: #3A0E36;
         }
         
         .btn-track:hover {
-            background: #7c3aed;
+            background: #3A0E36;
         }
         
         .btn-complete {
-            background: #10b981;
+            background: #3A0E36;
         }
         
         .btn-complete:hover {
-            background: #059669;
+            background: #1c071a;
         }
         
         .btn-details {
@@ -1110,19 +1110,21 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
 
         
         async function managerStartTrip(tripId) {
+            console.log('managerStartTrip called', tripId);
             if (!confirm('Start this trip now?')) return;
             
             const startCard = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
             const startBtn = startCard ? startCard.querySelector('.btn-accept') : null;
             
             try {
-                const url = `../api/manager_start_trip.php?action=start&trip_id=${encodeURIComponent(tripId)}`;
-                
+                const url = '../api/manager_start_trip.php';
                 if (startBtn) startBtn.classList.add('loading');
 
                 const resp = await fetch(url, {
-                    method: 'GET',
-                    credentials: 'same-origin'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ trip_id: tripId, action: 'start' })
                 });
                 const data = await resp.json();
                 if (startBtn) startBtn.classList.remove('loading');
@@ -1418,17 +1420,10 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         }
 
         function trackTrip(tripId) {
-            currentTrackingTrip = tripId;
-            document.getElementById('liveTrackingSection').style.display = 'block';
-            
-            
-            if (!trackingMap) {
-                trackingMap = L.map('trackingMap').setView([-15.4067, 28.2871], 13); 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackingMap);
-            }
-            
-            
-            loadTripTracking(tripId);
+            console.log('trackTrip opening window for', tripId);
+            // open dedicated tracking page in new tab/window
+            const url = `manager_trip_tracking.php?trip_id=${encodeURIComponent(tripId)}`;
+            window.open(url, '_blank');
         }
 
         async function loadTripTracking(tripId) {
@@ -1448,12 +1443,25 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                     });
                     
                     
-                    data.locations.forEach(location => {
+                    const pathCoords = [];
+                data.locations.forEach(location => {
                         L.marker([location.latitude, location.longitude])
                             .addTo(trackingMap)
                             .bindPopup(`Driver location at ${new Date(location.timestamp).toLocaleTimeString()}`);
+                        pathCoords.push([location.latitude, location.longitude]);
                     });
                     
+                    // draw polyline showing the route so far
+                    if (typeof trackingPolyline !== 'undefined' && trackingPolyline) {
+                        trackingMap.removeLayer(trackingPolyline);
+                    }
+                    if (pathCoords.length > 1) {
+                        trackingPolyline = L.polyline(pathCoords, {
+                            color: '#3b82f6',
+                            weight: 3,
+                            opacity: 0.7
+                        }).addTo(trackingMap);
+                    }
                     
                     if (data.locations.length > 0) {
                         const group = new L.featureGroup(
@@ -1470,6 +1478,10 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         function closeLiveTracking() {
             document.getElementById('liveTrackingSection').style.display = 'none';
             currentTrackingTrip = null;
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+                trackingInterval = null;
+            }
         }
 
         async function completeTrip(tripId) {
