@@ -74,8 +74,8 @@ function logout() {
 
     session_destroy();
 
-    $loginPath = dirname($_SERVER['SCRIPT_NAME']) === '/pages' ? '../login.php' : 
-                 (dirname($_SERVER['SCRIPT_NAME']) === '/drivers/pages' ? '../../login.php' : 'login.php');
+    // always redirect to the global login page regardless of script location
+    $loginPath = '/login.php';
     header("Location: $loginPath?message=logged_out");
     exit();
 }

@@ -30,15 +30,18 @@
 
         <li><a href="parcel_management.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'parcel_management.php' ? 'active' : ''; ?>"><i class="fas fa-qrcode"></i> Scanner</a></li>
         <li><a href="parcelpool.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'parcelpool.php' ? 'active' : ''; ?>"><i class="fas fa-swimming-pool"></i> Parcel Pool</a></li>
+        <li><a href="transaction_history.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'transaction_history.php' ? 'active' : ''; ?>"><i class="fas fa-receipt"></i> Transactions</a></li>
         <li><a href="notifications.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'notifications.php' ? 'active' : ''; ?>"><i class="fas fa-bell"></i> Notifications</a></li>
         <li><a href="outlet_settings.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'outlet_settings.php' ? 'active' : ''; ?>"><i class="fas fa-cog"></i> Outlet Settings</a></li>
         <li><a href="help.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'help.php' ? 'active' : ''; ?>"><i class="fas fa-question-circle"></i> Help</a></li>
-        <li><a href="transaction_history.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'transaction_history.php' ? 'active' : ''; ?>"><i class="fas fa-receipt"></i> Transactions</a></li>
         <?php
-            $base = dirname($_SERVER['SCRIPT_NAME']);
-            if ($base === '/' || $base === '.') { $base = ''; }
-            $logoutUrl = $base . '/logout.php';
+            // always point to the root logout script so no matter where
+        // we are in the directory tree the link will work.  an extra
+        // driver-specific file also exists as a fallback in case some
+        // code still generates a relative path by mistake.
+        $logoutUrl = '/logout.php';
         ?>
+        
         <li><a href="<?php echo $logoutUrl; ?>" onclick="return confirmLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
 </div>
