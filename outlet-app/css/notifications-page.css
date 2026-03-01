@@ -1,8 +1,8 @@
 :root {
     --primary-color: #2E0D2A;
-    --primary-light: #A0522D;
-    --primary-dark: #654321;
-    --accent-color: #667eea;
+    --primary-light: #4A1C40;
+    --primary-dark: #6A2A62;
+    --accent-color: #4A1C40;
     --success-color: #10b981;
     --warning-color: #f59e0b;
     --error-color: #ef4444;
@@ -23,7 +23,7 @@
 
 body {
     background: #f1f5f9;
-    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
@@ -359,15 +359,15 @@ body {
 }
 
 .toolbar-btn-refresh {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(46, 13, 42, 0.35);
 }
 
 .toolbar-btn-refresh:hover {
-    background: linear-gradient(135deg, #5a67d8 0%, #6a4492 100%);
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #4A1C40 0%, #6A2A62 100%);
+    box-shadow: 0 6px 16px rgba(46, 13, 42, 0.45);
     transform: translateY(-2px);
 }
 
@@ -431,8 +431,8 @@ body {
     justify-content: center;
     font-size: 22px;
     color: #fff;
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    box-shadow: 0 8px 24px -8px rgba(79, 70, 229, 0.6),
+    background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
+    box-shadow: 0 8px 24px -8px rgba(46, 13, 42, 0.6),
                 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     position: relative;
 }
@@ -491,7 +491,7 @@ body {
     width: 80px;
     height: 80px;
     margin: 0 auto 20px;
-    background: linear-gradient(135deg, var(--accent-color), #764ba2);
+    background: linear-gradient(135deg, #2E0D2A, #4A1C40);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -515,7 +515,7 @@ body {
 
 .empty-state-btn {
     padding: 12px 24px;
-    background: var(--accent-color);
+    background: linear-gradient(135deg, #2E0D2A, #4A1C40);
     color: white;
     border: none;
     border-radius: 8px;
@@ -528,7 +528,7 @@ body {
 }
 
 .empty-state-btn:hover {
-    background: #5a67d8;
+    background: linear-gradient(135deg, #4A1C40, #6A2A62);
     transform: translateY(-1px);
 }
 
@@ -567,7 +567,7 @@ body {
 
 .notification-card.unread {
     border-left: 4px solid var(--accent-color);
-    background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #fdf6fd 100%);
 }
 
 .notification-card.unread::before {
@@ -577,7 +577,7 @@ body {
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--accent-color), #764ba2);
+    background: linear-gradient(90deg, #2E0D2A, #6A2A62);
 }
 
 .notification-card-header {
@@ -794,9 +794,9 @@ body {
 
 .search-input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12),
-                0 2px 8px rgba(102, 126, 234, 0.08);
+    border-color: #4A1C40;
+    box-shadow: 0 0 0 4px rgba(74, 28, 64, 0.12),
+                0 2px 8px rgba(46, 13, 42, 0.08);
     background: #fff;
 }
 
@@ -811,7 +811,7 @@ body {
 }
 
 .search-input:focus ~ .search-icon {
-    color: #667eea;
+    color: #4A1C40;
 }
 
 .notifications-filters-wrapper {
@@ -838,8 +838,8 @@ body {
 
 .filter-select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.12);
+    border-color: #4A1C40;
+    box-shadow: 0 0 0 4px rgba(74, 28, 64, 0.12);
 }
 
 .notifications-filters {
@@ -872,7 +872,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    background: linear-gradient(135deg, rgba(46, 13, 42, 0.08) 0%, rgba(74, 28, 64, 0.08) 100%);
     opacity: 0;
     transition: opacity 0.2s ease;
 }
@@ -889,10 +889,10 @@ body {
 }
 
 .filter-btn.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
     color: white;
     border-color: transparent;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
+    box-shadow: 0 4px 16px rgba(46, 13, 42, 0.35);
     transform: translateY(-1px);
 }
 
@@ -940,12 +940,12 @@ body {
 }
 
 .bulk-actions button.primary {
-    background: var(--accent-color);
+    background: linear-gradient(135deg, #2E0D2A, #4A1C40);
     color: white;
 }
 
 .bulk-actions button.primary:hover {
-    background: #5a67d8;
+    background: linear-gradient(135deg, #4A1C40, #6A2A62);
 }
 
 .bulk-actions button.danger {
@@ -1097,9 +1097,9 @@ body {
 }
 
 .action-modal-btn:hover {
-    background: var(--accent-color);
+    background: linear-gradient(135deg, #2E0D2A, #4A1C40);
     color: white;
-    border-color: var(--accent-color);
+    border-color: #4A1C40;
 }
 
 .action-modal-btn:last-child {

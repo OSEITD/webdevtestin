@@ -18,9 +18,11 @@ $company_id = $_SESSION['company_id'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notifications - Outlet Management</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="../css/outlet-dashboard.css">
     <link rel="stylesheet" href="../css/notifications-page.css">
+    <link rel="stylesheet" href="../assets/css/search-notifications.css">
 </head>
 <body>
     <div class="mobile-dashboard">
@@ -192,9 +194,9 @@ $company_id = $_SESSION['company_id'];
     <div id="actionModal" class="action-modal">
         <div class="action-modal-backdrop" onclick="notificationsPage.hideActionModal()" onmouseover="event.stopPropagation();"></div>
         <div class="action-modal-content" onclick="event.stopPropagation();" onmouseover="event.stopPropagation();">
-            <div class="action-modal-header">
-                <h3>Notification Actions</h3>
-                <button class="action-modal-close" onclick="notificationsPage.hideActionModal()" onmouseover="event.stopPropagation();">
+            <div class="action-modal-header" style="background:linear-gradient(135deg,#2E0D2A 0%,#4A1C40 100%); border-radius:8px 8px 0 0; margin:-24px -24px 20px; padding:20px 24px;">
+                <h3 style="color:#fff; margin:0; font-size:16px; font-weight:700; display:flex; align-items:center; gap:8px;"><i class="fas fa-bell" style="opacity:.8;"></i> Notification Actions</h3>
+                <button class="action-modal-close" onclick="notificationsPage.hideActionModal()" onmouseover="event.stopPropagation();" style="color:#fff; background:rgba(255,255,255,.15);">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
