@@ -208,6 +208,31 @@ $current_user = getCurrentUser();
             flex-wrap: wrap;
         }
 
+        .trips-scroll-container {
+            max-height: calc(100vh - 320px);
+            overflow-y: auto;
+            padding-right: 4px;
+            scroll-behavior: smooth;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
         .summary-card {
             flex: 1;
             min-width: 150px;
@@ -220,6 +245,15 @@ $current_user = getCurrentUser();
             gap: 0.5rem;
         }
 
+        .summary-card.status-accepted {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+        .summary-card.status-pending-verification {
+            background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+        }
+        .summary-card.status-verified {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        }
         .summary-card.status-scheduled {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
@@ -520,9 +554,17 @@ $current_user = getCurrentUser();
                         <span class="summary-card-label">Scheduled</span>
                         <span class="summary-card-value" id="scheduledTrips">0</span>
                     </div>
+                    <div class="summary-card status-accepted">
+                        <span class="summary-card-label">Accepted</span>
+                        <span class="summary-card-value" id="acceptedTrips">0</span>
+                    </div>
                     <div class="summary-card status-in-transit">
                         <span class="summary-card-label">In Transit</span>
                         <span class="summary-card-value" id="inTransitTrips">0</span>
+                    </div>
+                    <div class="summary-card status-pending-verification">
+                        <span class="summary-card-label">Pending Verification</span>
+                        <span class="summary-card-value" id="pendingVerifTrips">0</span>
                     </div>
                     <div class="summary-card status-completed">
                         <span class="summary-card-label">Completed</span>
@@ -548,9 +590,12 @@ $current_user = getCurrentUser();
                                 <select id="filterStatus">
                                     <option value="">All Statuses</option>
                                     <option value="scheduled">Scheduled</option>
+                                    <option value="accepted">Accepted</option>
                                     <option value="in_transit">In Transit</option>
-                                    <option value="completed">Completed</option>
                                     <option value="at_outlet">At Outlet</option>
+                                    <option value="pending_verification">Pending Verification</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="verified">Verified (Manager Confirmed)</option>
                                     <option value="cancelled">Cancelled</option>
                                 </select>
                             </div>
@@ -595,9 +640,11 @@ $current_user = getCurrentUser();
                 </div>
 
                 <div id="tripsSection" style="margin-bottom: 2rem;">
+                    <div class="trips-scroll-container">
                     <div id="tripsList" style="display: grid; gap: 1rem;">
                         <p style="text-align: center; color: #6b7280;"><i class="fas fa-spinner fa-spin"></i> Loading trips...</p>
                     </div>
+                    </div><!-- /.trips-scroll-container -->
                 </div>
             </div>
         </main>
@@ -874,15 +921,19 @@ $current_user = getCurrentUser();
         }
 
         function updateSummary() {
-            const total = filteredTrips.length;
+            const total     = filteredTrips.length;
             const scheduled = filteredTrips.filter(t => t.trip_status === 'scheduled').length;
+            const accepted  = filteredTrips.filter(t => t.trip_status === 'accepted').length;
             const inTransit = filteredTrips.filter(t => t.trip_status === 'in_transit').length;
             const completed = filteredTrips.filter(t => t.trip_status === 'completed').length;
+            const pendingVerif = filteredTrips.filter(t => t.driver_completed && !t.manager_verified).length;
 
-            document.getElementById('totalTrips').textContent = total;
+            document.getElementById('totalTrips').textContent    = total;
             document.getElementById('scheduledTrips').textContent = scheduled;
+            document.getElementById('acceptedTrips').textContent  = accepted;
             document.getElementById('inTransitTrips').textContent = inTransit;
             document.getElementById('completedTrips').textContent = completed;
+            document.getElementById('pendingVerifTrips').textContent = pendingVerif;
             document.getElementById('tripsSummary').style.display = total > 0 ? 'flex' : 'none';
         }
 
@@ -894,8 +945,13 @@ $current_user = getCurrentUser();
             const search = document.getElementById('filterSearch').value.toLowerCase();
 
             filteredTrips = allTrips.filter(trip => {
-                if (status && trip.trip_status !== status) {
-                    return false;
+                // Virtual filter values that don't map 1-to-1 to trip_status
+                if (status === 'pending_verification') {
+                    if (!(trip.driver_completed && !trip.manager_verified)) return false;
+                } else if (status === 'verified') {
+                    if (!trip.manager_verified) return false;
+                } else if (status) {
+                    if (trip.trip_status !== status) return false;
                 }
 
                 if (driver && trip.driver?.id !== driver) {
@@ -1050,13 +1106,36 @@ $current_user = getCurrentUser();
             `;
 
             const statusColors = {
-                'scheduled': '#fbbf24',
-                'in_transit': '#3b82f6',
-                'completed': '#10b981',
-                'at_outlet': '#8b5cf6',
-                'cancelled': '#ef4444'
+                'scheduled'   : '#fbbf24',
+                'accepted'    : '#8b5cf6',
+                'in_transit'  : '#3b82f6',
+                'at_outlet'   : '#8b5cf6',
+                'completed'   : '#10b981',
+                'cancelled'   : '#ef4444'
             };
-            const statusColor = statusColors[trip.trip_status] || '#6b7280';
+
+            // Compute effective display status (verification overrides raw trip_status)
+            const isPendingVerif = trip.driver_completed && !trip.manager_verified;
+            const isVerified     = trip.manager_verified;
+            const displayStatus  = isPendingVerif ? 'pending_verification'
+                                 : isVerified     ? 'verified'
+                                 : trip.trip_status;
+            const displayLabel   = {
+                'pending_verification': 'Pending Verification',
+                'verified'            : 'Verified',
+                'scheduled'   : 'Scheduled',
+                'accepted'    : 'Accepted',
+                'in_transit'  : 'In Transit',
+                'at_outlet'   : 'At Outlet',
+                'completed'   : 'Completed',
+                'cancelled'   : 'Cancelled'
+            }[displayStatus] || displayStatus.replace(/_/g,' ');
+
+            const extraStatusColors = {
+                'pending_verification': '#f59e0b',
+                'verified'            : '#059669'
+            };
+            const statusColor = extraStatusColors[displayStatus] || statusColors[trip.trip_status] || '#6b7280';
 
             const header = document.createElement('div');
             header.style.cssText = 'display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;';
@@ -1131,7 +1210,7 @@ $current_user = getCurrentUser();
                     ${managerActionButtons}
 
                     <span class="status-pill" style="background: ${statusColor};">
-                        ${trip.trip_status.replace('_', ' ')}
+                        ${displayLabel}
                     </span>
                 </div>
             `;
@@ -1164,6 +1243,29 @@ $current_user = getCurrentUser();
                 </div>
             `;
             card.appendChild(infoGrid);
+
+            // ── Verification status banner ─────────────────────────────────────
+            if (isPendingVerif || isVerified) {
+                const vBanner = document.createElement('div');
+                if (isPendingVerif) {
+                    vBanner.style.cssText = 'padding:.75rem 1rem;border-radius:8px;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #f59e0b;';
+                    vBanner.innerHTML = `
+                        <i class="fas fa-hourglass-half" style="color:#f59e0b;font-size:1.25rem;flex-shrink:0;"></i>
+                        <div>
+                            <strong style="color:#92400e;display:block;"><i class="fas fa-user-check"></i> Driver Reported Completion &mdash; Awaiting Manager Verification</strong>
+                            <span style="color:#b45309;font-size:.8rem;">Reported: ${trip.driver_completed_at ? new Date(trip.driver_completed_at).toLocaleString() : 'Time not recorded'}</span>
+                        </div>`;
+                } else {
+                    vBanner.style.cssText = 'padding:.75rem 1rem;border-radius:8px;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #10b981;';
+                    vBanner.innerHTML = `
+                        <i class="fas fa-check-double" style="color:#10b981;font-size:1.25rem;flex-shrink:0;"></i>
+                        <div>
+                            <strong style="color:#065f46;display:block;"><i class="fas fa-shield-check"></i> Trip Verified by Manager</strong>
+                            <span style="color:#047857;font-size:.8rem;">Verified: ${trip.manager_verified_at ? new Date(trip.manager_verified_at).toLocaleString() : 'N/A'}</span>
+                        </div>`;
+                }
+                card.appendChild(vBanner);
+            }
 
             const routeSection = document.createElement('div');
             routeSection.style.cssText = 'border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-bottom: 1rem;';

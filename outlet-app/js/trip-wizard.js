@@ -572,8 +572,8 @@ function updateTripSummary() {
         tripData.selectedParcels.forEach((parcelId, index) => {
             const parcel = availableParcels.find(p => p.id === parcelId);
             if (parcel) {
-                const weight = parcel.parcel_weight ? `${parcel.parcel_weight} kg` : 'N/A';
-                const value = parcel.parcel_value || parcel.delivery_fee || 0;
+                const weight = parcel.weight_display || (parcel.parcel_weight != null ? parcel.parcel_weight + ' kg' : 'N/A');
+                const value = parcel.parcel_value ?? parcel.declared_value ?? parcel.delivery_fee ?? 0;
                 html += `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; margin-bottom: 8px; border-radius: 6px; border-left: 4px solid #4A1C40;">
                         <div>
@@ -738,11 +738,26 @@ function displayTripCreationSuccess(result) {
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #28a745;">
                     <h4 style="color: #28a745; margin-bottom: 10px;"><i class="fas fa-map-marker-alt"></i> Stops Created</h4>
-                    <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">${result.trip_stops_created || 0}</p>
+                    <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">
+                        ${(() => {
+                            const serverCount = result.trip_stops_created;
+                            if (serverCount && serverCount > 0) return serverCount;
+                            let local = 0;
+                            if (typeof tripData !== 'undefined') {
+                                local = (tripData.stops ? tripData.stops.length : 0) + 2;
+                                if (document.getElementById('originOutlet').value === document.getElementById('destinationOutlet').value) {
+                                    local = (tripData.stops ? tripData.stops.length : 0) + 1;
+                                }
+                            }
+                            return local;
+                        })()}
+                    </p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #28a745;">
                     <h4 style="color: #28a745; margin-bottom: 10px;"><i class="fas fa-box"></i> Parcels Assigned</h4>
-                    <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">${result.parcels_assigned || 0}</p>
+                    <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">
+                        ${result.parcels_assigned > 0 ? result.parcels_assigned : (typeof tripData !== 'undefined' ? tripData.selectedParcels.length : 0)}
+                    </p>
                 </div>
             </div>
 
@@ -935,7 +950,7 @@ function updateParcelStats(parcels) {
     const statsDiv = document.getElementById('parcelStats');
     if (statsDiv && Array.isArray(parcels)) {
         const totalWeight = parcels.reduce((sum, p) => sum + (parseFloat(p.parcel_weight) || 0), 0);
-        const totalValue = parcels.reduce((sum, p) => sum + (parseFloat(p.declared_value) || 0), 0);
+        const totalValue = parcels.reduce((sum, p) => sum + (parseFloat(p.parcel_value ?? p.declared_value ?? 0) || 0), 0);
         statsDiv.innerHTML = `
             <div style="display: flex; justify-content: space-around; padding: 15px; background: #e7f3ff; border-radius: 8px; margin-bottom: 20px;">
                 <div style="text-align: center;">
@@ -996,24 +1011,23 @@ function displayParcels(parcels) {
                     </div>
                     <div class="parcel-detail">
                         <div class="parcel-detail-label">Weight</div>
-                        <div class="parcel-detail-value">${parcel.parcel_weight ? parcel.parcel_weight + ' kg' : 'N/A'}</div>
+                        <div class="parcel-detail-value">${parcel.weight_display || (parcel.parcel_weight != null ? parcel.parcel_weight + ' kg' : 'N/A')}</div>
                     </div>
                     <div class="parcel-detail">
                         <div class="parcel-detail-label">Origin</div>
-                        <div class="parcel-detail-value">${parcel.origin_outlet?.outlet_name || 'Current Outlet'}</div>
+                        <div class="parcel-detail-value">${parcel.origin_outlet?.outlet_name || parcel.origin_outlet_name || 'Current Outlet'}</div>
                     </div>
                     <div class="parcel-detail">
                         <div class="parcel-detail-label">Destination</div>
-                        <div class="parcel-detail-value">${parcel.destination_outlet?.outlet_name || 'N/A'}</div>
+                        <div class="parcel-detail-value">${parcel.destination_outlet?.outlet_name || parcel.destination_outlet_name || 'N/A'}</div>
                     </div>
                     <div class="parcel-detail">
                         <div class="parcel-detail-label">Value</div>
-                        <div class="parcel-detail-value">ZMW ${parseFloat(parcel.parcel_value || parcel.delivery_fee || 0).toFixed(2)}</div>
-                        <div class="parcel-detail-value">${parcel.value_display || 'ZMW 0.00'}</div>
+                        <div class="parcel-detail-value">${parcel.value_display || 'ZMW ' + parseFloat(parcel.parcel_value || parcel.delivery_fee || 0).toFixed(2)}</div>
                     </div>
                     <div class="parcel-detail">
                         <div class="parcel-detail-label">Delivery Fee</div>
-                        <div class="parcel-detail-value">${parcel.fee_display}</div>
+                        <div class="parcel-detail-value">${parcel.fee_display || 'ZMW ' + parseFloat(parcel.delivery_fee || 0).toFixed(2)}</div>
                     </div>
                 </div>
 

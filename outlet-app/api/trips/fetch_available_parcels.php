@@ -202,6 +202,17 @@ try {
             ];
         }
 
+        // build enriched parcel object with some pre‑formatted fields
+        $weight = is_numeric($parcel['parcel_weight'] ?? null) ? $parcel['parcel_weight'] : 0;
+        $fee = is_numeric($parcel['delivery_fee'] ?? null) ? $parcel['delivery_fee'] : 0;
+        // prefer parcel_value when positive, otherwise fall back to declared_value if available
+        $value = 0;
+        if (isset($parcel['parcel_value']) && is_numeric($parcel['parcel_value']) && $parcel['parcel_value'] > 0) {
+            $value = $parcel['parcel_value'];
+        } elseif (!empty($parcel['declared_value']) && is_numeric($parcel['declared_value'])) {
+            $value = $parcel['declared_value'];
+        }
+
         $enrichedParcels[] = [
             'id' => $parcel['id'],
             'track_number' => $parcel['track_number'],
@@ -214,17 +225,24 @@ try {
             'receiver_address' => $parcel['receiver_address'] ?? null,
             'receiver_phone' => $parcel['receiver_phone'] ?? null,
             'package_details' => $parcel['package_details'] ?? null,
-            'parcel_weight' => $parcel['parcel_weight'] ?? 0,
-            'delivery_fee' => $parcel['delivery_fee'] ?? 0,
-            'parcel_value' => $parcel['parcel_value'] ?? 0,
+            // numeric fields
+            'parcel_weight' => $weight,
+            'delivery_fee' => $fee,
+            'parcel_value' => $value,
             'cod_amount' => $parcel['cod_amount'] ?? 0,
             'delivery_option' => $parcel['delivery_option'] ?? 'standard',
             'origin_outlet_id' => $parcel['origin_outlet_id'],
             'origin_outlet' => $originOutlet,
+            'origin_outlet_name' => $originOutlet['outlet_name'] ?? null,
             'destination_outlet_id' => $parcel['destination_outlet_id'],
             'destination_outlet' => $destinationOutlet,
+            'destination_outlet_name' => $destinationOutlet['outlet_name'] ?? null,
             'created_at' => $parcel['created_at'],
-            'barcode_url' => $parcel['barcode_url'] ?? null
+            'barcode_url' => $parcel['barcode_url'] ?? null,
+            // display helpers
+            'weight_display' => $weight . ' kg',
+            'fee_display' => 'ZMW ' . number_format($fee, 2),
+            'value_display' => 'ZMW ' . number_format($value, 2)
         ];
     }
 

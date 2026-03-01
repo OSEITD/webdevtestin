@@ -768,7 +768,8 @@ $current_user = getCurrentUser();
             departureTime: null,
             selectedParcels: [] 
         };
-        let availableParcels = []; 
+        let availableParcels = [];
+        let tripCreated = false; // prevents re-submission after a successful creation 
         
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Trip wizard initialized');
@@ -936,11 +937,11 @@ $current_user = getCurrentUser();
                 console.log('datetime-local supported:', isSupported);
                 
                 const now = new Date();
-                const minDateTime = new Date(now.getTime() + (30 * 60000)); 
+                const minDateTime = new Date(now.getTime() + (10 * 60000)); 
                 departureTimeInput.min = minDateTime.toISOString().slice(0, 16);
                 
                 
-                const defaultDateTime = new Date(now.getTime() + (60 * 60000)); 
+                const defaultDateTime = new Date(now.getTime() + (20 * 60000)); 
                 departureTimeInput.value = defaultDateTime.toISOString().slice(0, 16);
                 
               
@@ -949,11 +950,11 @@ $current_user = getCurrentUser();
                     const minTime = new Date(this.min);
                     
                     if (selectedTime < minTime) {
-                        showMessage('Departure time must be at least 30 minutes from now', 'error');
+                        showMessage('Departure time must be at least 10 minutes from now', 'error');
                         this.value = minTime.toISOString().slice(0, 16);
                     }
                 });
-                
+
                 departureTimeInput.style.position = 'relative';
                 departureTimeInput.style.zIndex = '10';
                 
@@ -1051,48 +1052,69 @@ $current_user = getCurrentUser();
         }
 
         function handleDestinationChange() {
+            updateOutletDropdownRestrictions();
             updateStopsDisplay();
-            
             
             if (currentStep === 3) {
                 const originSelect = document.getElementById('originOutlet');
-                const destSelect = document.getElementById('destinationOutlet');
+                const destSelect   = document.getElementById('destinationOutlet');
                 const originId = originSelect?.value;
-                const destId = destSelect?.value;
+                const destId   = destSelect?.value;
                 
                 if (originId && destId) {
                     console.log('Destination changed - auto-refreshing parcels');
-                    setTimeout(() => loadAvailableParcels(), 100); 
+                    setTimeout(() => loadAvailableParcels(), 100);
                 }
+            }
+        }
+
+        // Keeps all outlet dropdowns mutually exclusive: origin, destination and
+        // intermediate stops are each disabled in the other selects.
+        function updateOutletDropdownRestrictions() {
+            const originSelect       = document.getElementById('originOutlet');
+            const destSelect         = document.getElementById('destinationOutlet');
+            const intermediateSelect = document.getElementById('intermediateOutlet');
+            if (!originSelect || !destSelect || !intermediateSelect) return;
+
+            const originId  = originSelect.value;
+            const destId    = destSelect.value;
+            const stopIds   = new Set(tripData.stops.map(s => s.id));
+
+            // IDs that must be blocked in the destination dropdown
+            const blockedInDest = new Set([originId, ...stopIds].filter(Boolean));
+            // IDs that must be blocked in the intermediate dropdown
+            const blockedInIntermediate = new Set([originId, destId, ...stopIds].filter(Boolean));
+
+            Array.from(destSelect.options).forEach(opt => {
+                opt.disabled = opt.value ? blockedInDest.has(opt.value) : false;
+            });
+            // If the current dest value became blocked, clear it
+            if (destId && blockedInDest.has(destId)) {
+                destSelect.value = '';
+            }
+
+            Array.from(intermediateSelect.options).forEach(opt => {
+                opt.disabled = opt.value ? blockedInIntermediate.has(opt.value) : false;
+            });
+            if (intermediateSelect.value && blockedInIntermediate.has(intermediateSelect.value)) {
+                intermediateSelect.value = '';
             }
         }
 
         function handleOriginChange() {
             const originSelect = document.getElementById('originOutlet');
-            const destSelect = document.getElementById('destinationOutlet');
-            const intermediateSelect = document.getElementById('intermediateOutlet');
-            
+            const destSelect   = document.getElementById('destinationOutlet');
             if (!originSelect) return;
-            
-            const originId = originSelect.value;
-            
-           
-            [destSelect, intermediateSelect].forEach(select => {
-                if (select) {
-                    Array.from(select.options).forEach(option => {
-                        option.disabled = option.value === originId;
-                    });
-                }
-            });
 
+            updateOutletDropdownRestrictions();
             updateStopsDisplay();
-            
             
             if (currentStep === 3) {
                 const destId = destSelect?.value;
+                const originId = originSelect.value;
                 if (originId && destId) {
                     console.log('Route changed - auto-refreshing parcels');
-                    setTimeout(() => loadAvailableParcels(), 100); 
+                    setTimeout(() => loadAvailableParcels(), 100);
                 }
             }
         }
@@ -1229,6 +1251,7 @@ $current_user = getCurrentUser();
             });
 
             select.value = '';
+            updateOutletDropdownRestrictions();
             updateStopsDisplay();
             showMessage('Intermediate stop added successfully', 'success');
             
@@ -1252,6 +1275,7 @@ $current_user = getCurrentUser();
             try {
                 tripData.stops.splice(index, 1);
                 console.log('Stops after removal:', tripData.stops);
+                updateOutletDropdownRestrictions();
                 updateStopsDisplay();
                 showMessage('Intermediate stop removed', 'info');
                 
@@ -1422,7 +1446,9 @@ $current_user = getCurrentUser();
             
             const totalValue = tripData.selectedParcels.reduce((sum, parcelId) => {
                 const parcel = availableParcels.find(p => p.id === parcelId);
-                return sum + (parseFloat(parcel?.declared_value || 0));
+                if (!parcel) return sum;
+                const val = parseFloat(parcel.parcel_value ?? parcel.declared_value ?? 0) || 0;
+                return sum + val;
             }, 0);
 
             let html = `
@@ -1565,7 +1591,25 @@ $current_user = getCurrentUser();
                         showMessage(`Trip created successfully! Trip ID: ${result.trip_id}`, 'success');
                         console.log(`Parcels assigned: ${result.parcels_assigned} out of ${result.selected_parcels_count} selected`);
                         displayTripCreationSuccess(result);
-                        
+
+                        // Lock down the wizard so the same trip cannot be submitted again.
+                        tripCreated = true;
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Trip Created';
+                        submitBtn.classList.remove('btn-success', 'btn-warning');
+                        submitBtn.classList.add('btn-secondary');
+
+                        // Reset in-memory state so going back won't carry stale data.
+                        tripData = { vehicle: null, originOutlet: null, destinationOutlet: null, stops: [], parcels: [], departureTime: null, selectedParcels: [] };
+                        availableParcels = [];
+
+                        // Clear the form fields.
+                        ['vehicleId','driverId','originOutlet','destinationOutlet'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.value = '';
+                        });
+                        const dtInput = document.getElementById('departureTime');
+                        if (dtInput) dtInput.value = '';
                         
                     } else {
                         throw new Error(result.error || 'Failed to create trip');
@@ -1579,9 +1623,11 @@ $current_user = getCurrentUser();
                 console.error('Error creating trip:', error);
                 showMessage('Error creating trip: ' + error.message, 'error');
             } finally {
-                
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
+                // Only re-enable the button on failure; keep it locked on success.
+                if (!tripCreated) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
             }
         }
         
@@ -1647,11 +1693,26 @@ $current_user = getCurrentUser();
                         </div>
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #28a745;">
                             <h4 style="color: #28a745; margin-bottom: 10px;"><i class="fas fa-map-marker-alt"></i> Stops Created</h4>
-                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">${result.trip_stops_created || 0}</p>
+                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">
+                                ${(() => {
+                                    const serverCount = result.trip_stops_created;
+                                    if (serverCount && serverCount > 0) return serverCount;
+                                    let local = 0;
+                                    if (typeof tripData !== 'undefined') {
+                                        local = (tripData.stops ? tripData.stops.length : 0) + 2;
+                                        if (document.getElementById('originOutlet').value === document.getElementById('destinationOutlet').value) {
+                                            local = (tripData.stops ? tripData.stops.length : 0) + 1;
+                                        }
+                                    }
+                                    return local;
+                                })()}
+                            </p>
                         </div>
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #28a745;">
                             <h4 style="color: #28a745; margin-bottom: 10px;"><i class="fas fa-box"></i> Parcels Assigned</h4>
-                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">${result.parcels_assigned || 0}</p>
+                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">
+                                ${result.parcels_assigned > 0 ? result.parcels_assigned : (typeof tripData !== 'undefined' ? tripData.selectedParcels.length : 0)}
+                            </p>
                         </div>
                     </div>
                     
@@ -1938,11 +1999,11 @@ $current_user = getCurrentUser();
                             </div>
                             <div class="parcel-detail">
                                 <div class="parcel-detail-label">Origin</div>
-                                <div class="parcel-detail-value">${parcel.origin_outlet_name || 'N/A'}</div>
+                                <div class="parcel-detail-value">${parcel.origin_outlet_name || parcel.origin_outlet?.outlet_name || 'N/A'}</div>
                             </div>
                             <div class="parcel-detail">
                                 <div class="parcel-detail-label">Destination</div>
-                                <div class="parcel-detail-value">${parcel.destination_outlet_name || 'N/A'}</div>
+                                <div class="parcel-detail-value">${parcel.destination_outlet_name || parcel.destination_outlet?.outlet_name || 'N/A'}</div>
                             </div>
                             <div class="parcel-detail">
                                 <div class="parcel-detail-label">Value</div>
@@ -2016,7 +2077,8 @@ $current_user = getCurrentUser();
                         <div class="selected-parcel-item">
                             <div>
                                 <strong>${parcel.track_number}</strong><br>
-                                <small>${parcel.receiver_name} | ${parcel.weight_display}</small>
+                                <small>${parcel.receiver_name} | ${parcel.weight_display} | 
+                                ZMW ${parseFloat(parcel.parcel_value ?? parcel.declared_value ?? parcel.delivery_fee ?? 0).toFixed(2)}</small>
                             </div>
                             <button class="btn btn-danger" onclick="toggleParcelSelection('${parcelId}')" style="padding: 5px 10px;">
                                 <i class="fas fa-times"></i>

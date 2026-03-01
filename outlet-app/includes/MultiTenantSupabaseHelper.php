@@ -41,12 +41,25 @@ class MultiTenantSupabaseHelper {
     }
 
     public function post($table, $data) {
+        // Detect a batch insert: numerically-indexed array whose first element is also an array.
+        $isBatch = is_array($data) && !empty($data) && isset($data[0]) && is_array($data[0]);
+
         if (!in_array($table, $this->tablesWithoutCompanyFilter)) {
-            $data['company_id'] = $this->companyId;
+            if ($isBatch) {
+                // Inject company_id into every record in the batch without corrupting the array structure.
+                foreach ($data as &$record) {
+                    if (!isset($record['company_id'])) {
+                        $record['company_id'] = $this->companyId;
+                    }
+                }
+                unset($record);
+            } else {
+                $data['company_id'] = $this->companyId;
+            }
         }
         $this->validateTenantTable($table);
 
-        if ($table === 'parcels') {
+        if ($table === 'parcels' && !$isBatch) {
             return $this->postParcelAlternative($data);
         }
 
@@ -56,7 +69,8 @@ class MultiTenantSupabaseHelper {
                 'header' => [
                     'Authorization: Bearer ' . $this->key,
                     'apikey: ' . $this->key,
-                    'Content-Type: application/json'
+                    'Content-Type: application/json',
+                    'Prefer: return=representation'
                 ],
                 'content' => json_encode($data),
                 'ignore_errors' => true
@@ -75,6 +89,7 @@ class MultiTenantSupabaseHelper {
 
         if (empty($response) || trim($response) === '') {
             error_log("Empty response from Supabase POST for table: $table - assuming success");
+            // if we posted a single record with an id we can try to fetch it back
             if (in_array($table, ['trips', 'trip_stops', 'parcel_list']) && isset($data['id'])) {
                 usleep(100000);
                 try {
@@ -85,6 +100,11 @@ class MultiTenantSupabaseHelper {
                 } catch (Exception $e) {
                     error_log("Could not fetch created record: " . $e->getMessage());
                 }
+            }
+            // if $data is a numerically indexed array (batch insert) return it directly
+            if (is_array($data) && array_values($data) === $data) {
+                // flatten each element in case they are themselves arrays
+                return $data;
             }
             return [$data];
         }

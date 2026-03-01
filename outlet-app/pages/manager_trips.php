@@ -611,6 +611,31 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             border-color: #d1d5db;
         }
         
+        .trips-scroll-container {
+            max-height: calc(100vh - 320px);
+            overflow-y: auto;
+            padding-right: 4px;
+            scroll-behavior: smooth;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .trips-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
         .no-trips {
             text-align: center;
             padding: 3rem 1.5rem;
@@ -697,6 +722,154 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             color: #d1d5db;
             margin-bottom: 1rem;
         }
+
+        /* ── Pending Verification Styles ───────────────────────────────────── */
+        .summary-card.status-pending-verification {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .status-pending_verification {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            animation: pulse-badge 2s ease-in-out infinite;
+        }
+        @keyframes pulse-badge {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.80; }
+        }
+        .verification-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .verification-banner .banner-icon {
+            font-size: 1.4rem;
+            color: #d97706;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+        .verification-banner .banner-text strong {
+            color: #92400e;
+            font-size: 0.9rem;
+            display: block;
+        }
+        .verification-banner .banner-text p {
+            margin: 0.2rem 0 0;
+            font-size: 0.8rem;
+            color: #78350f;
+        }
+        .btn-verify {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .btn-verify:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        /* ── Verification Modal ─────────────────────────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .verify-modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: vmSlideIn 0.25s ease;
+        }
+        @keyframes vmSlideIn {
+            from { opacity: 0; transform: translateY(-18px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0)   scale(1);     }
+        }
+        .verify-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            margin-bottom: 1.25rem;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        .verify-modal-header h3 {
+            margin: 0;
+            color: #374151;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: #6b7280;
+            line-height: 1;
+            padding: 0;
+        }
+        .modal-close-btn:hover { color: #374151; }
+        .verify-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin: 1.25rem 0;
+        }
+        .verify-detail-item {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+        }
+        .verify-detail-item span {
+            font-size: 0.7rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+        .verify-detail-item strong { color: #374151; font-size: 0.875rem; }
+        .verify-note {
+            font-size: 0.85rem;
+            color: #78350f;
+            background: #fef3c7;
+            border-radius: 6px;
+            padding: 0.6rem 0.9rem;
+        }
+        .verify-modal-footer {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 2px solid #f3f4f6;
+        }
+        .btn-cancel-modal {
+            padding: 0.6rem 1.25rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: white;
+            color: #374151;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.875rem;
+        }
+        .btn-cancel-modal:hover { background: #f3f4f6; }
+        @media (max-width: 768px) {
+            .verify-detail-grid { grid-template-columns: 1fr; }
+            .verify-modal-box   { padding: 1.25rem; }
+        }
+        /* ── End Verification Styles ────────────────────────────────────────── */
 
         
         @media (max-width: 768px) {
@@ -814,6 +987,10 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                         <span class="summary-card-label">At Outlet</span>
                         <span class="summary-card-value" id="atOutletTrips">0</span>
                     </div>
+                    <div class="summary-card status-pending-verification">
+                        <span class="summary-card-label">Pending Verification</span>
+                        <span class="summary-card-value" id="pendingVerificationTrips">0</span>
+                    </div>
                 </div>
             
                 <!-- Filters -->
@@ -835,6 +1012,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                                     <option value="accepted">Accepted</option>
                                     <option value="in_transit">In Transit</option>
                                     <option value="at_outlet">At Outlet</option>
+                                    <option value="pending_verification">Pending Verification</option>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -857,6 +1035,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 </div>
                 
                 <!-- Active Trips List -->
+                <div class="trips-scroll-container">
                 <div id="activeTripsContainer">
                     <div class="no-trips">
                         <i class="fas fa-truck"></i>
@@ -864,6 +1043,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                         <p>Please wait while we fetch your assigned trips.</p>
                     </div>
                 </div>
+                </div><!-- /.trips-scroll-container -->
                 
                 <!-- Live Tracking Section -->
                 <div id="liveTrackingSection" class="live-tracking-section" style="display: none;">
@@ -879,14 +1059,130 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         </main>
     </div>
 
+    <!-- Trip Verification Modal -->
+    <div id="verificationModal" class="modal-overlay" style="display:none;"
+         onclick="if(event.target===this) dismissVerificationModal()" role="dialog"
+         aria-modal="true" aria-labelledby="verifyModalTitle">
+        <div class="verify-modal-box">
+            <div class="verify-modal-header">
+                <h3 id="verifyModalTitle">
+                    <i class="fas fa-check-double" style="color:#10b981;"></i>
+                    Verify Trip Completion
+                </h3>
+                <button class="modal-close-btn" onclick="dismissVerificationModal()" aria-label="Close">&times;</button>
+            </div>
+
+            <p style="color:#6b7280;font-size:0.875rem;margin:0 0 0.5rem;">
+                The driver has reported this trip as completed. Review the details below and confirm.
+            </p>
+
+            <div class="verify-detail-grid">
+                <div class="verify-detail-item">
+                    <span>Route</span>
+                    <strong id="vmRoute">&mdash;</strong>
+                </div>
+                <div class="verify-detail-item">
+                    <span>Trip Date</span>
+                    <strong id="vmTripDate">&mdash;</strong>
+                </div>
+                <div class="verify-detail-item">
+                    <span>Driver</span>
+                    <strong id="vmDriver">&mdash;</strong>
+                </div>
+                <div class="verify-detail-item">
+                    <span>Vehicle</span>
+                    <strong id="vmVehicle">&mdash;</strong>
+                </div>
+                <div class="verify-detail-item">
+                    <span>Current Status</span>
+                    <strong id="vmStatus">&mdash;</strong>
+                </div>
+                <div class="verify-detail-item">
+                    <span>Stops</span>
+                    <strong id="vmStops">&mdash;</strong>
+                </div>
+            </div>
+
+            <div class="verify-note">
+                <i class="fas fa-info-circle"></i>
+                <strong> Driver reported completion at:</strong> <span id="vmReportedAt">&mdash;</span>
+            </div>
+
+            <div class="verify-modal-footer">
+                <button class="btn-cancel-modal" onclick="dismissVerificationModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button id="confirmVerifyBtn" class="action-btn btn-verify" onclick="confirmVerifyTrip()">
+                    <i class="fas fa-check-double"></i> Confirm &amp; Complete Trip
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
         let activeTrips = [];
-        let allTrips = []; 
+        let allTrips = [];
         let trackingMap = null;
         let currentTrackingTrip = null;
+        let autoRefreshHandle = null;
+
+        // ── Shared toast helper ──────────────────────────────────────────────────
+        function showToast(message, type = 'success') {
+            const palette = {
+                success: 'linear-gradient(135deg,#10b981,#059669)',
+                error:   'linear-gradient(135deg,#ef4444,#dc2626)',
+                info:    'linear-gradient(135deg,#3b82f6,#2563eb)',
+                warning: 'linear-gradient(135deg,#f59e0b,#d97706)'
+            };
+            const iconMap = { success:'fa-check-circle', error:'fa-times-circle', info:'fa-info-circle', warning:'fa-exclamation-circle' };
+            const toast = document.createElement('div');
+            toast.style.cssText = `position:fixed;bottom:2rem;right:2rem;z-index:10002;background:${palette[type]||palette.success};color:white;padding:1rem 1.5rem;border-radius:12px;font-family:Poppins,sans-serif;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;align-items:center;gap:.75rem;max-width:380px;animation:vmSlideIn .25s ease;transition:opacity .3s`;
+            toast.innerHTML = `<i class="fas ${iconMap[type]||iconMap.success}" style="font-size:1.2rem;flex-shrink:0;"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3800);
+        }
+
+        // ── Re-render a single card's status badge, departure time & action buttons
+        //    without touching its stop-list or the rest of the page.
+        function refreshTripCard(tripId) {
+            const trip = activeTrips.find(t => t.id === tripId);
+            if (!trip) return;
+            const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
+            if (!card) return;
+
+            const isPending   = !!(trip.driver_completed && !trip.manager_verified);
+            const statusClass = isPending ? 'pending_verification' : trip.trip_status;
+            const statusLabel = isPending ? 'Pending Verification' : trip.trip_status.replace(/_/g, ' ');
+
+            card.setAttribute('data-status', statusClass);
+
+            const badge = card.querySelector('.trip-status');
+            if (badge) { badge.className = `trip-status status-${statusClass}`; badge.textContent = statusLabel; }
+
+            // Refresh departure time cell (2nd item in .trip-details)
+            const detailCells = card.querySelectorAll('.trip-details > div');
+            if (detailCells[1]) {
+                detailCells[1].innerHTML = `<strong><i class="fas fa-clock"></i> Departure</strong>${trip.departure_time ? new Date(trip.departure_time).toLocaleTimeString() : 'Not set'}`;
+            }
+
+            const actionsDiv = card.querySelector('.trip-actions');
+            if (actionsDiv) {
+                actionsDiv.innerHTML = `
+                    ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) ? `<button class="action-btn btn-accept" onclick="managerStartTrip('${trip.id}')"><i class="fas fa-play"></i> Start Trip</button>` : ''}
+                    ${!isPending && ['accepted','in_transit'].includes(trip.trip_status) ? `<button class="action-btn btn-track" onclick="trackTrip('${trip.id}')"><i class="fas fa-map-marker-alt"></i> Live Track</button>` : ''}
+                    ${!isPending && trip.trip_status === 'at_outlet' ? `<button class="action-btn btn-complete" onclick="completeTrip('${trip.id}')"><i class="fas fa-flag-checkered"></i> Mark Complete</button>` : ''}
+                    ${isPending ? `<button class="action-btn btn-verify" onclick="verifyTrip('${trip.id}')"><i class="fas fa-check-double"></i> Verify &amp; Complete</button>` : ''}
+                    <button class="action-btn btn-details" onclick="viewTripDetails('${trip.id}')"><i class="fas fa-eye"></i> Details</button>`;
+            }
+
+            // Keep allTrips in sync
+            const ai = allTrips.findIndex(t => t.id === tripId);
+            if (ai !== -1) allTrips[ai] = trip;
+            updateSummary(activeTrips);
+        }
 
         
         function toggleFilters() {
@@ -922,18 +1218,20 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             }
 
             summary.style.display = 'flex';
-            
-            const total = trips.length;
-            const scheduled = trips.filter(t => t.trip_status === 'scheduled').length;
-            const accepted = trips.filter(t => t.trip_status === 'accepted').length;
-            const inTransit = trips.filter(t => t.trip_status === 'in_transit').length;
-            const atOutlet = trips.filter(t => t.trip_status === 'at_outlet').length;
 
-            document.getElementById('totalTrips').textContent = total;
-            document.getElementById('scheduledTrips').textContent = scheduled;
-            document.getElementById('acceptedTrips').textContent = accepted;
-            document.getElementById('inTransitTrips').textContent = inTransit;
-            document.getElementById('atOutletTrips').textContent = atOutlet;
+            const total               = trips.length;
+            const scheduled           = trips.filter(t => t.trip_status === 'scheduled').length;
+            const accepted            = trips.filter(t => t.trip_status === 'accepted').length;
+            const inTransit           = trips.filter(t => t.trip_status === 'in_transit').length;
+            const atOutlet            = trips.filter(t => t.trip_status === 'at_outlet').length;
+            const pendingVerification = trips.filter(t => t.driver_completed && !t.manager_verified).length;
+
+            document.getElementById('totalTrips').textContent              = total;
+            document.getElementById('scheduledTrips').textContent          = scheduled;
+            document.getElementById('acceptedTrips').textContent           = accepted;
+            document.getElementById('inTransitTrips').textContent          = inTransit;
+            document.getElementById('atOutletTrips').textContent           = atOutlet;
+            document.getElementById('pendingVerificationTrips').textContent = pendingVerification;
         }
 
         async function fetchFullTrips() {
@@ -950,9 +1248,13 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
 
                 if (data.success) {
                     activeTrips = data.trips || [];
-                    allTrips = [...activeTrips]; 
+                    allTrips = [...activeTrips];
                     displayTrips(activeTrips);
                     updateSummary(activeTrips);
+                    // Update the pending verification badge count from the API
+                    if (data.awaiting_verification_count !== undefined) {
+                        document.getElementById('pendingVerificationTrips').textContent = data.awaiting_verification_count;
+                    }
                 } else {
                     throw new Error(data.message || 'Failed to load trips');
                 }
@@ -1005,8 +1307,23 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 return;
             }
             
-            const tripsHtml = trips.map(trip => `
-                <div class="manager-trip-card" data-trip-id="${trip.id}" data-status="${trip.trip_status}" data-date="${trip.trip_date}">
+            const tripsHtml = trips.map(trip => {
+                const isPending   = !!(trip.driver_completed && !trip.manager_verified);
+                const statusClass = isPending ? 'pending_verification' : trip.trip_status;
+                const statusLabel = isPending
+                    ? 'Pending Verification'
+                    : trip.trip_status.replace(/_/g, ' ');
+                return `
+                <div class="manager-trip-card" data-trip-id="${trip.id}" data-status="${statusClass}" data-date="${trip.trip_date}">
+                    ${isPending ? `
+                    <div class="verification-banner">
+                        <div class="banner-icon"><i class="fas fa-hourglass-half"></i></div>
+                        <div class="banner-text">
+                            <strong><i class="fas fa-user-check"></i> Driver Reported Completion &mdash; Awaiting Your Verification</strong>
+                            <p>Reported at: ${trip.driver_completed_at ? new Date(trip.driver_completed_at).toLocaleString() : 'Time not recorded'}</p>
+                        </div>
+                    </div>` : ''}
+
                     <div class="trip-header">
                         <div>
                             <div class="trip-id">Trip ID: ${trip.id.substring(0, 8)}...</div>
@@ -1016,13 +1333,13 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                                 <strong>${trip.destination_name || 'Destination'}</strong>
                             </div>
                         </div>
-                        <span class="trip-status status-${trip.trip_status}">${trip.trip_status.replace('_', ' ')}</span>
+                        <span class="trip-status status-${statusClass}">${statusLabel}</span>
                     </div>
-                    
+
                     <div class="trip-details">
                         <div>
                             <strong><i class="fas fa-calendar"></i> Trip Date</strong>
-                            ${new Date(trip.trip_date).toLocaleDateString()}
+                            ${trip.trip_date ? new Date(trip.trip_date).toLocaleDateString() : 'N/A'}
                         </div>
                         <div>
                             <strong><i class="fas fa-clock"></i> Departure</strong>
@@ -1037,48 +1354,47 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                             ${trip.vehicle_name || 'Not assigned'}
                         </div>
                     </div>
-                    
+
                     <div class="trip-actions">
-                        ${['scheduled','accepted'].includes(trip.trip_status) ? `
+                        ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) ? `
                             <button class="action-btn btn-accept" onclick="managerStartTrip('${trip.id}')">
                                 <i class="fas fa-play"></i> Start Trip
-                            </button>
-                        ` : ''}
-                        
-                        ${['accepted', 'in_transit'].includes(trip.trip_status) ? `
+                            </button>` : ''}
+
+                        ${!isPending && ['accepted','in_transit'].includes(trip.trip_status) ? `
                             <button class="action-btn btn-track" onclick="trackTrip('${trip.id}')">
                                 <i class="fas fa-map-marker-alt"></i> Live Track
-                            </button>
-                        ` : ''}
-                        
-                        ${trip.trip_status === 'at_outlet' ? `
+                            </button>` : ''}
+
+                        ${!isPending && trip.trip_status === 'at_outlet' ? `
                             <button class="action-btn btn-complete" onclick="completeTrip('${trip.id}')">
                                 <i class="fas fa-flag-checkered"></i> Mark Complete
-                            </button>
-                        ` : ''}
-                        
+                            </button>` : ''}
+
+                        ${isPending ? `
+                            <button class="action-btn btn-verify" onclick="verifyTrip('${trip.id}')">
+                                <i class="fas fa-check-double"></i> Verify &amp; Complete
+                            </button>` : ''}
+
                         <button class="action-btn btn-details" onclick="viewTripDetails('${trip.id}')">
                             <i class="fas fa-eye"></i> Details
                         </button>
                     </div>
 
                     <div class="trip-stops-container"></div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
             
             container.innerHTML = tripsHtml;
-            
-            // OPTIMIZATION: Auto-render stops for in_transit and at_outlet trips
-            // Use setTimeout to ensure DOM is fully updated
+
+            // Auto-render stops for in_transit, at_outlet, and pending-verification trips
             setTimeout(() => {
                 trips.forEach(trip => {
-                    console.log('Trip:', trip.id, 'Status:', trip.trip_status, 'Stops:', trip.stops?.length || 0);
-                    if (['in_transit', 'at_outlet'].includes(trip.trip_status)) {
+                    const isPending = !!(trip.driver_completed && !trip.manager_verified);
+                    if (['in_transit', 'at_outlet'].includes(trip.trip_status) || isPending) {
                         if (trip.stops && trip.stops.length > 0) {
-                            console.log('Rendering stops for trip:', trip.id);
                             renderStopsUI(trip.id, trip.stops);
                         } else {
-                            console.log('No stops data for trip:', trip.id, '- fetching from API');
                             renderTripStops(trip.id);
                         }
                     }
@@ -1088,21 +1404,23 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
 
         function filterTrips() {
             const statusFilter = document.getElementById('statusFilter').value;
-            const dateFilter = document.getElementById('dateFilter').value;
-            
+            const dateFilter   = document.getElementById('dateFilter').value;
+
             let filteredTrips = [...allTrips];
-            
-            if (statusFilter) {
-                filteredTrips = filteredTrips.filter(trip => trip.trip_status === statusFilter);
+
+            if (statusFilter === 'pending_verification') {
+                filteredTrips = filteredTrips.filter(t => t.driver_completed && !t.manager_verified);
+            } else if (statusFilter) {
+                filteredTrips = filteredTrips.filter(t => t.trip_status === statusFilter);
             }
-            
+
             if (dateFilter) {
                 filteredTrips = filteredTrips.filter(trip => {
                     const tripDate = new Date(trip.trip_date).toISOString().split('T')[0];
                     return tripDate === dateFilter;
                 });
             }
-            
+
             displayTrips(filteredTrips);
             updateSummary(filteredTrips);
         }
@@ -1110,41 +1428,73 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
 
         
         async function managerStartTrip(tripId) {
-            console.log('managerStartTrip called', tripId);
-            if (!confirm('Start this trip now?')) return;
-            
-            const startCard = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
-            const startBtn = startCard ? startCard.querySelector('.btn-accept') : null;
-            
-            try {
-                const url = '../api/manager_start_trip.php';
-                if (startBtn) startBtn.classList.add('loading');
+            if (!confirm('Start this trip now? The origin stop will be automatically marked as arrived.')) return;
 
-                const resp = await fetch(url, {
+            const startCard = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
+            const startBtn  = startCard ? startCard.querySelector('.btn-accept') : null;
+            if (startBtn) { startBtn.disabled = true; startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...'; }
+
+            try {
+                const resp = await fetch('../api/manager_start_trip.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ trip_id: tripId, action: 'start' })
+                    body: JSON.stringify({ trip_id: tripId })
                 });
                 const data = await resp.json();
-                if (startBtn) startBtn.classList.remove('loading');
-                if (data.success) {
-                    
-                    const trip = activeTrips.find(t => t.id === tripId);
-                    if (trip) {
-                        trip.trip_status = 'in_transit';
-                        trip.departure_time = data.departure_time || new Date().toISOString();
-                        
-                        await renderTripStops(tripId);
-                    }
-                    alert('Trip started successfully');
-                } else {
-                    alert('Error starting trip: ' + (data.error || data.message || 'Unknown'));
+
+                if (!data.success) {
+                    if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = '<i class="fas fa-play"></i> Start Trip'; }
+                    showToast(data.error || data.message || 'Failed to start trip', 'error');
+                    return;
                 }
+
+                // 1 — Update in-memory trip object
+                const trip = activeTrips.find(t => t.id === tripId);
+                if (trip) {
+                    trip.trip_status   = 'in_transit';
+                    trip.departure_time = data.departure_time || new Date().toISOString();
+                }
+
+                // 2 — Rebuild the card header / action buttons in-place (no full redraw)
+                refreshTripCard(tripId);
+
+                // 3 — Ensure stops are cached; fetch them if missing
+                if (trip && (!trip.stops || trip.stops.length === 0)) {
+                    try {
+                        const sr = await fetch(`../api/trips/get_trip_route_for_manager.php?trip_id=${encodeURIComponent(tripId)}`, { credentials: 'same-origin' });
+                        const sd = await sr.json();
+                        if (sd.success && trip) trip.stops = sd.stops || [];
+                    } catch (e) { /* non-fatal */ }
+                }
+
+                // 4 — Auto-arrive the origin stop (first stop, stop_order = 1)
+                const now = new Date().toISOString();
+                if (trip && trip.stops && trip.stops.length > 0) {
+                    const originStop = trip.stops.find(s => s.stop_order === 1) || trip.stops[0];
+                    if (originStop && originStop.id && !originStop.arrival_time) {
+                        try {
+                            const ar = await fetch('../api/manager_update_trip_stop.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({ stop_id: originStop.id, action: 'arrive', timestamp: now })
+                            });
+                            const ad = await ar.json();
+                            if (ad.success) originStop.arrival_time = now; // optimistic cache update
+                        } catch (e) { /* non-fatal */ }
+                    }
+                }
+
+                // 5 — Render stops panel inside the card
+                renderStopsUI(tripId, trip ? (trip.stops || []) : []);
+
+                showToast('Trip started — driver is now in transit', 'success');
+
             } catch (err) {
                 console.error('Error starting trip:', err);
-                if (startBtn) startBtn.classList.remove('loading');
-                alert('Failed to start trip. See console for details.');
+                if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = '<i class="fas fa-play"></i> Start Trip'; }
+                showToast('Failed to start trip. Please try again.', 'error');
             }
         }
 
@@ -1187,7 +1537,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 console.error('No stops container found for trip:', tripId);
                 return;
             }
-            
+
             if (!stops || stops.length === 0) {
                 console.warn('No stops to render for trip:', tripId);
                 // Fallback: Render origin and destination from trip object
@@ -1243,181 +1593,226 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             `).join('');
 
             containerEl.innerHTML = stopsHtml;
+
+            // ── Recovery banner: all stops done but trip not yet marked complete ──
+            const trip = activeTrips.find(t => t.id === tripId);
+            const allDone = stops.length > 0 && stops.every(s => s.arrival_time && s.departure_time);
+            const needsRecovery = allDone
+                && trip
+                && !trip.driver_completed
+                && !trip.manager_verified
+                && ['in_transit','at_outlet','scheduled','accepted'].includes(trip.trip_status);
+
+            if (needsRecovery) {
+                const banner = document.createElement('div');
+                banner.style.cssText = 'margin-top:.75rem;padding:1rem 1.25rem;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #f59e0b;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;';
+                banner.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:.75rem;">
+                        <i class="fas fa-check-double" style="color:#f59e0b;font-size:1.3rem;"></i>
+                        <div>
+                            <strong style="color:#92400e;display:block;">All stops completed</strong>
+                            <span style="font-size:.8rem;color:#b45309;">This trip can now be verified and closed.</span>
+                        </div>
+                    </div>
+                    <button class="action-btn btn-verify" style="flex-shrink:0;" onclick="forceMarkDriverComplete('${tripId}')">
+                        <i class="fas fa-flag-checkered"></i> Mark as Ready to Verify
+                    </button>`;
+                containerEl.appendChild(banner);
+            }
+
             console.log('Successfully rendered stops for trip:', tripId);
         }
 
-        
+        // ── Recovery: manager manually flags driver as done when all stops are departed
+        //    but the trip is stuck in in_transit (e.g. from before auto-complete was added).
+        async function forceMarkDriverComplete(tripId) {
+            if (!confirm('Mark all stops as done and open the verification dialog?')) return;
+            try {
+                // Call the verify endpoint directly — it already cascades everything.
+                const resp = await fetch('../api/manager_verify_trip.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ trip_id: tripId, force: true })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
+                    if (card) { card.classList.add('fade-out'); setTimeout(() => card.remove(), 350); }
+                    activeTrips = activeTrips.filter(t => t.id !== tripId);
+                    allTrips    = allTrips.filter(t => t.id !== tripId);
+                    updateSummary(activeTrips);
+                    showToast('Trip verified and marked as completed!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to complete trip', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to complete trip. Please try again.', 'error');
+            }
+        }
+
         async function managerArriveStop(tripId, stopId, outletId) {
             if (!confirm('Mark arrived at this stop?')) return;
-            try {
-                const payload = { stop_id: stopId, action: 'arrive', timestamp: new Date().toISOString() };
-                
-                const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
-                const stopEl = card ? card.querySelector(`#stop-${stopId}`) : null;
-                const btn = stopEl ? stopEl.querySelector('button') : null;
-                if (btn) btn.classList.add('loading');
+            const now = new Date().toISOString();
 
+            const card   = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
+            const stopEl = card ? card.querySelector(`#stop-${stopId}`) : null;
+            const btn    = stopEl ? stopEl.querySelector('button') : null;
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+            try {
                 const resp = await fetch('../api/manager_update_trip_stop.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ stop_id: stopId, action: 'arrive', timestamp: now })
                 });
                 const data = await resp.json();
-                if (data.success) {
-                    
-                    if (btn) btn.classList.remove('loading');
-                    if (data.trip_completed) {
-                        const cardEl = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
-                        if (cardEl) {
-                            cardEl.classList.add('fade-out');
-                            setTimeout(() => cardEl.remove(), 350);
-                        }
-                    } else {
-                        
-                        await renderTripStops(tripId);
-                    }
-                } else {
-                    if (btn) btn.classList.remove('loading');
-                    alert('Error: ' + (data.error || 'Failed to mark arrival'));
+
+                if (!data.success) {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Arrive'; }
+                    showToast(data.error || 'Failed to mark arrival', 'error');
+                    return;
                 }
+
+                // Optimistic in-memory update — no need to re-fetch stops
+                const trip = activeTrips.find(t => t.id === tripId);
+                if (trip && trip.stops) {
+                    const stop = trip.stops.find(s => s.id === stopId);
+                    if (stop) stop.arrival_time = now;
+                }
+                renderStopsUI(tripId, trip ? (trip.stops || []) : []);
+                showToast('Arrival at stop recorded', 'success');
+
             } catch (e) {
-                
-                try { const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`); const stopEl = card ? card.querySelector(`#stop-${stopId}`) : null; const btn = stopEl ? stopEl.querySelector('button') : null; if (btn) btn.classList.remove('loading'); } catch (ignore) {}
-                console.error(e); alert('Failed to mark arrival');
+                console.error(e);
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Arrive'; }
+                showToast('Failed to mark arrival', 'error');
             }
         }
 
         async function managerDepartStop(tripId, stopId, outletId) {
             if (!confirm('Mark departed from this stop?')) return;
-            try {
-                const payload = { stop_id: stopId, action: 'depart', timestamp: new Date().toISOString() };
-                
-                const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
-                const stopEl = card ? card.querySelector(`#stop-${stopId}`) : null;
-                const btn = stopEl ? stopEl.querySelector('button') : null;
-                if (btn) btn.classList.add('loading');
+            const now = new Date().toISOString();
 
+            const card   = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
+            const stopEl = card ? card.querySelector(`#stop-${stopId}`) : null;
+            const btn    = stopEl ? stopEl.querySelector('button') : null;
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+            try {
                 const resp = await fetch('../api/manager_update_trip_stop.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ stop_id: stopId, action: 'depart', timestamp: now })
                 });
                 const data = await resp.json();
-                if (btn) btn.classList.remove('loading');
-                if (data.success) {
-                    
-                    if (data.trip_completed) {
-                        const cardEl = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
-                        if (cardEl) {
-                            cardEl.classList.add('fade-out');
-                            setTimeout(() => cardEl.remove(), 350);
-                        }
-                    } else {
-                        
-                        await renderTripStops(tripId);
-                    }
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to mark depart'));
+
+                if (!data.success) {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-route"></i> Depart'; }
+                    showToast(data.error || 'Failed to mark departure', 'error');
+                    return;
                 }
+
+                // Optimistic in-memory update
+                const trip = activeTrips.find(t => t.id === tripId);
+                if (trip && trip.stops) {
+                    const stop = trip.stops.find(s => s.id === stopId);
+                    if (stop) stop.departure_time = now;
+                }
+                renderStopsUI(tripId, trip ? (trip.stops || []) : []);
+                showToast('Departure from stop recorded', 'success');
+
+                // If the API signals all stops are done, flip the in-memory trip to
+                // driver_completed so the card immediately shows "Verify & Complete".
+                if (data.all_stops_completed) {
+                    if (trip) {
+                        trip.driver_completed    = true;
+                        trip.driver_completed_at = now;
+                    }
+                    refreshTripCard(tripId);
+                    showToast('All stops completed — trip is ready for your verification', 'info');
+                }
+
             } catch (e) {
-                try { const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`); const stopEl = card ? card.querySelector(`#stop-${stopId}`) : null; const btn = stopEl ? stopEl.querySelector('button') : null; if (btn) btn.classList.remove('loading'); } catch (ignore) {}
-                console.error(e); alert('Failed to mark depart');
+                console.error(e);
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-route"></i> Depart'; }
+                showToast('Failed to mark departure', 'error');
             }
         }
 
         // Direct outlet tracking (for origin/destination without trip_stops)
         async function managerArriveOutlet(tripId, outletId) {
             if (!confirm('Mark arrived at this outlet?')) return;
+            const now = new Date().toISOString();
+
             try {
-                const payload = { 
-                    outlet_id: outletId, 
-                    trip_id: tripId, 
-                    action: 'arrive', 
-                    timestamp: new Date().toISOString() 
-                };
-                
                 const resp = await fetch('../api/manager_update_trip_stop.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ outlet_id: outletId, trip_id: tripId, action: 'arrive', timestamp: now })
                 });
-                
                 const data = await resp.json();
-                if (data.success) {
-                    alert('Arrival recorded successfully');
-                    await loadManagerTrips();
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to record arrival'));
+
+                if (!data.success) { showToast(data.error || 'Failed to record arrival', 'error'); return; }
+
+                // Update in-memory: find the fallback stop matching this outlet
+                const trip = activeTrips.find(t => t.id === tripId);
+                if (trip && trip.stops) {
+                    const s = trip.stops.find(st => st.outlet_id === outletId);
+                    if (s) s.arrival_time = now;
                 }
+                // If this was arrival at destination, the API sets trip_status = 'completed'
+                // reflect that in memory
+                if (trip && (outletId === trip.destination_outlet_id || outletId === trip.origin_outlet_id)) {
+                    trip.trip_status = data.trip_status || trip.trip_status;
+                }
+                refreshTripCard(tripId);
+                renderStopsUI(tripId, trip ? (trip.stops || []) : []);
+                showToast('Arrival recorded', 'success');
+
             } catch (err) {
                 console.error('Arrive outlet error', err);
-                alert('Failed to mark arrival: ' + err.message);
+                showToast('Failed to mark arrival: ' + err.message, 'error');
             }
         }
 
         async function managerDepartOutlet(tripId, outletId) {
             if (!confirm('Mark departed from this outlet?')) return;
+            const now = new Date().toISOString();
+
             try {
-                const payload = { 
-                    outlet_id: outletId, 
-                    trip_id: tripId, 
-                    action: 'depart', 
-                    timestamp: new Date().toISOString() 
-                };
-                
                 const resp = await fetch('../api/manager_update_trip_stop.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ outlet_id: outletId, trip_id: tripId, action: 'depart', timestamp: now })
                 });
-                
                 const data = await resp.json();
-                if (data.success) {
-                    alert('Departure recorded successfully');
-                    await loadManagerTrips();
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to record departure'));
+
+                if (!data.success) { showToast(data.error || 'Failed to record departure', 'error'); return; }
+
+                // Update in-memory departure time on the stop
+                const trip = activeTrips.find(t => t.id === tripId);
+                if (trip && trip.stops) {
+                    const s = trip.stops.find(st => st.outlet_id === outletId);
+                    if (s) s.departure_time = now;
                 }
+                refreshTripCard(tripId);
+                renderStopsUI(tripId, trip ? (trip.stops || []) : []);
+                showToast('Departure recorded', 'success');
+
             } catch (err) {
                 console.error('Depart outlet error', err);
-                alert('Failed to mark departure: ' + err.message);
+                showToast('Failed to mark departure: ' + err.message, 'error');
             }
         }
 
-        async function completeTrip(tripId) {
-            const notes = prompt('Add completion notes (optional):');
-            if (notes === null) return; 
-            
-            if (!confirm('Mark this trip as completed?')) return;
-            
-            try {
-                const response = await fetch('../api/manager_complete_trip.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ 
-                        trip_id: tripId,
-                        notes: notes || ''
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert('Trip completed successfully!');
-                    loadActiveTrips(); 
-                } else {
-                    alert('Error: ' + (data.message || 'Failed to complete trip'));
-                }
-            } catch (error) {
-                console.error('Error completing trip:', error);
-                alert('Failed to complete trip. Please try again.');
-            }
-        }
+        // First completeTrip definition removed (duplicate was overridden by the
+        // definition further down; kept only the canonical version below).
 
         function trackTrip(tripId) {
             console.log('trackTrip opening window for', tripId);
@@ -1486,7 +1881,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
 
         async function completeTrip(tripId) {
             if (!confirm('Mark this trip as completed?')) return;
-            
+
             try {
                 const response = await fetch('../api/manager_complete_trip.php', {
                     method: 'POST',
@@ -1494,18 +1889,95 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                     credentials: 'same-origin',
                     body: JSON.stringify({ trip_id: tripId })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
-                    alert('Trip marked as completed!');
-                    loadActiveTrips(); 
+                    const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
+                    if (card) { card.classList.add('fade-out'); setTimeout(() => card.remove(), 350); }
+                    activeTrips = activeTrips.filter(t => t.id !== tripId);
+                    allTrips    = allTrips.filter(t => t.id !== tripId);
+                    updateSummary(activeTrips);
                 } else {
                     alert('Error: ' + (data.message || 'Failed to complete trip'));
                 }
             } catch (error) {
                 console.error('Error completing trip:', error);
                 alert('Failed to complete trip. Please try again.');
+            }
+        }
+
+        // ── Manager Verification Flow ─────────────────────────────────────────────
+        let pendingVerifyTripId = null;
+
+        function verifyTrip(tripId) {
+            const trip = activeTrips.find(t => t.id === tripId);
+            if (!trip) { alert('Trip not found'); return; }
+
+            pendingVerifyTripId = tripId;
+
+            document.getElementById('vmRoute').textContent =
+                `${trip.origin_name || 'Origin'} → ${trip.destination_name || 'Destination'}`;
+            document.getElementById('vmDriver').textContent   = trip.driver_name  || 'Not assigned';
+            document.getElementById('vmVehicle').textContent  =
+                trip.vehicle_name ? `${trip.vehicle_name}${trip.vehicle_plate ? ' (' + trip.vehicle_plate + ')' : ''}` : 'Unknown';
+            document.getElementById('vmTripDate').textContent =
+                trip.trip_date ? new Date(trip.trip_date).toLocaleDateString() : 'N/A';
+            document.getElementById('vmReportedAt').textContent =
+                trip.driver_completed_at ? new Date(trip.driver_completed_at).toLocaleString() : 'Not recorded';
+            document.getElementById('vmStatus').textContent =
+                trip.trip_status.replace(/_/g, ' ');
+            document.getElementById('vmStops').textContent =
+                trip.stop_count > 0 ? trip.stop_count + ' stop(s)' : 'Direct route';
+
+            document.getElementById('verificationModal').style.display = 'flex';
+        }
+
+        function dismissVerificationModal() {
+            document.getElementById('verificationModal').style.display = 'none';
+            pendingVerifyTripId = null;
+        }
+
+        async function confirmVerifyTrip() {
+            if (!pendingVerifyTripId) return;
+            const tripId    = pendingVerifyTripId;
+            const confirmBtn = document.getElementById('confirmVerifyBtn');
+            const original   = confirmBtn.innerHTML;
+
+            confirmBtn.disabled  = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+            try {
+                const resp = await fetch('../api/manager_verify_trip.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ trip_id: tripId })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    dismissVerificationModal();
+                    const card = document.querySelector(`.manager-trip-card[data-trip-id="${tripId}"]`);
+                    if (card) { card.classList.add('fade-out'); setTimeout(() => card.remove(), 350); }
+                    activeTrips = activeTrips.filter(t => t.id !== tripId);
+                    allTrips    = allTrips.filter(t => t.id !== tripId);
+                    updateSummary(activeTrips);
+                    // Success toast
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;bottom:2rem;right:2rem;z-index:10001;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:1rem 1.5rem;border-radius:12px;font-family:Poppins,sans-serif;font-weight:600;box-shadow:0 8px 24px rgba(16,185,129,.4);display:flex;align-items:center;gap:.75rem;animation:vmSlideIn .25s ease';
+                    toast.innerHTML = '<i class="fas fa-check-circle" style="font-size:1.2rem"></i> Trip verified and marked as completed!';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 4500);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to verify trip'));
+                }
+            } catch (err) {
+                console.error('Verify trip error:', err);
+                alert('Failed to verify trip. Please try again.');
+            } finally {
+                confirmBtn.disabled  = false;
+                confirmBtn.innerHTML = original;
             }
         }
 
@@ -1521,13 +1993,69 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             }
         }, 30000);
 
-        
+        // ── Silent background refresh — updates the trip list every 30 s
+        //    without destroying stop panels or scroll position.
+        async function silentRefresh() {
+            try {
+                const resp = await fetch('../api/manager_trips.php', { credentials: 'same-origin' });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data.success) return;
+
+                const fresh = data.trips || [];
+
+                // Remove cards for trips that have disappeared (completed/cancelled)
+                activeTrips.forEach(old => {
+                    if (!fresh.find(f => f.id === old.id)) {
+                        const el = document.querySelector(`.manager-trip-card[data-trip-id="${old.id}"]`);
+                        if (el) { el.classList.add('fade-out'); setTimeout(() => el.remove(), 350); }
+                    }
+                });
+
+                fresh.forEach(f => {
+                    const existing = activeTrips.find(t => t.id === f.id);
+                    if (!existing) {
+                        // New trip appeared — full redraw is safest
+                        activeTrips = fresh;
+                        allTrips    = [...fresh];
+                        displayTrips(activeTrips);
+                        return;
+                    }
+
+                    // Merge fresh fields but preserve cached stops (avoid re-render flicker)
+                    const cachedStops = existing.stops;
+                    Object.assign(existing, f);
+                    if (cachedStops && cachedStops.length) existing.stops = cachedStops;
+
+                    // If status changed, refresh the card header silently
+                    if (existing.trip_status !== f.trip_status ||
+                        existing.driver_completed !== f.driver_completed ||
+                        existing.manager_verified !== f.manager_verified) {
+                        refreshTripCard(existing.id);
+                    }
+                });
+
+                activeTrips = fresh.map(f => {
+                    const cached = activeTrips.find(t => t.id === f.id);
+                    return cached || f;
+                });
+                allTrips = [...activeTrips];
+
+                updateSummary(activeTrips);
+                if (data.awaiting_verification_count !== undefined) {
+                    document.getElementById('pendingVerificationTrips').textContent = data.awaiting_verification_count;
+                }
+            } catch (e) { /* silent — don't disturb the user */ }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadActiveTrips();
-            
-            
+
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('dateFilter').value = today;
+
+            // Auto-refresh every 30 seconds without a full page reload
+            autoRefreshHandle = setInterval(silentRefresh, 30000);
         });
     </script>
 

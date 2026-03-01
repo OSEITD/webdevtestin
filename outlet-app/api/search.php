@@ -51,15 +51,14 @@ try {
         
         foreach ($parcelResults as $parcel) {
             $results['parcels'][] = [
-                'id' => $parcel['id'],
-                'type' => 'parcel',
-                'title' => 'Parcel #' . $parcel['track_number'],
-                'subtitle' => $parcel['sender_name'] . ' → ' . $parcel['receiver_name'],
-                'status' => $parcel['status'],
-                'date' => $parcel['created_at'],
-                'url' => '#',
-                'onclick' => 'viewParcelDetails(\'' . $parcel['id'] . '\')',
-                'icon' => 'fa-box'
+                'id'       => $parcel['id'],
+                'type'     => 'parcel',
+                'title'    => 'Parcel #' . $parcel['track_number'],
+                'subtitle' => ($parcel['sender_name'] ?? '?') . ' → ' . ($parcel['receiver_name'] ?? '?'),
+                'status'   => $parcel['status'],
+                'date'     => $parcel['created_at'],
+                'url'      => '../pages/parcel_management.php?parcel_id=' . urlencode($parcel['id']),
+                'icon'     => 'fa-box'
             ];
         }
     }
@@ -114,26 +113,53 @@ try {
         }
     }
 
-    
-    if (($type === 'all' || $type === 'trips') && $role === 'outlet_manager') {
-        $tripResults = $supabase->get('trips', 
-            'company_id=eq.' . urlencode($companyId) . 
-            '&outlet_manager_id=eq.' . urlencode($userId) .
-            '&select=id,trip_status,departure_time,created_at,driver_id,origin_outlet_id,destination_outlet_id' .
+    if ($type === 'all' || $type === 'trips') {
+        $outletId = $_SESSION['outlet_id'] ?? '';
+
+        // Build role-aware base filter
+        $tripFilter = 'company_id=eq.' . urlencode($companyId);
+        if ($role === 'driver') {
+            $tripFilter .= '&driver_id=eq.' . urlencode($userId);
+        } elseif ($role === 'outlet_manager') {
+            $conditions = 'outlet_manager_id.eq.' . urlencode($userId);
+            if ($outletId) {
+                $conditions .= ',origin_outlet_id.eq.' . urlencode($outletId);
+                $conditions .= ',destination_outlet_id.eq.' . urlencode($outletId);
+            }
+            $tripFilter .= '&or=(' . $conditions . ')';
+        }
+        // admin / company_admin / super_admin: no extra scope, search all company trips
+
+        // Query filter: UUID prefix -> match by ID, otherwise match by status keyword
+        $isUuidLike = (bool) preg_match('/^[0-9a-f\-]{2,}$/i', $query);
+        if ($isUuidLike) {
+            $tripFilter .= '&id=ilike.' . urlencode($query) . '*';
+        } else {
+            $tripFilter .= '&trip_status=ilike.*' . urlencode($query) . '*';
+        }
+
+        $tripResults = $supabase->get('trips',
+            $tripFilter .
+            '&select=id,trip_status,departure_time,trip_date,created_at,origin_outlet_id,destination_outlet_id,driver_id' .
             '&order=created_at.desc&limit=10'
         );
-        
-        foreach ($tripResults as $trip) {
-            $shortId = substr($trip['id'], 0, 8);
+
+        foreach ($tripResults ?? [] as $trip) {
+            $shortId  = strtoupper(substr($trip['id'], 0, 8));
+            $status   = str_replace('_', ' ', ucfirst($trip['trip_status'] ?? 'unknown'));
+            $dateStr  = $trip['trip_date']
+                ? date('M j, Y', strtotime($trip['trip_date']))
+                : ($trip['departure_time'] ? date('M j, Y', strtotime($trip['departure_time'])) : 'No date');
+
             $results['trips'][] = [
-                'id' => $trip['id'],
-                'type' => 'trip',
-                'title' => 'Trip #' . $shortId,
-                'subtitle' => 'Status: ' . str_replace('_', ' ', ucfirst($trip['trip_status'])),
-                'status' => $trip['trip_status'],
-                'date' => $trip['created_at'],
-                'url' => '../pages/manager_trips.php?trip_id=' . $trip['id'],
-                'icon' => 'fa-route'
+                'id'       => $trip['id'],
+                'type'     => 'trip',
+                'title'    => 'Trip #' . $shortId,
+                'subtitle' => $status . ' · ' . $dateStr,
+                'status'   => $trip['trip_status'],
+                'date'     => $trip['created_at'],
+                'url'      => '../pages/manager_trips.php?trip_id=' . $trip['id'],
+                'icon'     => 'fa-route'
             ];
         }
     }

@@ -63,11 +63,13 @@ $notificationCount = 0;
         <div class="menu-divider"></div>
         <?php
             // compute logout path relative to current script location
-            $base = dirname($_SERVER['SCRIPT_NAME']);
-            if ($base === '/' || $base === '.') {
-                $base = '';
+            if (strpos($_SERVER['SCRIPT_NAME'], '/drivers/pages/') !== false) {
+                $logoutUrl = '../../logout.php';
+            } elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/') !== false) {
+                $logoutUrl = '../logout.php';
+            } else {
+                $logoutUrl = 'logout.php';
             }
-            $logoutUrl = $base . '/logout.php';
         ?>
         <a href="<?php echo $logoutUrl; ?>" class="menu-item logout">
             <i class="fas fa-sign-out-alt"></i>

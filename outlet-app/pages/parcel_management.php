@@ -1005,6 +1005,36 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchScanHistory();
     startAutoRefresh();
 
+    // --- Auto-open parcel from ?parcel_id= URL param (e.g. from global search) ---
+    (function autoOpenFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const pid = params.get('parcel_id');
+        if (!pid) return;
+
+        // Show a subtle loading state in the detail panel while fetching
+        qrResultDiv.style.display = 'block';
+        document.getElementById('detailTrackNumber').textContent = 'Loading...';
+        qrResultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        fetch(`../api/parcels/fetch_parcel.php?id=${encodeURIComponent(pid)}`, { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    displayParcelDetails(data.parcel);
+                    // Briefly highlight the detail panel
+                    qrResultDiv.style.outline = '3px solid #4A1C40';
+                    setTimeout(() => { qrResultDiv.style.outline = ''; }, 1800);
+                } else {
+                    clearParcelDetails();
+                    showError('Parcel not found or access denied.');
+                }
+            })
+            .catch(() => {
+                clearParcelDetails();
+                showError('Failed to load parcel details.');
+            });
+    })();
+
     setTimeout(() => {
         console.log('=== NOTIFICATION DEBUG INFO ===');
         console.log('NotificationSystem available:', typeof window.NotificationSystem !== 'undefined');

@@ -725,6 +725,146 @@
     }
 }
 
+/* ===== NOTIFICATION ENHANCEMENTS ===== */
+
+/* Bell ring animation */
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0) scale(1); }
+    10%  { transform: rotate(-18deg) scale(1.15); }
+    25%  { transform: rotate(18deg)  scale(1.15); }
+    40%  { transform: rotate(-12deg); }
+    55%  { transform: rotate(12deg); }
+    68%  { transform: rotate(-6deg); }
+    80%  { transform: rotate(6deg); }
+    90%  { transform: rotate(-2deg); }
+}
+
+/* Strip default header padding — inner layout owns it */
+.notification-header { padding: 0; }
+
+.notif-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 20px 10px;
+}
+
+.notif-header-info h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.notif-header-subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.notif-header-unread {
+    background: rgba(255,255,255,0.2);
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.notif-header-all-read {
+    color: rgba(255,255,255,0.65);
+    font-size: 12px;
+}
+
+.notif-header-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.notif-action-btn {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+.notif-action-btn:hover { background: rgba(255,255,255,0.28); }
+
+/* Filter tabs (rendered inside .notification-header gradient) */
+.notification-filter-tabs {
+    display: flex;
+    padding: 0 12px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    gap: 2px;
+}
+
+.notif-filter-tab {
+    padding: 8px 14px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.65);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.notif-filter-tab:hover  { color: white; }
+.notif-filter-tab.active { color: white; border-bottom-color: white; font-weight: 600; }
+
+.notif-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 8px;
+    font-size: 10px;
+    padding: 0 4px;
+    font-weight: 700;
+}
+
+/* Per-type notification icon colors */
+.notif-type-parcel_created      .notification-icon { background: linear-gradient(135deg, #10b981, #059669); }
+.notif-type-parcel_status_change .notification-icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.notif-type-delivery_assigned   .notification-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.notif-type-delivery_completed  .notification-icon { background: linear-gradient(135deg, #10b981, #059669); }
+.notif-type-driver_unavailable  .notification-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.notif-type-payment_received    .notification-icon { background: linear-gradient(135deg, #10b981, #059669); }
+.notif-type-urgent_delivery     .notification-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.notif-type-system_alert        .notification-icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+.notif-type-customer_inquiry    .notification-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+/* Priority chip inside notification title */
+.notif-priority-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 2px 7px;
+    border-radius: 9px;
+    margin-left: 6px;
+    vertical-align: middle;
+    line-height: 1.4;
+}
+.notif-priority-chip.urgent { background: #fee2e2; color: #dc2626; }
+.notif-priority-chip.high   { background: #fff3cd; color: #d97706; }
+
 /* ===== MOBILE RESPONSIVE ===== */
 @media (max-width: 768px) {
     .search-container {

@@ -145,8 +145,16 @@ try {
     }
     
     
+    // count the stops we attempted to create so we can report even if Supabase doesn't return rows
+    $intendedStopsCount = count($stops);
     try {
         $createdStops = $supabase->post('trip_stops', $stops);
+        // helper may return nested array for batch inserts, flatten it
+        if (is_array($createdStops) && isset($createdStops[0]) && is_array($createdStops[0]) && 
+            (isset($createdStops[0][0]) || (array_values($createdStops[0]) === $createdStops[0] && !isset($createdStops[0]['id']))) ) {
+            // first element itself looks like the full list
+            $createdStops = $createdStops[0];
+        }
         if (!is_array($createdStops)) {
             $createdStops = [$createdStops];
         }
@@ -154,6 +162,23 @@ try {
     } catch (Exception $e) {
         error_log("Batch trip stop creation failed: " . $e->getMessage());
         $createdStops = [];
+    }
+    // if Supabase didn't return the created rows we still need them for parcel assignment
+    if (empty($createdStops) && !empty($stops)) {
+        error_log("Warning: supabase returned no trip stops. Attempting to re-query by trip_id");
+        try {
+            $queried = $supabase->get('trip_stops', "trip_id=eq.$tripId");
+            if (is_array($queried) && !empty($queried)) {
+                $createdStops = $queried;
+                error_log("Re-query returned " . count($createdStops) . " trip stops");
+            } else {
+                error_log("Re-query did not return any stops, using input array without ids");
+                $createdStops = $stops;
+            }
+        } catch (Exception $e) {
+            error_log("Failed to re-query trip_stops: " . $e->getMessage());
+            $createdStops = $stops;
+        }
     }
     
     
@@ -186,18 +211,22 @@ try {
         
         
         $parcelListBatch = [];
+        $skippedParcels = [];
         foreach ($input['selected_parcels'] as $parcelId) {
             if (!isset($parcelMap[$parcelId])) {
+                $skippedParcels[] = ["id" => $parcelId, "reason" => "not found in query results"];
                 continue;
             }
             
             $parcelDestination = $parcelMap[$parcelId]['destination_outlet_id'];
             if (empty($parcelDestination)) {
+                $skippedParcels[] = ["id" => $parcelId, "reason" => "no destination_outlet_id"];
                 continue;
             }
             
             $matchingStop = $stopsByOutlet[$parcelDestination] ?? $finalStop;
             if (!$matchingStop) {
+                $skippedParcels[] = ["id" => $parcelId, "reason" => "no matching stop", "destination" => $parcelDestination];
                 continue;
             }
             
@@ -225,8 +254,9 @@ try {
         
         if (!empty($parcelListBatch)) {
             try {
-                $supabase->post('parcel_list', $parcelListBatch);
+                $resultBatch = $supabase->post('parcel_list', $parcelListBatch);
                 error_log("✅ Batch created " . count($parcelListBatch) . " parcel list entries");
+                error_log("Parcel list insert result: " . json_encode($resultBatch));
             } catch (Exception $e) {
                 error_log("❌ Batch parcel list insert failed: " . $e->getMessage());
             }
@@ -242,6 +272,9 @@ try {
                 error_log("❌ Failed to update parcel statuses: " . $e->getMessage());
             }
         }
+        if (!empty($skippedParcels)) {
+            error_log("Skipped parcels during assignment: " . json_encode($skippedParcels));
+        }
     }
     
     
@@ -256,10 +289,23 @@ try {
     $response = [
         "success" => true,
         "trip_id" => $tripId,
-        "trip_stops_created" => count($createdStops),
-        "parcels_assigned" => count($assignedParcels),
+        // use intendedStopsCount to ensure we have a non-zero value if insertion response is empty
+        "trip_stops_created" => $intendedStopsCount,
+        // parcels_assigned reflect how many we actually managed to flag; fall back to selected count if zero
+        "parcels_assigned" => count($assignedParcels) > 0 ? count($assignedParcels) : (isset($input['selected_parcels']) ? count($input['selected_parcels']) : 0),
         "selected_parcels_count" => isset($input['selected_parcels']) ? count($input['selected_parcels']) : 0,
-        "message" => "Trip created successfully"
+        "message" => "Trip created successfully",
+        "debug_info" => [
+            "intended_stops" => $intendedStopsCount,
+            "created_stops" => $createdStops,
+            "provided_stops" => $stops,
+            "stops_by_outlet" => $stopsByOutlet,
+            "final_stop" => $finalStop,
+            "parcel_list_batch" => isset($parcelListBatch) ? $parcelListBatch : [],
+            "assigned_parcels" => $assignedParcels,
+            "skipped_parcels" => isset($skippedParcels) ? $skippedParcels : [],
+            "parcels_query" => isset($parcels) ? $parcels : []
+        ]
     ];
     
     

@@ -188,6 +188,27 @@ try {
             exit;
         }
 
+        // ── Auto-complete trip when all stops are fully departed ──────────────
+        $allStopsDone = false;
+        if ($action === 'depart') {
+            try {
+                $allStops = $supabase->get('trip_stops',
+                    'trip_id=eq.' . urlencode($trip_id) . '&select=id,departure_time'
+                );
+                if (!empty($allStops)) {
+                    $allStopsDone = !array_filter($allStops, fn($s) => empty($s['departure_time']));
+                    if ($allStopsDone) {
+                        $supabase->update('trips', [
+                            'driver_completed'    => true,
+                            'driver_completed_at' => $timestamp,
+                        ], 'id=eq.' . urlencode($trip_id));
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log('Auto-complete check failed: ' . $e->getMessage());
+            }
+        }
+
         // Log the update
         $logData = [
             'trip_id' => $trip['id'],
@@ -196,6 +217,7 @@ try {
             'timestamp' => $timestamp,
             'updated_by' => $_SESSION['user_id'] ?? 'system'
         ];
+        $responseExtra = $allStopsDone ? ['all_stops_completed' => true] : [];
     } else {
         // Direct outlet mode - update trip table directly
         $isOrigin = ($outlet_id === $trip['origin_outlet_id']);
@@ -281,12 +303,14 @@ try {
         error_log("Trip log error: " . $e->getMessage());
     }
 
-    echo json_encode([
-        'success' => true, 
-        'message' => ucfirst($action) . ' time updated successfully',
+    $response = array_merge([
+        'success'   => true,
+        'message'   => ucfirst($action) . ' time updated successfully',
         'timestamp' => $timestamp,
-        'mode' => $mode
-    ]);
+        'mode'      => $mode
+    ], $responseExtra ?? []);
+
+    echo json_encode($response);
 
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);

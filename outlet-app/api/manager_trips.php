@@ -118,6 +118,19 @@ try {
         error_log("Fetched " . count($allTripStops) . " trip stops for " . count($tripIds) . " trips");
     }
 
+    // Merge in trips awaiting manager verification (driver_completed=true, manager_verified=false)
+    // These may not be in the active-status list but must still appear for the manager to action.
+    $verificationPendingQuery = "driver_completed=eq.true&manager_verified=eq.false&company_id=eq.$companyId&or=(origin_outlet_id.eq.$outletId,destination_outlet_id.eq.$outletId)";
+    $verificationPendingTrips = $supabase->get('trips', $verificationPendingQuery);
+    if (!empty($verificationPendingTrips) && is_array($verificationPendingTrips)) {
+        $existingTripIds = array_column($trips, 'id');
+        foreach ($verificationPendingTrips as $vt) {
+            if (!in_array($vt['id'], $existingTripIds)) {
+                $trips[] = $vt;
+            }
+        }
+    }
+
     $driverIds = [];
     $vehicleIds = [];
     $originOutletIds = [];
@@ -248,6 +261,11 @@ try {
             'origin_name' => $originOutletName,
             'destination_name' => $destinationOutletName,
             'is_manager_assigned' => $trip['outlet_manager_id'] === $managerId,
+            // Driver completion & manager verification fields
+            'driver_completed'    => (bool)($trip['driver_completed']    ?? false),
+            'driver_completed_at' => $trip['driver_completed_at'] ?? null,
+            'manager_verified'    => (bool)($trip['manager_verified']    ?? false),
+            'manager_verified_at' => $trip['manager_verified_at'] ?? null,
             // OPTIMIZATION: Include stops data to avoid separate API calls
             'stops' => $tripStopsMap[$trip['id']] ?? [],
             'stop_count' => count($tripStopsMap[$trip['id']] ?? [])
@@ -259,10 +277,13 @@ try {
         return strtotime($b['created_at']) - strtotime($a['created_at']);
     });
     
+    $awaitingVerificationCount = count(array_filter($formattedTrips, fn($t) => $t['driver_completed'] && !$t['manager_verified']));
+
     echo json_encode([
         'success' => true,
         'trips' => $formattedTrips,
         'total_count' => count($formattedTrips),
+        'awaiting_verification_count' => $awaitingVerificationCount,
         'manager_id' => $managerId
     ], JSON_PRETTY_PRINT);
     

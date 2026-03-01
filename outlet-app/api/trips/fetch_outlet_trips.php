@@ -72,35 +72,50 @@ try {
     if ($page_size > 200) $page_size = 200;
     $offset = ($page - 1) * $page_size;
 
-    
-    $tripStopsFilter = "outlet_id=eq." . urlencode($outletId) . 
-                       "&company_id=eq." . urlencode($companyId) .
-                       "&select=trip_id";
-    $tripStops = $supabase->get('trip_stops', $tripStopsFilter);
-    
-    if (empty($tripStops)) {
-        
-        $tripsFilter = "company_id=eq." . urlencode($companyId) .
-                       "&or=(origin_outlet_id.eq." . urlencode($outletId) . 
-                       ",destination_outlet_id.eq." . urlencode($outletId) . ")" .
-                       "&order=created_at.desc" .
-                       "&limit=" . urlencode($page_size) .
-                       "&offset=" . urlencode($offset);
-        $trips = $supabase->get('trips', $tripsFilter);
-    } else {
-        
-        $relevantTripIds = array_unique(array_column($tripStops, 'trip_id'));
-        
-        
-        
-        $tripsFilter = "id=in.(" . implode(',', array_map('urlencode', $relevantTripIds)) . ")" .
-                       "&company_id=eq." . urlencode($companyId) .
-                       "&order=created_at.desc";
-        $allTrips = $supabase->get('trips', $tripsFilter);
-        
-        
-        $trips = array_slice($allTrips, $offset, $page_size);
+    // ── Collect relevant trip IDs from ALL three sources ────────────────────
+    // 1. Trips passing through this outlet as an intermediate stop
+    $stopTripIds = [];
+    $tripStops = $supabase->get(
+        'trip_stops',
+        "outlet_id=eq." . urlencode($outletId) .
+        "&company_id=eq." . urlencode($companyId) .
+        "&select=trip_id"
+    );
+    if (!empty($tripStops)) {
+        $stopTripIds = array_column($tripStops, 'trip_id');
     }
+
+    // 2. Trips that originate from OR are destined for this outlet
+    $directTrips = $supabase->get(
+        'trips',
+        "company_id=eq." . urlencode($companyId) .
+        "&or=(origin_outlet_id.eq." . urlencode($outletId) .
+        ",destination_outlet_id.eq." . urlencode($outletId) . ")" .
+        "&select=id"
+    );
+    $directTripIds = !empty($directTrips) ? array_column($directTrips, 'id') : [];
+
+    // 3. Merge and deduplicate
+    $relevantTripIds = array_values(array_unique(array_merge($stopTripIds, $directTripIds)));
+
+    if (empty($relevantTripIds)) {
+        echo json_encode([
+            "success" => true,
+            "trips"   => [],
+            "message" => "No trips involving this outlet were found."
+        ]);
+        exit;
+    }
+
+    // Fetch full trip records with pagination
+    $allMatchedTrips = $supabase->get(
+        'trips',
+        "id=in.(" . implode(',', array_map('urlencode', $relevantTripIds)) . ")" .
+        "&company_id=eq." . urlencode($companyId) .
+        "&order=created_at.desc"
+    );
+
+    $trips = array_slice($allMatchedTrips ?? [], $offset, $page_size);
 
     if (empty($trips)) {
         echo json_encode([
@@ -352,27 +367,41 @@ try {
             $isPartOfRoute = true;
         }
 
-        
-        
         $filteredParcels = $parcels;
-        
+
+        // Determine which stop number this outlet is on the route
+        $outletStopOrder = null;
+        foreach ($enrichedStops as $s) {
+            if (!empty($s['outlet']['id']) && $s['outlet']['id'] === $outletId) {
+                $outletStopOrder = $s['stop_order'];
+                break;
+            }
+        }
+
         $enrichedTrips[] = [
             'id' => $trip['id'],
             'trip_status' => $trip['trip_status'] ?? 'scheduled',
             'departure_time' => $trip['departure_time'] ?? null,
             'arrival_time' => $trip['arrival_time'] ?? null,
+            'trip_date' => $trip['trip_date'] ?? null,
             'created_at' => $trip['created_at'] ?? null,
             'updated_at' => $trip['updated_at'] ?? null,
-            
+            // Verification fields
+            'driver_completed'    => (bool)($trip['driver_completed'] ?? false),
+            'driver_completed_at' => $trip['driver_completed_at'] ?? null,
+            'manager_verified'    => (bool)($trip['manager_verified'] ?? false),
+            'manager_verified_at' => $trip['manager_verified_at'] ?? null,
+            'manager_verified_by' => $trip['manager_verified_by'] ?? null,
+            //
             'outlet_manager_id' => $trip['outlet_manager_id'] ?? null,
             'driver' => $driverInfo,
             'vehicle' => $vehicleInfo,
             'stops' => $enrichedStops,
             'parcels' => $filteredParcels,
             'total_parcels' => count($filteredParcels),
-            'is_origin_outlet' => $isOriginOutlet,
-            'is_part_of_route' => $isPartOfRoute,
-            'outlet_stop_order' => null
+            'is_origin_outlet'  => $isOriginOutlet,
+            'is_part_of_route'  => $isPartOfRoute,
+            'outlet_stop_order' => $outletStopOrder
         ];
     }
 
@@ -384,8 +413,9 @@ try {
     });
 
     
-    $returnedCount = count($enrichedTrips);
-    $isLastPage = $returnedCount < $page_size;
+    $returnedCount  = count($enrichedTrips);
+    $totalMatched   = count($allMatchedTrips ?? []);
+    $isLastPage     = ($offset + $returnedCount) >= $totalMatched;
 
     
     foreach ($enrichedTrips as &$et) {
@@ -438,34 +468,32 @@ try {
             $et['authorized_actions']['can_complete'] = true;
         }
 
-        
+        // Per-stop authorization: a manager can arrive/depart only at stops that
+        // belong to their own outlet (or super_admin can act on any stop).
         foreach ($et['stops'] as &$s) {
-            $stopAllowed = $s['authorized_actions']['stop_allowed'] ?? false;
+            $stopOutletId = $s['outlet']['id'] ?? null;
+            $stopAllowed  = $userRole === 'super_admin'
+                         || ($stopOutletId && $stopOutletId === $outletId)
+                         || $tripAllowed; // trip-level authorization also grants stop access
 
-            $s['authorized_actions']['can_arrive'] = false;
-            $s['authorized_actions']['can_depart'] = false;
-
-            
-            if ($stopAllowed && empty($s['arrival_time'])) {
-                $s['authorized_actions']['can_arrive'] = true;
-            }
-
-            
-            if ($stopAllowed && !empty($s['arrival_time']) && empty($s['departure_time'])) {
-                $s['authorized_actions']['can_depart'] = true;
-            }
+            $s['authorized_actions'] = [
+                'stop_allowed' => $stopAllowed,
+                'can_arrive'   => $stopAllowed && !empty($s['id']) && empty($s['arrival_time']),
+                'can_depart'   => $stopAllowed && !empty($s['id']) && !empty($s['arrival_time']) && empty($s['departure_time']),
+            ];
         }
         unset($s);
     }
 
     echo json_encode([
-        "success" => true,
-        "trips" => $enrichedTrips,
-        "outlet_id" => $outletId,
-        "page" => $page,
-        "page_size" => $page_size,
-        "returned" => $returnedCount,
-        "is_last_page" => $isLastPage
+        "success"        => true,
+        "trips"          => $enrichedTrips,
+        "outlet_id"      => $outletId,
+        "page"           => $page,
+        "page_size"      => $page_size,
+        "returned"       => $returnedCount,
+        "total_matching" => $totalMatched,
+        "is_last_page"   => $isLastPage
     ]);
 
 } catch (Exception $e) {

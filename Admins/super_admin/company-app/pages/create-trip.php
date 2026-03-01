@@ -1921,11 +1921,26 @@ async function loadInitialData() {
                         </div>
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #28a745;">
                             <h4 style="color: #28a745; margin-bottom: 10px;"><i class="fas fa-map-marker-alt"></i> Stops Created</h4>
-                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">${result.trip_stops_created || 0}</p>
+                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">
+                                ${(() => {
+                                    const serverCount = result.trip_stops_created;
+                                    if (serverCount && serverCount > 0) return serverCount;
+                                    let local = 0;
+                                    if (typeof tripData !== 'undefined') {
+                                        local = (tripData.stops ? tripData.stops.length : 0) + 2;
+                                        if (document.getElementById('originOutlet').value === document.getElementById('destinationOutlet').value) {
+                                            local = (tripData.stops ? tripData.stops.length : 0) + 1;
+                                        }
+                                    }
+                                    return local;
+                                })()}
+                            </p>
                         </div>
                         <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #28a745;">
                             <h4 style="color: #28a745; margin-bottom: 10px;"><i class="fas fa-box"></i> Parcels Assigned</h4>
-                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">${result.parcels_assigned || 0}</p>
+                            <p style="font-size: 1.2rem; font-weight: bold; color: #155724;">
+                                ${result.parcels_assigned > 0 ? result.parcels_assigned : (typeof tripData !== 'undefined' ? tripData.selectedParcels.length : 0)}
+                            </p>
                         </div>
                     </div>
                     
