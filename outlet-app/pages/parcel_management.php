@@ -172,7 +172,35 @@ $current_user = getCurrentUser();
 
         .scan-history .table-wrapper {
             overflow-x: auto;
+            overflow-y: auto;
+            max-height: 420px;
             /* background now set above */
+        }
+
+        .scan-history .table-wrapper::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .scan-history .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .scan-history .table-wrapper::-webkit-scrollbar-thumb {
+            background: #4A1C40;
+            border-radius: 3px;
+        }
+
+        .scan-history .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #2E0D2A;
+        }
+
+        /* Sticky header so column names stay visible while scrolling */
+        .scan-history .table-wrapper table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
         }
 
         .scan-history table {

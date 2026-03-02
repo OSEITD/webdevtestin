@@ -402,8 +402,8 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         .filter-group select:focus,
         .filter-group input:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            border-color: #2E0D2A;
+            box-shadow: 0 0 0 3px rgba(46, 13, 42, 0.12);
         }
 
         .filter-actions {
@@ -426,12 +426,203 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         }
 
         .filter-btn-apply {
-            background: #3b82f6;
+            background: #2E0D2A;
             color: white;
         }
 
         .filter-btn-apply:hover {
-            background: #2563eb;
+            background: #1a061a;
+        }
+
+        .btn-assign {
+            background: #2E0D2A;
+            color: white;
+        }
+
+        .btn-assign:hover {
+            background: #1a061a;
+        }
+
+        /* Assign modal */
+        #assignModal .assign-modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 1.75rem;
+            max-width: 480px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        #assignModal .assign-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        #assignModal .assign-modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #2E0D2A;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #assignModal .assign-form-group {
+            margin-bottom: 1rem;
+        }
+        #assignModal .assign-form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.4rem;
+        }
+        #assignModal .assign-form-group select {
+            width: 100%;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: 'Poppins', sans-serif;
+        }
+        #assignModal .assign-form-group select:focus {
+            outline: none;
+            border-color: #2E0D2A;
+            box-shadow: 0 0 0 3px rgba(46,13,42,0.12);
+        }
+        #assignModal .assign-modal-footer {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        /* ── Trip Details Modal ─────────────────────────────────────────────── */
+        #tripDetailsModal .td-box {
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            max-width: 600px;
+            width: 96%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.28);
+            animation: vmSlideIn 0.22s ease;
+        }
+        #tripDetailsModal .td-header {
+            padding: 1.4rem 1.6rem 1rem;
+            border-bottom: 2px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+        #tripDetailsModal .td-header h3 {
+            margin: 0 0 0.25rem;
+            font-size: 1.05rem;
+            color: #2E0D2A;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #tripDetailsModal .td-header .td-trip-id {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            font-family: monospace;
+        }
+        #tripDetailsModal .td-body {
+            padding: 1.25rem 1.6rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        #tripDetailsModal .td-section {
+            margin-bottom: 1.25rem;
+        }
+        #tripDetailsModal .td-section-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #9ca3af;
+            margin-bottom: 0.6rem;
+        }
+        #tripDetailsModal .td-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem 1.25rem;
+        }
+        #tripDetailsModal .td-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+        #tripDetailsModal .td-item span {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        #tripDetailsModal .td-item strong {
+            font-size: 0.9rem;
+            color: #1f2937;
+        }
+        #tripDetailsModal .td-route {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 1rem;
+        }
+        #tripDetailsModal .td-route .td-outlet {
+            flex: 1;
+            font-weight: 700;
+            color: #2E0D2A;
+            font-size: 0.95rem;
+        }
+        #tripDetailsModal .td-route .td-arrow {
+            color: #9ca3af;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        #tripDetailsModal .td-status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: capitalize;
+            color: white;
+        }
+        #tripDetailsModal .td-stops-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        #tripDetailsModal .td-stop-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 0.75rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border-left: 3px solid #d1d5db;
+        }
+        #tripDetailsModal .td-stop-row.origin  { border-left-color: #10b981; }
+        #tripDetailsModal .td-stop-row.dest    { border-left-color: #ef4444; }
+        #tripDetailsModal .td-stop-row.inter   { border-left-color: #f59e0b; }
+        #tripDetailsModal .td-stop-row .td-stop-time {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        #tripDetailsModal .td-footer {
+            padding: 1rem 1.6rem;
+            border-top: 2px solid #f3f4f6;
+            display: flex;
+            justify-content: flex-end;
+            flex-shrink: 0;
         }
 
         .filter-btn-reset {
@@ -1059,6 +1250,100 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         </main>
     </div>
 
+    <!-- Assign Vehicle/Driver Modal -->
+    <div id="assignModal" class="modal-overlay" style="display:none;"
+         onclick="if(event.target===this) closeAssignModal()" role="dialog"
+         aria-modal="true" aria-labelledby="assignModalTitle">
+        <div class="assign-modal-box">
+            <div class="assign-modal-header">
+                <h3 id="assignModalTitle">
+                    <i class="fas fa-user-plus" style="color:#2E0D2A;"></i>
+                    Assign Vehicle &amp; Driver
+                </h3>
+                <button class="modal-close-btn" onclick="closeAssignModal()" aria-label="Close">&times;</button>
+            </div>
+            <p style="color:#6b7280;font-size:0.875rem;margin:0 0 1rem;">
+                Assign a vehicle and/or driver to this scheduled trip. You can leave either blank to assign just one.
+            </p>
+            <input type="hidden" id="assignTripId" value="">
+            <div class="assign-form-group">
+                <label for="assignVehicleSelect"><i class="fas fa-truck"></i> Vehicle</label>
+                <select id="assignVehicleSelect">
+                    <option value="">Loading vehicles...</option>
+                </select>
+            </div>
+            <div class="assign-form-group">
+                <label for="assignDriverSelect"><i class="fas fa-user"></i> Driver</label>
+                <select id="assignDriverSelect">
+                    <option value="">Loading drivers...</option>
+                </select>
+            </div>
+            <div class="assign-modal-footer">
+                <button class="btn-cancel-modal" onclick="closeAssignModal()" style="background:#f3f4f6;color:#374151;border:none;padding:0.55rem 1.1rem;border-radius:8px;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button id="assignSubmitBtn" class="action-btn btn-assign" onclick="submitAssign()">
+                    <i class="fas fa-check"></i> Assign
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trip Details Modal -->
+    <div id="tripDetailsModal" class="modal-overlay" style="display:none;"
+         onclick="if(event.target===this) closeTripDetails()" role="dialog"
+         aria-modal="true" aria-labelledby="tdModalTitle">
+        <div class="td-box">
+            <div class="td-header">
+                <div>
+                    <h3 id="tdModalTitle"><i class="fas fa-clipboard-list"></i> Trip Details</h3>
+                    <div class="td-trip-id" id="tdTripId"></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span class="td-status-badge" id="tdStatusBadge"></span>
+                    <button class="modal-close-btn" onclick="closeTripDetails()" aria-label="Close">&times;</button>
+                </div>
+            </div>
+            <div class="td-body">
+                <div id="tdRoute" class="td-route">
+                    <div class="td-outlet" id="tdOrigin"></div>
+                    <i class="fas fa-arrow-right td-arrow"></i>
+                    <div class="td-outlet" id="tdDestination"></div>
+                </div>
+
+                <div class="td-section">
+                    <div class="td-section-title">Trip Info</div>
+                    <div class="td-grid">
+                        <div class="td-item"><span>Trip Date</span><strong id="tdDate"></strong></div>
+                        <div class="td-item"><span>Departure</span><strong id="tdDeparture"></strong></div>
+                        <div class="td-item"><span>Driver</span><strong id="tdDriver"></strong></div>
+                        <div class="td-item"><span>Vehicle</span><strong id="tdVehicle"></strong></div>
+                        <div class="td-item"><span>Parcels</span><strong id="tdParcels"></strong></div>
+                        <div class="td-item"><span>Created</span><strong id="tdCreated"></strong></div>
+                    </div>
+                </div>
+
+                <div class="td-section">
+                    <div class="td-section-title">Route Stops</div>
+                    <div class="td-stops-list" id="tdStopsList"></div>
+                </div>
+
+                <div class="td-section" id="tdVerifySection" style="display:none;">
+                    <div class="td-section-title">Verification</div>
+                    <div class="td-grid">
+                        <div class="td-item"><span>Driver Completed</span><strong id="tdDriverCompleted"></strong></div>
+                        <div class="td-item"><span>Manager Verified</span><strong id="tdManagerVerified"></strong></div>
+                    </div>
+                </div>
+            </div>
+            <div class="td-footer">
+                <button class="btn-cancel-modal" onclick="closeTripDetails()" style="background:#f3f4f6;color:#374151;border:none;padding:0.6rem 1.2rem;border-radius:8px;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Trip Verification Modal -->
     <div id="verificationModal" class="modal-overlay" style="display:none;"
          onclick="if(event.target===this) dismissVerificationModal()" role="dialog"
@@ -1162,16 +1447,23 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             const badge = card.querySelector('.trip-status');
             if (badge) { badge.className = `trip-status status-${statusClass}`; badge.textContent = statusLabel; }
 
-            // Refresh departure time cell (2nd item in .trip-details)
+            // Refresh departure time cell (2nd), driver (3rd), vehicle (4th)
             const detailCells = card.querySelectorAll('.trip-details > div');
             if (detailCells[1]) {
                 detailCells[1].innerHTML = `<strong><i class="fas fa-clock"></i> Departure</strong>${trip.departure_time ? new Date(trip.departure_time).toLocaleTimeString() : 'Not set'}`;
+            }
+            if (detailCells[2]) {
+                detailCells[2].innerHTML = `<strong><i class="fas fa-user"></i> Driver</strong>${trip.driver_name || 'Not assigned'}`;
+            }
+            if (detailCells[3]) {
+                detailCells[3].innerHTML = `<strong><i class="fas fa-truck"></i> Vehicle</strong>${trip.vehicle_name || 'Not assigned'}`;
             }
 
             const actionsDiv = card.querySelector('.trip-actions');
             if (actionsDiv) {
                 actionsDiv.innerHTML = `
                     ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) ? `<button class="action-btn btn-accept" onclick="managerStartTrip('${trip.id}')"><i class="fas fa-play"></i> Start Trip</button>` : ''}
+                    ${!isPending && trip.trip_status === 'scheduled' && (!trip.vehicle_id || !trip.driver_id) ? `<button class="action-btn btn-assign" onclick="openAssignModal('${trip.id}')"><i class="fas fa-user-plus"></i> Assign</button>` : ''}
                     ${!isPending && ['accepted','in_transit'].includes(trip.trip_status) ? `<button class="action-btn btn-track" onclick="trackTrip('${trip.id}')"><i class="fas fa-map-marker-alt"></i> Live Track</button>` : ''}
                     ${!isPending && trip.trip_status === 'at_outlet' ? `<button class="action-btn btn-complete" onclick="completeTrip('${trip.id}')"><i class="fas fa-flag-checkered"></i> Mark Complete</button>` : ''}
                     ${isPending ? `<button class="action-btn btn-verify" onclick="verifyTrip('${trip.id}')"><i class="fas fa-check-double"></i> Verify &amp; Complete</button>` : ''}
@@ -1359,6 +1651,11 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                         ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) ? `
                             <button class="action-btn btn-accept" onclick="managerStartTrip('${trip.id}')">
                                 <i class="fas fa-play"></i> Start Trip
+                            </button>` : ''}
+
+                        ${!isPending && trip.trip_status === 'scheduled' && (!trip.vehicle_id || !trip.driver_id) ? `
+                            <button class="action-btn btn-assign" onclick="openAssignModal('${trip.id}')">
+                                <i class="fas fa-user-plus"></i> Assign Vehicle/Driver
                             </button>` : ''}
 
                         ${!isPending && ['accepted','in_transit'].includes(trip.trip_status) ? `
@@ -1649,6 +1946,116 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             } catch (err) {
                 console.error(err);
                 showToast('Failed to complete trip. Please try again.', 'error');
+            }
+        }
+
+        // ── Assign Vehicle / Driver to a scheduled trip ──────────────────────
+        async function openAssignModal(tripId) {
+            document.getElementById('assignTripId').value = tripId;
+            document.getElementById('assignModal').style.display = 'flex';
+
+            const vSel = document.getElementById('assignVehicleSelect');
+            const dSel = document.getElementById('assignDriverSelect');
+            vSel.innerHTML = '<option value="">⏳ Loading vehicles...</option>';
+            dSel.innerHTML = '<option value="">⏳ Loading drivers...</option>';
+
+            try {
+                const res  = await fetch('../api/trips/fetch_assign_data.php', { credentials: 'same-origin' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Server error');
+
+                const vehicles = data.vehicles || [];
+                const drivers  = data.drivers  || [];
+                const trip = activeTrips.find(t => t.id === tripId);
+
+                vSel.innerHTML = '<option value="">-- Not assigned --</option>';
+                vehicles.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.id;
+                    const statusLabel = v.status === 'available' ? 'available' : (v.status === 'out_for_delivery' ? ' out for delivery' : ' unavailable');
+                    opt.textContent = `${v.name}${v.plate_number ? ' (' + v.plate_number + ')' : ''}${statusLabel}`;
+                    if (trip && trip.vehicle_id === v.id) opt.selected = true;
+                    vSel.appendChild(opt);
+                });
+
+                dSel.innerHTML = '<option value="">-- Not assigned --</option>';
+                drivers.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    const statusLabel = d.status === 'available' ? 'available' : 'unavailable';
+                    opt.textContent = `${d.driver_name}${d.driver_phone ? ' (' + d.driver_phone + ')' : ''}${statusLabel}`;
+                    if (trip && trip.driver_id === d.id) opt.selected = true;
+                    dSel.appendChild(opt);
+                });
+
+                if (vehicles.length === 0) vSel.innerHTML = '<option value="">No vehicles found</option>';
+                if (drivers.length === 0)  dSel.innerHTML = '<option value="">No drivers found</option>';
+
+            } catch (err) {
+                console.error('Error loading vehicles/drivers:', err);
+                vSel.innerHTML = '<option value="">⚠️ Error loading vehicles</option>';
+                dSel.innerHTML = '<option value="">⚠️ Error loading drivers</option>';
+            }
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+            document.getElementById('assignTripId').value = '';
+        }
+
+        async function submitAssign() {
+            const tripId    = document.getElementById('assignTripId').value;
+            const vehicleId = document.getElementById('assignVehicleSelect').value;
+            const driverId  = document.getElementById('assignDriverSelect').value;
+            const btn       = document.getElementById('assignSubmitBtn');
+
+            if (!vehicleId && !driverId) {
+                showToast('Please select at least a vehicle or driver to assign.', 'warning');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                const resp = await fetch('../api/trips/assign_trip.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ trip_id: tripId, vehicle_id: vehicleId || null, driver_id: driverId || null })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    // Update local trip object so the card re-renders correctly
+                    const trip = activeTrips.find(t => t.id === tripId);
+                    if (trip) {
+                        const vSel = document.getElementById('assignVehicleSelect');
+                        const dSel = document.getElementById('assignDriverSelect');
+                        // Strip trailing status emoji before storing display names
+                        const stripStatus = txt => txt ? txt.replace(/\s*[\u2705\u26d4\ud83d\ude9a]+$/, '').trim() : txt;
+                        if (vehicleId) {
+                            trip.vehicle_id   = vehicleId;
+                            trip.vehicle_name = vSel.selectedOptions[0] ? stripStatus(vSel.selectedOptions[0].textContent) : vehicleId;
+                        }
+                        if (driverId) {
+                            trip.driver_id   = driverId;
+                            trip.driver_name = dSel.selectedOptions[0] ? stripStatus(dSel.selectedOptions[0].textContent) : driverId;
+                        }
+                        refreshTripCard(tripId);
+                    }
+                    showToast('Vehicle/Driver assigned successfully!', 'success');
+                    closeAssignModal();
+                } else {
+                    showToast(data.error || 'Failed to assign. Please try again.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Network error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Assign';
             }
         }
 
@@ -1982,8 +2389,80 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         }
 
         function viewTripDetails(tripId) {
-            
-            window.open(`trip_details.php?id=${tripId}`, '_blank');
+            const trip = activeTrips.find(t => t.id === tripId);
+            if (!trip) {
+                showToast('Trip data not available — please refresh.', 'warning');
+                return;
+            }
+
+            // Status badge colour
+            const statusColors = {
+                scheduled: '#f59e0b', accepted: '#06b6d4', in_transit: '#3b82f6',
+                at_outlet: '#8b5cf6', completed: '#10b981', cancelled: '#ef4444',
+                pending_verification: '#f59e0b'
+            };
+            const isPending = !!(trip.driver_completed && !trip.manager_verified);
+            const statusKey = isPending ? 'pending_verification' : trip.trip_status;
+            const statusLabel = isPending ? 'Pending Verification' : (trip.trip_status || '').replace(/_/g, ' ');
+
+            document.getElementById('tdTripId').textContent    = trip.id;
+            document.getElementById('tdStatusBadge').textContent  = statusLabel;
+            document.getElementById('tdStatusBadge').style.background = statusColors[statusKey] || '#6b7280';
+            document.getElementById('tdOrigin').textContent      = trip.origin_name      || 'Unknown';
+            document.getElementById('tdDestination').textContent = trip.destination_name || 'Unknown';
+            document.getElementById('tdDate').textContent        = trip.trip_date   ? new Date(trip.trip_date).toLocaleDateString()   : '—';
+            document.getElementById('tdDeparture').textContent   = trip.departure_time ? new Date(trip.departure_time).toLocaleString() : '—';
+            document.getElementById('tdDriver').textContent      = trip.driver_name  || 'Not assigned';
+            document.getElementById('tdVehicle').textContent     = trip.vehicle_name
+                ? trip.vehicle_name + (trip.vehicle_plate ? ` (${trip.vehicle_plate})` : '')
+                : 'Not assigned';
+            document.getElementById('tdCreated').textContent     = trip.created_at ? new Date(trip.created_at).toLocaleDateString() : '—';
+
+            // Parcel count
+            const parcelCount = trip.parcel_count ?? (trip.stops ? trip.stops.reduce((s, st) => s + (st.parcel_count || 0), 0) : null);
+            document.getElementById('tdParcels').textContent = parcelCount != null ? parcelCount : '—';
+
+            // Stops
+            const stopsList = document.getElementById('tdStopsList');
+            const stops = trip.stops || [];
+            if (stops.length === 0) {
+                stopsList.innerHTML = '<div style="color:#9ca3af;font-size:0.85rem;padding:0.25rem 0;">No stops data available</div>';
+            } else {
+                stopsList.innerHTML = stops.map((s, i) => {
+                    const isOrigin = i === 0;
+                    const isDest   = i === stops.length - 1;
+                    const cls      = isOrigin ? 'origin' : (isDest ? 'dest' : 'inter');
+                    const icon     = isOrigin ? 'fa-play' : (isDest ? 'fa-flag-checkered' : 'fa-map-marker-alt');
+                    const arrTime  = s.arrival_time   ? new Date(s.arrival_time).toLocaleTimeString()   : null;
+                    const depTime  = s.departure_time ? new Date(s.departure_time).toLocaleTimeString() : null;
+                    const timeStr  = arrTime ? (depTime ? `Arr ${arrTime} · Dep ${depTime}` : `Arr ${arrTime}`) : '';
+                    return `<div class="td-stop-row ${cls}">
+                        <i class="fas ${icon}" style="color:inherit;opacity:0.6;font-size:0.75rem;"></i>
+                        <span>${s.stop_order}. ${s.outlet_name || 'Outlet'}</span>
+                        ${timeStr ? `<span class="td-stop-time">${timeStr}</span>` : ''}
+                    </div>`;
+                }).join('');
+            }
+
+            // Verification section
+            const verifySection = document.getElementById('tdVerifySection');
+            if (trip.driver_completed || trip.manager_verified) {
+                verifySection.style.display = '';
+                document.getElementById('tdDriverCompleted').textContent = trip.driver_completed
+                    ? (trip.driver_completed_at ? new Date(trip.driver_completed_at).toLocaleString() : 'Yes')
+                    : 'No';
+                document.getElementById('tdManagerVerified').textContent = trip.manager_verified
+                    ? (trip.manager_verified_at ? new Date(trip.manager_verified_at).toLocaleString() : 'Yes')
+                    : 'Pending';
+            } else {
+                verifySection.style.display = 'none';
+            }
+
+            document.getElementById('tripDetailsModal').style.display = 'flex';
+        }
+
+        function closeTripDetails() {
+            document.getElementById('tripDetailsModal').style.display = 'none';
         }
 
         

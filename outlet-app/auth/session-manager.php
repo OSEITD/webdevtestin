@@ -10,7 +10,7 @@ class SessionManager {
             
             
             session_set_cookie_params([
-                'lifetime' => 604800,
+                'lifetime' => 1296000,
                 'path' => '/',
                 'domain' => $isLocalhost ? '' : '.localhost', 
                 'secure' => !$isLocalhost, 

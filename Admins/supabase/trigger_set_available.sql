@@ -117,8 +117,8 @@ BEGIN
     RAISE EXCEPTION 'Company with id % does not exist', v_company;
   END IF;
 
-  -- Ensure vehicle belongs to same company
-  IF NOT EXISTS (
+  -- Ensure vehicle belongs to same company (only when a vehicle is provided)
+  IF NEW.vehicle_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.vehicle v
     WHERE v.id = NEW.vehicle_id
       AND v.company_id = v_company

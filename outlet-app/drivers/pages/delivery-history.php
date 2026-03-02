@@ -120,6 +120,30 @@ try {
         .trips-grid {
             display: grid;
             gap: 20px;
+            max-height: calc(100vh - 340px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 6px;
+            scrollbar-width: thin;
+            scrollbar-color: #764ba2 rgba(102, 126, 234, 0.12);
+        }
+
+        .trips-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .trips-grid::-webkit-scrollbar-track {
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 4px;
+        }
+
+        .trips-grid::-webkit-scrollbar-thumb {
+            background: #764ba2;
+            border-radius: 4px;
+        }
+
+        .trips-grid::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
         }
         
         .trip-card {

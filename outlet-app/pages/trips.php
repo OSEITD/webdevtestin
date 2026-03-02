@@ -152,12 +152,12 @@ $current_user = getCurrentUser();
         }
 
         .filter-btn-apply {
-            background: #3b82f6;
+            background: #2E0D2A;
             color: white;
         }
 
         .filter-btn-apply:hover {
-            background: #2563eb;
+            background: #1a061a;
         }
 
         .filter-btn-reset {
@@ -1190,9 +1190,9 @@ $current_user = getCurrentUser();
                 <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                     ${(['scheduled', 'at_outlet', 'accepted'].includes(trip.trip_status) && (trip.is_origin_outlet || trip.is_part_of_route)) ? `
                     <button onclick="openAddParcelsModal('${trip.id}')"
-                       style="background: #8b5cf6; color: white; border: none; font-size: 0.875rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 6px; transition: background 0.2s; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;"
-                       onmouseover="this.style.background='#7c3aed'"
-                       onmouseout="this.style.background='#8b5cf6'"
+                       style="background: #2E0D2A; color: white; border: none; font-size: 0.875rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 6px; transition: background 0.2s; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;"
+                       onmouseover="this.style.background='#1a061a'"
+                       onmouseout="this.style.background='#2E0D2A'"
                        title="Add parcels to this trip (route-matched only)">
                         <i class="fas fa-plus-circle"></i> Add Parcels
                     </button>

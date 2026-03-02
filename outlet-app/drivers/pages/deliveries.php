@@ -146,6 +146,30 @@ $pageTitle = "Delivery History";
         .deliveries-list {
             display: grid;
             gap: 20px;
+            max-height: calc(100vh - 340px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 6px;
+            scrollbar-width: thin;
+            scrollbar-color: #764ba2 rgba(102, 126, 234, 0.12);
+        }
+
+        .deliveries-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .deliveries-list::-webkit-scrollbar-track {
+            background: rgba(102, 126, 234, 0.08);
+            border-radius: 4px;
+        }
+
+        .deliveries-list::-webkit-scrollbar-thumb {
+            background: #764ba2;
+            border-radius: 4px;
+        }
+
+        .deliveries-list::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
         }
         
         .delivery-card {

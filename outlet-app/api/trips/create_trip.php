@@ -67,7 +67,7 @@ try {
     error_log("Input data received: " . json_encode($input));
     
     
-    $required = ['vehicle_id', 'departure_time', 'origin_outlet', 'destination_outlet'];
+    $required = ['departure_time', 'origin_outlet', 'destination_outlet'];
     foreach ($required as $field) {
         if (empty($input[$field])) {
             throw new Exception("Missing required field: $field");
@@ -90,7 +90,7 @@ try {
     
     $tripData = [
         'id' => $tripId,
-        'vehicle_id' => $input['vehicle_id'],
+        'vehicle_id' => $input['vehicle_id'] ?? null,
         'outlet_manager_id' => $outletManagerId,
         'departure_time' => $input['departure_time'],
         'trip_status' => 'scheduled',

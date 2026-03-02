@@ -210,12 +210,12 @@ $current_user = getCurrentUser();
         }
 
         .btn-primary {
-            background: #4A1C40;
+            background: #2E0D2A;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #2E0D2A;
+            background: #1a061a;
         }
 
         .btn-secondary {
@@ -266,6 +266,32 @@ $current_user = getCurrentUser();
             border-radius: 12px;
             padding: 25px;
             background: white;
+        }
+
+        #stopsDisplay {
+            max-height: 380px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 4px;
+            scroll-behavior: smooth;
+        }
+
+        #stopsDisplay::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #stopsDisplay::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        #stopsDisplay::-webkit-scrollbar-thumb {
+            background: #4A1C40;
+            border-radius: 3px;
+        }
+
+        #stopsDisplay::-webkit-scrollbar-thumb:hover {
+            background: #2E0D2A;
         }
 
         /* Wider content container and responsive table support */
@@ -607,17 +633,17 @@ $current_user = getCurrentUser();
                             <input type="hidden" id="currentOutletId" value="<?php echo htmlspecialchars($_SESSION['outlet_id'] ?? ''); ?>">
 
                             <div class="form-section">
-                                <h3><i class="fas fa-truck"></i> Vehicle & Driver Selection</h3>
+                                <h3><i class="fas fa-truck"></i> Vehicle & Driver Selection <small style="font-size:0.72em;color:#6c757d;font-weight:400;">(optional – can be assigned later in Manager Trips)</small></h3>
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="vehicleId">Select Vehicle <span class="required">*</span></label>
-                                        <select id="vehicleId" name="vehicleId" required>
+                                        <label for="vehicleId">Select Vehicle <small class="text-muted">(optional)</small></label>
+                                        <select id="vehicleId" name="vehicleId">
                                             <option value="">Loading vehicles...</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="driverId">Select Driver <span class="required">*</span></label>
-                                        <select id="driverId" name="driverId" required>
+                                        <label for="driverId">Select Driver <small class="text-muted">(optional)</small></label>
+                                        <select id="driverId" name="driverId">
                                             <option value="">Loading drivers...</option>
                                         </select>
                                     </div>
@@ -1551,8 +1577,8 @@ $current_user = getCurrentUser();
                 const departureDateTime = document.getElementById('departureTime').value;
                 const tripDate = departureDateTime ? departureDateTime.split('T')[0] : '';
                 const tripPayload = {
-                    vehicle_id: document.getElementById('vehicleId').value,
-                    driver_id: document.getElementById('driverId').value,
+                    vehicle_id: document.getElementById('vehicleId').value || null,
+                    driver_id: document.getElementById('driverId').value || null,
                     origin_outlet: document.getElementById('originOutlet').value,
                     destination_outlet: document.getElementById('destinationOutlet').value,
                     departure_time: departureDateTime,
@@ -1636,14 +1662,6 @@ $current_user = getCurrentUser();
             const originOutlet = document.getElementById('originOutlet').value;
             const destOutlet = document.getElementById('destinationOutlet').value;
             const departureTime = document.getElementById('departureTime').value;
-            
-            if (!vehicleId) {
-                if (showMessages) {
-                    showMessage('Please select a vehicle for the trip', 'error');
-                    goToStep(1);
-                }
-                return false;
-            }
             
             if (!originOutlet || !destOutlet) {
                 if (showMessages) {

@@ -387,6 +387,11 @@ class DriverDashboard {
                         e.preventDefault();
                         this.fitMapToContent();
                     });
+                } else if (icon.classList.contains('fa-expand') || icon.classList.contains('fa-compress')) {
+                    newButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.toggleMapFullscreen();
+                    });
                 }
             }
         });
@@ -850,6 +855,14 @@ class DriverDashboard {
             
             this.renderActiveTrip(data.active_trips);
             this.renderUpcomingTrips(data.upcoming_trips || []);
+
+            // Stop auto-refresh immediately if trip is already active/in-transit on load
+            if (data.active_trips && data.active_trips.length > 0) {
+                const activeStatus = data.active_trips[0].trip_status || data.active_trips[0].status;
+                if (['in_transit', 'accepted', 'at_outlet'].includes(activeStatus)) {
+                    this.stopDashboardRefresh();
+                }
+            }
             
             // Performance Snapshot state preservation logic
             const perf = data.performance;

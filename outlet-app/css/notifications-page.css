@@ -57,20 +57,17 @@ body {
     margin: 0 auto;
 }
 
-/* For pages that should stretch wider (notifications) */
+/* Notifications page — same max-width as other pages */
 .content-container.notifications-wide {
-    /* span full width of viewport */
-    max-width: none;
+    max-width: 1400px;
     width: 100%;
     padding: 16px 20px;
-    margin: 0;
+    margin: 0 auto;
     box-sizing: border-box;
 }
 
-/* Ensure wider layout on large viewports but still allow breathing room */
 @media (min-width: 769px) {
     .content-container.notifications-wide {
-        max-width: calc(100% - 40px);
         padding: 24px 28px;
     }
 }
@@ -535,10 +532,24 @@ body {
 /* Notification Cards */
 .notifications-grid {
     display: grid;
-    /* use responsive columns so cards flow across the available width */
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 16px;
+    /* single column so card edge-to-edge matches other page tables */
+    grid-template-columns: 1fr;
+    gap: 14px;
 }
+
+/* Scrollable notifications list */
+#notificationsContainer {
+    max-height: calc(100vh - 380px);
+    min-height: 300px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scroll-behavior: smooth;
+}
+
+#notificationsContainer::-webkit-scrollbar { width: 6px; }
+#notificationsContainer::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+#notificationsContainer::-webkit-scrollbar-thumb { background: #4A1C40; border-radius: 3px; }
+#notificationsContainer::-webkit-scrollbar-thumb:hover { background: #2E0D2A; }
 
 .notification-card {
     background: var(--bg-primary);
