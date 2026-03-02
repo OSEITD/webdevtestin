@@ -109,26 +109,25 @@ class SecureParcelTracker {
     }
     
     private function verifyCustomerIdentity($parcel, $phoneNumber, $nrc) {
-        // For sender verification
+        //  sender verification
         $senderPhone = $parcel['sender_phone'] ?? null;
-        $senderNrc = $parcel['nrc'] ?? $parcel['sender_nrc'] ?? null; // Database has single 'nrc' field
+        $senderNrc = $parcel['nrc'] ?? $parcel['sender_nrc'] ?? null; 
         if ($senderPhone && $senderNrc && $this->matchCustomerData($senderPhone, $senderNrc, $phoneNumber, $nrc)) {
             return 'sender';
         }
-        // For receiver verification - check if there's a separate receiver_nrc or use global_receiver_id
+        // For receiver verification 
         $receiverPhone = $parcel['receiver_phone'] ?? null;
         $receiverNrc = $parcel['receiver_nrc'] ?? null;
         if ($receiverPhone && $receiverNrc && $this->matchCustomerData($receiverPhone, $receiverNrc, $phoneNumber, $nrc)) {
             return 'receiver';
         }
-        // Check global_receiver_id for additional verification
+      
         if (!empty($parcel['global_receiver_id'])) {
             $globalReceiver = $this->getGlobalCustomer($parcel['global_receiver_id']);
             if ($globalReceiver && $this->matchCustomerData($globalReceiver['phone'], $globalReceiver['nrc'], $phoneNumber, $nrc)) {
                 return 'receiver';
             }
         }
-        // Check global_sender_id for additional verification
         if (!empty($parcel['global_sender_id'])) {
             $globalSender = $this->getGlobalCustomer($parcel['global_sender_id']);
             if ($globalSender && $this->matchCustomerData($globalSender['phone'], $globalSender['nrc'], $phoneNumber, $nrc)) {
@@ -278,7 +277,7 @@ class SecureParcelTracker {
                     'limit' => '1'
                 ];
                 $driverResponse = $this->callSupabase('drivers', 'GET', $driverParams);
-                return !empty($driverResponse); // Return true if driver exists, even without GPS data
+                return !empty($driverResponse); 
             }
             
             return !empty($response);
@@ -324,13 +323,13 @@ class SecureParcelTracker {
         $phone = preg_replace('/[^0-9]/', '', $phone);
         
         if (strlen($phone) === 9 && substr($phone, 0, 1) === '9') {
-            $phone = '260' . $phone; // Add country code
+            $phone = '260' . $phone; //  country code
         } elseif (strlen($phone) === 10 && substr($phone, 0, 2) === '09') {
-            $phone = '260' . substr($phone, 1); // Replace 0 with 260
+            $phone = '260' . substr($phone, 1); 
         } elseif (strlen($phone) === 12 && substr($phone, 0, 3) === '260') {
-            // Already has country code
+            
         } elseif (strlen($phone) === 10 && substr($phone, 0, 1) === '9') {
-            $phone = '260' . $phone; // Add country code to 10-digit starting with 9
+            $phone = '260' . $phone; 
         }
         
         return $phone;

@@ -2298,7 +2298,7 @@ header('Content-Type: text/html; charset=UTF-8');
     <script src="../assets/js/notifications.js?v=<?php echo time(); ?>"></script>
 
     <script src="../assets/js/sidebar-toggle.js?v=<?php echo time(); ?>"></script>
-    <script src="../assets/js/outlet-dashboard.js?v=<?php echo time(); ?>"></script>
+    <script src="../assets/js/outlet-dashboard.js?v=<?php echo filemtime(__DIR__ . '/../assets/js/outlet-dashboard.js'); ?>"></script>
 
     <script>
     // Recent activity delete handler

@@ -121,7 +121,6 @@ try {
     error_log("Final user_id: " . ($userId ?? 'null'));
     error_log("Final tracking_number: " . $trackingNumber);
 
-    // First check if subscription with same endpoint already exists
     $ch = curl_init();
     if ($userId) {
         curl_setopt($ch, CURLOPT_URL, "$supabaseUrl/rest/v1/push_subscriptions?user_id=eq.$userId&user_role=eq.$userRole&endpoint=eq." . urlencode($subscription['endpoint']));
@@ -142,7 +141,7 @@ try {
     error_log("Existing subscription data: " . json_encode($existingData));
 
     if (!empty($existingData) && isset($existingData[0]['id'])) {
-        // Update existing subscription
+
         $subscriptionId = $existingData[0]['id'];
         $updateData = json_encode([
             'p256dh_key' => $subscription['keys']['p256dh'],
@@ -169,7 +168,7 @@ try {
             'subscription_id' => $subscriptionId
         ]);
     } else {
-        // Deactivate old subscriptions before creating new one
+        // Deactivating old subscriptions before creating new one
         $deactivateData = json_encode(['is_active' => false]);
         $ch = curl_init();
         if ($userId) {
@@ -188,7 +187,7 @@ try {
         curl_exec($ch);
         curl_close($ch);
 
-        // Create new subscription
+        //  new subscription
         $insertPayload = [
             'user_role' => $userRole,
             'endpoint' => $subscription['endpoint'],

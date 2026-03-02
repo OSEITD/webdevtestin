@@ -1,7 +1,7 @@
 
 // Lenco Payment Handler — Production-ready
 
-// Payment state (kept in closure-like scope)
+
 let lencoPaymentState = {
     reference: null,
     amount: 0,
@@ -9,7 +9,6 @@ let lencoPaymentState = {
     inProgress: false
 };
 
-// Only log in non-production
 const _lencoDebug = (window.LENCO_CONFIG?.environment === 'sandbox');
 function lencoLog(...args) { if (_lencoDebug) console.log('[Lenco]', ...args); }
 function lencoWarn(...args) { console.warn('[Lenco]', ...args); }

@@ -1,4 +1,5 @@
 ﻿
+console.info('[Dashboard] v3.2 loaded');
 let dashboardData = null;
 let updateInterval = null;
 let isModalOpen = false;
@@ -580,9 +581,8 @@ function showParcelsPendingAtOutlet() {
 function showParcelsInTransit() {
     fetchParcelDetails('in_transit').then(parcels => {
         const title = `Parcels in Transit (${parcels.length})`;
-        
-        let content = '<div class="modal-summary">Parcels currently being transported on trips.</div>';
-        
+        let content = '<div class="modal-summary">Parcels currently being transported on active trips.</div>';
+
         if (parcels.length === 0) {
             content += '<div class="no-data">No parcels currently in transit.</div>';
         } else {
@@ -590,35 +590,40 @@ function showParcelsInTransit() {
                 <table class="dashboard-table">
                     <thead>
                         <tr>
-                            <th>Tracking Number</th>
+                            <th>Tracking #</th>
                             <th>Trip Code</th>
                             <th>Vehicle</th>
-                            <th>Departure</th>
-                            <th>Destination</th>
+                            <th>Driver</th>
+                            <th>Route</th>
+                            <th>Departed</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
-            
             parcels.forEach(parcel => {
+                const vehicleLabel = (parcel.vehicle_name && parcel.vehicle_name !== 'N/A')
+                    ? `${parcel.vehicle_name}<br><small>${parcel.vehicle_plate || ''}</small>`
+                    : 'N/A';
+                const route = (parcel.origin_outlet_name && parcel.destination_outlet_name)
+                    ? `${parcel.origin_outlet_name} &rarr; ${parcel.destination_outlet_name}`
+                    : (parcel.destination_outlet_name || 'N/A');
                 content += `
                     <tr>
                         <td><strong>${parcel.track_number || 'N/A'}</strong></td>
                         <td>${parcel.trip_code || 'N/A'}</td>
-                        <td>${parcel.vehicle_name || 'N/A'} (${parcel.vehicle_plate || 'N/A'})</td>
-                        <td>${formatDateTime(parcel.departure_time)}</td>
-                        <td>${parcel.destination_outlet_name || 'N/A'}</td>
+                        <td>${vehicleLabel}</td>
+                        <td>${parcel.driver_name || 'N/A'}</td>
+                        <td>${route}</td>
+                        <td>${parcel.departure_time ? formatDateTime(parcel.departure_time) : 'N/A'}</td>
                     </tr>
                 `;
             });
-            
             content += '</tbody></table>';
         }
-        
         showDashboardModal(title, content);
     }).catch(error => {
         console.error('Error fetching in-transit parcels:', error);
-        showMessage('Failed to load in-transit parcels');
+        showDashboardModal('Parcels in Transit', '<div class="no-data">Could not load in-transit parcels. Please try again.</div>');
     });
 }
 
@@ -713,12 +718,10 @@ function showParcelsDelayedUrgent() {
 }
 
 function showUpcomingTrips() {
-    
     fetchTripDetails('scheduled').then(trips => {
         const title = `Upcoming Trips (${trips.length})`;
-        
         let content = '<div class="modal-summary">Trips scheduled to depart from your outlet.</div>';
-        
+
         if (trips.length === 0) {
             content += '<div class="no-data">No upcoming trips scheduled.</div>';
         } else {
@@ -727,45 +730,45 @@ function showUpcomingTrips() {
                     <thead>
                         <tr>
                             <th>Vehicle</th>
+                            <th>Driver</th>
+                            <th>Route</th>
                             <th>Status</th>
-                            <th>Departure Time</th>
-                            <th>Arrival Time</th>
+                            <th>Departure</th>
+                            <th>Arrival</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
-            
             trips.forEach(trip => {
-                const vehicle = trip.vehicle || {};
-                const tripStatus = trip.trip_status || 'Unknown';
-                
+                const vehicleName  = trip.vehicle_name  || trip.vehicle?.name         || 'N/A';
+                const vehiclePlate = trip.vehicle_plate || trip.vehicle?.plate_number || 'N/A';
+                const tripStatus   = trip.trip_status || 'Unknown';
+                const route        = `${trip.origin_outlet_name || 'N/A'} &rarr; ${trip.destination_outlet_name || 'N/A'}`;
                 content += `
                     <tr>
-                        <td><strong>${vehicle.name || 'Unknown'} (${vehicle.plate_number || 'N/A'})</strong></td>
-                        <td><span class="status-badge ${tripStatus.toLowerCase()}">${tripStatus}</span></td>
+                        <td><strong>${vehicleName}</strong><br><small>${vehiclePlate}</small></td>
+                        <td>${trip.driver_name || 'N/A'}</td>
+                        <td>${route}</td>
+                        <td><span class="status-badge ${tripStatus.toLowerCase().replace(/_/g,'-')}">${tripStatus.replace(/_/g,' ')}</span></td>
                         <td>${trip.departure_time ? formatDateTime(trip.departure_time) : 'Not set'}</td>
-                        <td>${trip.arrival_time ? formatDateTime(trip.arrival_time) : 'Not set'}</td>
+                        <td>${trip.arrival_time  ? formatDateTime(trip.arrival_time)   : 'Not set'}</td>
                     </tr>
                 `;
             });
-            
             content += '</tbody></table>';
         }
-        
         showDashboardModal(title, content);
     }).catch(error => {
-        console.error('Error fetching trip details:', error);
-        showMessage('Failed to load trip details');
+        console.error('Error fetching upcoming trips:', error);
+        showDashboardModal('Upcoming Trips', '<div class="no-data">Could not load trip details. Please try again.</div>');
     });
 }
 
 function showInTransitTrips() {
-    
     fetchTripDetails('in_transit').then(trips => {
         const title = `In-Transit Trips (${trips.length})`;
-        
-        let content = '<div class="modal-summary">Trips currently in progress that include your outlet.</div>';
-        
+        let content = '<div class="modal-summary">Trips currently in progress departing from your outlet.</div>';
+
         if (trips.length === 0) {
             content += '<div class="no-data">No trips currently in transit.</div>';
         } else {
@@ -774,45 +777,45 @@ function showInTransitTrips() {
                     <thead>
                         <tr>
                             <th>Vehicle</th>
+                            <th>Driver</th>
+                            <th>Route</th>
                             <th>Status</th>
-                            <th>Departure Time</th>
-                            <th>Arrival Time</th>
+                            <th>Departure</th>
+                            <th>ETA</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
-            
             trips.forEach(trip => {
-                const vehicle = trip.vehicle || {};
-                const tripStatus = trip.trip_status || 'Unknown';
-                
+                const vehicleName  = trip.vehicle_name  || trip.vehicle?.name         || 'N/A';
+                const vehiclePlate = trip.vehicle_plate || trip.vehicle?.plate_number || 'N/A';
+                const tripStatus   = trip.trip_status || 'Unknown';
+                const route        = `${trip.origin_outlet_name || 'N/A'} &rarr; ${trip.destination_outlet_name || 'N/A'}`;
                 content += `
                     <tr>
-                        <td><strong>${vehicle.name || 'Unknown'} (${vehicle.plate_number || 'N/A'})</strong></td>
-                        <td><span class="status-badge ${tripStatus.toLowerCase()}">${tripStatus}</span></td>
-                        <td>${trip.departure_time ? formatDateTime(trip.departure_time) : 'Not set'}</td>
-                        <td>${trip.arrival_time ? formatDateTime(trip.arrival_time) : 'Not set'}</td>
+                        <td><strong>${vehicleName}</strong><br><small>${vehiclePlate}</small></td>
+                        <td>${trip.driver_name || 'N/A'}</td>
+                        <td>${route}</td>
+                        <td><span class="status-badge ${tripStatus.toLowerCase().replace(/_/g,'-')}">${tripStatus.replace(/_/g,' ')}</span></td>
+                        <td>${trip.departure_time ? formatDateTime(trip.departure_time) : 'N/A'}</td>
+                        <td>${trip.arrival_time  ? formatDateTime(trip.arrival_time)   : 'N/A'}</td>
                     </tr>
                 `;
             });
-            
             content += '</tbody></table>';
         }
-        
         showDashboardModal(title, content);
     }).catch(error => {
-        console.error('Error fetching trip details:', error);
-        showMessage('Failed to load trip details');
+        console.error('Error fetching in-transit trips:', error);
+        showDashboardModal('In-Transit Trips', '<div class="no-data">Could not load trip details. Please try again.</div>');
     });
 }
 
 function showCompletedTrips() {
-    
     fetchTripDetails('completed').then(trips => {
         const title = `Completed Trips Today (${trips.length})`;
-        
-        let content = '<div class="modal-summary">Trips that were completed today.</div>';
-        
+        let content = '<div class="modal-summary">Trips that were completed today from your outlet.</div>';
+
         if (trips.length === 0) {
             content += '<div class="no-data">No trips completed today.</div>';
         } else {
@@ -821,35 +824,37 @@ function showCompletedTrips() {
                     <thead>
                         <tr>
                             <th>Vehicle</th>
+                            <th>Driver</th>
+                            <th>Route</th>
                             <th>Status</th>
-                            <th>Departure Time</th>
-                            <th>Arrival Time</th>
+                            <th>Departed</th>
+                            <th>Arrived</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
-            
             trips.forEach(trip => {
-                const vehicle = trip.vehicle || {};
-                const tripStatus = trip.trip_status || 'Unknown';
-                
+                const vehicleName  = trip.vehicle_name  || trip.vehicle?.name         || 'N/A';
+                const vehiclePlate = trip.vehicle_plate || trip.vehicle?.plate_number || 'N/A';
+                const tripStatus   = trip.trip_status || 'Unknown';
+                const route        = `${trip.origin_outlet_name || 'N/A'} &rarr; ${trip.destination_outlet_name || 'N/A'}`;
                 content += `
                     <tr>
-                        <td><strong>${vehicle.name || 'Unknown'} (${vehicle.plate_number || 'N/A'})</strong></td>
-                        <td><span class="status-badge ${tripStatus.toLowerCase()}">${tripStatus}</span></td>
-                        <td>${trip.departure_time ? formatDateTime(trip.departure_time) : 'Not set'}</td>
-                        <td>${trip.arrival_time ? formatDateTime(trip.arrival_time) : 'Not set'}</td>
+                        <td><strong>${vehicleName}</strong><br><small>${vehiclePlate}</small></td>
+                        <td>${trip.driver_name || 'N/A'}</td>
+                        <td>${route}</td>
+                        <td><span class="status-badge ${tripStatus.toLowerCase().replace(/_/g,'-')}">${tripStatus.replace(/_/g,' ')}</span></td>
+                        <td>${trip.departure_time ? formatDateTime(trip.departure_time) : 'N/A'}</td>
+                        <td>${trip.arrival_time  ? formatDateTime(trip.arrival_time)   : 'N/A'}</td>
                     </tr>
                 `;
             });
-            
             content += '</tbody></table>';
         }
-        
         showDashboardModal(title, content);
     }).catch(error => {
-        console.error('Error fetching trip details:', error);
-        showMessage('Failed to load trip details');
+        console.error('Error fetching completed trips:', error);
+        showDashboardModal('Completed Trips', '<div class="no-data">Could not load trip details. Please try again.</div>');
     });
 }
 
@@ -893,7 +898,7 @@ function showVehicleAvailability() {
         showDashboardModal(title, content);
     }).catch(error => {
         console.error('Error fetching vehicle details:', error);
-        showMessage('Failed to load vehicle details');
+        showDashboardModal('Available Vehicles', '<div class="no-data">Could not load vehicle details. Please try again.</div>');
     });
 }
 
@@ -937,7 +942,7 @@ function showVehicleUnavailability() {
         showDashboardModal(title, content);
     }).catch(error => {
         console.error('Error fetching vehicle details:', error);
-        showMessage('Failed to load vehicle details');
+        showDashboardModal('Unavailable Vehicles', '<div class="no-data">Could not load vehicle details. Please try again.</div>');
     });
 }
 
@@ -988,130 +993,219 @@ function showAssignedTrips() {
 }
 
 function showRevenueToday() {
-    if (!dashboardData || !dashboardData.revenue_snapshot.details.todays_payments) {
-        showMessage('No data available');
-        return;
-    }
-    
-    const payments = dashboardData.revenue_snapshot.details.todays_payments;
-    const total = dashboardData.revenue_snapshot.total_today || 0;
+    const total = dashboardData?.revenue?.today || dashboardData?.revenue_snapshot?.total_today || 0;
     const title = `Today's Revenue: ZMW ${parseFloat(total).toFixed(2)}`;
-    
-    let content = '<div class="modal-summary">Revenue collected today from parcel payments.</div>';
-    
-    if (payments.length === 0) {
-        content += '<div class="no-data">No payments received today.</div>';
-    } else {
-        
-        const methodBreakdown = dashboardData.revenue_snapshot.payment_method_breakdown || {};
-        if (Object.keys(methodBreakdown).length > 0) {
+
+    fetchDetailedData('today_transactions').then(transactions => {
+        let content = '<div class="modal-summary">Revenue collected today from parcel payments.</div>';
+
+        if (transactions.length === 0) {
+            content += '<div class="no-data">No payments received today.</div>';
+        } else {
+            const methodBreakdown = {};
+            transactions.forEach(tx => {
+                const m = tx.payment_method || 'unknown';
+                methodBreakdown[m] = (methodBreakdown[m] || 0) + parseFloat(tx.amount || 0);
+            });
             content += '<div class="payment-methods"><h4>Payment Methods:</h4><ul>';
             Object.entries(methodBreakdown).forEach(([method, amount]) => {
                 content += `<li><strong>${method.toUpperCase()}</strong>: ZMW ${parseFloat(amount).toFixed(2)}</li>`;
             });
             content += '</ul></div>';
-        }
-        
-        content += `
-            <table class="dashboard-table">
-                <thead>
-                    <tr>
-                        <th>Amount</th>
-                        <th>Method</th>
-                        <th>Parcel ID</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        payments.forEach(payment => {
+
             content += `
-                <tr>
-                    <td><strong>ZMW ${parseFloat(payment.amount || 0).toFixed(2)}</strong></td>
-                    <td><span class="status-badge ${payment.method || 'unknown'}">${payment.method || 'Unknown'}</span></td>
-                    <td>${payment.parcel_id || 'N/A'}</td>
-                </tr>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Customer</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
             `;
-        });
-        
-        content += '</tbody></table>';
-    }
-    
-    showDashboardModal(title, content);
+            transactions.forEach(tx => {
+                content += `
+                    <tr>
+                        <td><strong>ZMW ${parseFloat(tx.amount || 0).toFixed(2)}</strong></td>
+                        <td><span class="status-badge ${tx.payment_method || 'unknown'}">${tx.payment_method || 'Unknown'}</span></td>
+                        <td>${tx.customer_name || 'N/A'}</td>
+                        <td>${formatDateTime(tx.paid_at)}</td>
+                    </tr>
+                `;
+            });
+            content += '</tbody></table>';
+        }
+
+        showDashboardModal(title, content);
+    }).catch(error => {
+        console.error('Error fetching today transactions:', error);
+        showDashboardModal(title, '<div class="modal-summary">Revenue collected today from parcel payments.</div><div class="no-data">Could not load payment details.</div>');
+    });
 }
 
 function showRevenueWeek() {
-    const total = dashboardData?.revenue_snapshot?.total_week || 0;
+    const total = dashboardData?.revenue?.week || dashboardData?.revenue_snapshot?.total_week || 0;
     const title = `This Week's Revenue: ZMW ${parseFloat(total).toFixed(2)}`;
-    
-    let content = '<div class="modal-summary">Revenue collected over the past 7 days.</div>';
-    content += `<div class="revenue-summary"><h4>Total: ZMW ${parseFloat(total).toFixed(2)}</h4></div>`;
-    
-    showDashboardModal(title, content);
+
+    fetchDetailedData('week_payments').then(payments => {
+        let content = '<div class="modal-summary">Revenue collected over the past 7 days.</div>';
+
+        if (payments.length === 0) {
+            content += `<div class="revenue-summary"><h4>Total: ZMW ${parseFloat(total).toFixed(2)}</h4></div>`;
+            content += '<div class="no-data">No payments recorded this week.</div>';
+        } else {
+            const methodBreakdown = {};
+            payments.forEach(p => {
+                const m = p.payment_method || 'unknown';
+                methodBreakdown[m] = (methodBreakdown[m] || 0) + parseFloat(p.amount || 0);
+            });
+            content += '<div class="payment-methods"><h4>Payment Methods This Week:</h4><ul>';
+            Object.entries(methodBreakdown).forEach(([method, amount]) => {
+                content += `<li><strong>${method.toUpperCase()}</strong>: ZMW ${parseFloat(amount).toFixed(2)}</li>`;
+            });
+            content += '</ul></div>';
+
+            content += `
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            payments.forEach(payment => {
+                content += `
+                    <tr>
+                        <td><strong>ZMW ${parseFloat(payment.amount || 0).toFixed(2)}</strong></td>
+                        <td><span class="status-badge ${payment.payment_method || 'unknown'}">${payment.payment_method || 'Unknown'}</span></td>
+                        <td>${payment.customer_name || 'N/A'}</td>
+                        <td>${formatDateTime(payment.paid_at)}</td>
+                    </tr>
+                `;
+            });
+            content += '</tbody></table>';
+        }
+
+        showDashboardModal(title, content);
+    }).catch(error => {
+        console.error('Error fetching week payments:', error);
+        let content = '<div class="modal-summary">Revenue collected over the past 7 days.</div>';
+        content += `<div class="revenue-summary"><h4>Total: ZMW ${parseFloat(total).toFixed(2)}</h4></div>`;
+        showDashboardModal(title, content);
+    });
 }
 
 function showCODCollections() {
-    if (!dashboardData || !dashboardData.revenue_snapshot.details.cod_collections) {
-        showMessage('No data available');
-        return;
-    }
-    
-    const collections = dashboardData.revenue_snapshot.details.cod_collections;
-    const total = dashboardData.revenue_snapshot.cod_collected_today || 0;
+    const total = dashboardData?.revenue?.cod_collections || dashboardData?.revenue_snapshot?.cod_collected_today || 0;
     const title = `COD Collections Today: ZMW ${parseFloat(total).toFixed(2)}`;
-    
-    let content = '<div class="modal-summary">Cash on Delivery collections for today.</div>';
-    
-    if (collections.length === 0) {
-        content += '<div class="no-data">No COD collections today.</div>';
-    } else {
-        content += `
-            <table class="dashboard-table">
-                <thead>
-                    <tr>
-                        <th>Tracking Number</th>
-                        <th>COD Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        collections.forEach(collection => {
+
+    fetchDetailedData('cod_collections_today').then(collections => {
+        let content = '<div class="modal-summary">Cash on Delivery parcels collected today.</div>';
+
+        if (collections.length === 0) {
+            content += '<div class="no-data">No COD collections today.</div>';
+        } else {
             content += `
-                <tr>
-                    <td><strong>${collection.track_number || 'N/A'}</strong></td>
-                    <td><strong>ZMW ${parseFloat(collection.cod_amount || 0).toFixed(2)}</strong></td>
-                </tr>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Tracking Number</th>
+                            <th>Receiver</th>
+                            <th>Phone</th>
+                            <th>COD Amount</th>
+                            <th>Delivered At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
             `;
-        });
-        
-        content += '</tbody></table>';
-    }
-    
-    showDashboardModal(title, content);
+            collections.forEach(parcel => {
+                content += `
+                    <tr>
+                        <td><strong>${parcel.track_number || 'N/A'}</strong></td>
+                        <td>${parcel.receiver_name || 'N/A'}</td>
+                        <td>${parcel.receiver_phone || 'N/A'}</td>
+                        <td><strong>ZMW ${parseFloat(parcel.cod_amount || 0).toFixed(2)}</strong></td>
+                        <td>${formatDateTime(parcel.delivered_at || parcel.delivery_date)}</td>
+                    </tr>
+                `;
+            });
+            content += '</tbody></table>';
+        }
+
+        showDashboardModal(title, content);
+    }).catch(error => {
+        console.error('Error fetching COD collections:', error);
+        showDashboardModal(title, '<div class="modal-summary">Cash on Delivery parcels collected today.</div><div class="no-data">Could not load COD details.</div>');
+    });
 }
 
 function showTransactionCount() {
-    const count = dashboardData?.revenue_snapshot?.transaction_count_today || 0;
-    const codCount = dashboardData?.revenue_snapshot?.cod_transaction_count || 0;
-    const title = `Transactions Today: ${count}`;
-    
-    let content = '<div class="modal-summary">Transaction summary for today.</div>';
-    content += `
-        <div class="transaction-summary">
-            <div class="summary-item">
-                <h4>Total Transactions: ${count}</h4>
+    fetchDetailedData('today_transactions').then(transactions => {
+        const count = transactions.length;
+        const title = `Transactions Today: ${count}`;
+
+        let content = '<div class="modal-summary">All successful transactions for today.</div>';
+
+        if (transactions.length === 0) {
+            content += '<div class="no-data">No transactions recorded today.</div>';
+        } else {
+            const codCount = transactions.filter(t => t.payment_method === 'cod').length;
+            content += `
+                <div class="transaction-summary">
+                    <div class="summary-item"><h4>Total Transactions: ${count}</h4></div>
+                    <div class="summary-item"><h4>COD Transactions: ${codCount}</h4></div>
+                    <div class="summary-item"><h4>Digital Payments: ${count - codCount}</h4></div>
+                </div>
+            `;
+            content += `
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Ref</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Customer</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            transactions.forEach(tx => {
+                content += `
+                    <tr>
+                        <td><strong>${tx.tx_ref || 'N/A'}</strong></td>
+                        <td><strong>ZMW ${parseFloat(tx.amount || 0).toFixed(2)}</strong></td>
+                        <td><span class="status-badge ${tx.payment_method || 'unknown'}">${tx.payment_method || 'Unknown'}</span></td>
+                        <td>${tx.customer_name || 'N/A'} ${tx.customer_phone ? '(' + tx.customer_phone + ')' : ''}</td>
+                        <td>${formatDateTime(tx.paid_at)}</td>
+                    </tr>
+                `;
+            });
+            content += '</tbody></table>';
+        }
+
+        showDashboardModal(title, content);
+    }).catch(error => {
+        console.error('Error fetching transactions:', error);
+        const count = dashboardData?.revenue?.transactions_today || dashboardData?.revenue_snapshot?.transaction_count_today || 0;
+        const codCount = dashboardData?.revenue_snapshot?.cod_transaction_count || 0;
+        const title = `Transactions Today: ${count}`;
+        let content = '<div class="modal-summary">Transaction summary for today.</div>';
+        content += `
+            <div class="transaction-summary">
+                <div class="summary-item"><h4>Total Transactions: ${count}</h4></div>
+                <div class="summary-item"><h4>COD Transactions: ${codCount}</h4></div>
+                <div class="summary-item"><h4>Regular Payments: ${count - codCount}</h4></div>
             </div>
-            <div class="summary-item">
-                <h4>COD Transactions: ${codCount}</h4>
-            </div>
-            <div class="summary-item">
-                <h4>Regular Payments: ${count - codCount}</h4>
-            </div>
-        </div>
-    `;
-    
-    showDashboardModal(title, content);
+        `;
+        showDashboardModal(title, content);
+    });
 }
 
 function showDashboardModal(title, content) {
@@ -1257,6 +1351,7 @@ async function fetchDetailedData(type, status = null) {
         if (data.success) {
             return data.data;
         } else {
+            console.error('API error response:', JSON.stringify(data)); // debug: shows debug_type, debug_method, debug_raw
             throw new Error(data.error || 'Failed to fetch detailed data');
         }
     } catch (error) {

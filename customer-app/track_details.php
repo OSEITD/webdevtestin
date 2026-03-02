@@ -885,13 +885,12 @@ if (!$parcel) {
                     });
                     historyHtml += '</ul>';
                     
-                    // Create a modal-like display for the history
+                   
                     showTrackingHistoryModal(historyHtml);
                 } else {
                     alert('No detailed tracking history available for this parcel.');
                 }
                 
-                // Restore button
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 
@@ -954,13 +953,11 @@ if (!$parcel) {
             setInterval(async function() {
                 try {
                     
-                    // You could make an AJAX call here to check for updates
-                    // and refresh the page or update specific elements if changes are detected
                     
                 } catch (error) {
                     console.error('Error checking for updates:', error);
                 }
-            }, 60000); // Check every minute
+            }, 60000); 
         }
 
         
@@ -1001,7 +998,7 @@ if (!$parcel) {
                     notificationToggle.checked = true;
                     updateNotificationStatus('✅ Notifications enabled for this parcel', '#10b981');
                 } else if (Notification.permission === 'granted') {
-                    // Permission granted but not subscribed yet
+                    
                     if (notificationEnabled) {
                         // Auto-subscribe if user enabled it on tracking page
                         await subscribeToPushNotifications();
@@ -1068,7 +1065,6 @@ if (!$parcel) {
                     notificationToggle.checked = true;
                     updateNotificationStatus('✅ Notifications enabled! You\'ll receive updates about this parcel.', '#10b981');
                     
-                    // Show test notification
                     new Notification('🔔 Notifications Enabled!', {
                         body: `You'll receive updates about parcel ${TRACKING_NUMBER}`,
                         icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📦</text></svg>',

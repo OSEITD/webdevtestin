@@ -317,7 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         
                         if (!empty($profile) && !empty($company)) {
-                            // Get role from profile - DO NOT default to outlet_manager (security issue)
+                           
                             $userRole = $profile['role'] ?? null;
                             $allowedRoles = ['outlet_manager', 'outlet_admin', 'driver', 'admin', 'super_admin'];
                             

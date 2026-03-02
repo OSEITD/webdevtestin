@@ -32,6 +32,10 @@ class DriverDashboard {
         // Stop management state
         this.selectedStopId = null;
         this.lastRenderedStops = [];
+
+        // Map layer state
+        this.isSatelliteMode = false;
+        this.fullscreenMapInstance = null;
         
         // Performance snapshot state preservation
         this.cachedPerformanceStats = null;
@@ -5052,6 +5056,129 @@ class DriverDashboard {
         const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
         const index = Math.round(heading / 45) % 8;
         return directions[index];
+    }
+
+    /**
+     * Open fullscreen map modal and initialize its map
+     */
+    openFullscreenMap() {
+        const modal = document.getElementById('fullscreenMapModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => this.initFullscreenMap(), 120);
+    }
+
+    /**
+     * Close fullscreen map modal and destroy its map instance
+     */
+    closeFullscreenMap() {
+        const modal = document.getElementById('fullscreenMapModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        if (this.fullscreenMapInstance) {
+            this.fullscreenMapInstance.remove();
+            this.fullscreenMapInstance = null;
+        }
+    }
+
+    /**
+     * Initialize the map inside the fullscreen modal
+     */
+    initFullscreenMap() {
+        const mapEl = document.getElementById('fullscreenMap');
+        if (!mapEl) return;
+        if (this.fullscreenMapInstance) {
+            this.fullscreenMapInstance.invalidateSize();
+            return;
+        }
+        const center = this.currentPosition
+            ? [this.currentPosition.lat, this.currentPosition.lng]
+            : [-15.3875, 28.3228];
+        this.fullscreenMapInstance = L.map('fullscreenMap').setView(center, 14);
+        const tileLayer = this.isSatelliteMode ? this.getSatelliteTileLayer() : this.getStreetTileLayer();
+        tileLayer.addTo(this.fullscreenMapInstance);
+        // Driver location marker
+        if (this.currentPosition) {
+            L.marker([this.currentPosition.lat, this.currentPosition.lng], {
+                icon: L.divIcon({
+                    className: '',
+                    html: '<div style="width:18px;height:18px;background:#2e0d2a;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.5)"></div>',
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                })
+            }).addTo(this.fullscreenMapInstance).bindPopup('Your Location');
+        }
+        // Mirror outlet stops from trip map
+        if (this.mapLayers) {
+            if (this.mapLayers.outlets) {
+                this.mapLayers.outlets.eachLayer(layer => {
+                    if (layer instanceof L.Marker) {
+                        L.marker(layer.getLatLng(), { icon: layer.options.icon })
+                            .addTo(this.fullscreenMapInstance);
+                    }
+                });
+            }
+            if (this.mapLayers.route) {
+                this.mapLayers.route.eachLayer(layer => {
+                    if (layer instanceof L.Polyline) {
+                        L.polyline(layer.getLatLngs(), { color: '#2e0d2a', weight: 3, opacity: 0.8 })
+                            .addTo(this.fullscreenMapInstance);
+                    }
+                });
+            }
+        }
+        setTimeout(() => this.fullscreenMapInstance.invalidateSize(), 200);
+    }
+
+    /**
+     * Return an OSM street tile layer
+     */
+    getStreetTileLayer() {
+        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '\u00a9 OpenStreetMap contributors'
+        });
+    }
+
+    /**
+     * Return an Esri World Imagery (satellite) tile layer
+     */
+    getSatelliteTileLayer() {
+        return L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DigitalGlobe, GeoEye'
+            }
+        );
+    }
+
+    /**
+     * Toggle between satellite and street map tiles on all active maps
+     */
+    toggleSatelliteMode() {
+        this.isSatelliteMode = !this.isSatelliteMode;
+        const activeMaps = [this.tripMapInstance, this.mapInstance, this.fullscreenMapInstance]
+            .filter(Boolean);
+        activeMaps.forEach(map => {
+            map.eachLayer(layer => {
+                if (layer instanceof L.TileLayer) map.removeLayer(layer);
+            });
+            const newTile = this.isSatelliteMode ? this.getSatelliteTileLayer() : this.getStreetTileLayer();
+            newTile.addTo(map);
+        });
+        // Sync button state across all satellite buttons
+        document.querySelectorAll('.satellite-btn').forEach(btn => {
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = this.isSatelliteMode ? 'fas fa-map' : 'fas fa-satellite';
+            const label = btn.querySelector('span');
+            if (label) label.textContent = this.isSatelliteMode ? 'Street' : 'Satellite';
+            btn.title = this.isSatelliteMode ? 'Switch to Street View' : 'Switch to Satellite View';
+            if (this.isSatelliteMode) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
     }
 }
 

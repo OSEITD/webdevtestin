@@ -45,7 +45,7 @@ class GPSTracker {
                 
                 foreach ($params as $key => $value) {
                     if ($key === 'select' || $key === 'order' || $key === 'limit') {
-                        continue; // Skip special parameters
+                        continue; 
                     }
                     
                     if (strpos($value, 'eq.') === 0) {
@@ -66,7 +66,7 @@ class GPSTracker {
                     }
                 }
                 
-                // Handle limit
+              
                 if (isset($params['limit'])) {
                     $query = $query->limit(intval($params['limit']));
                 }
@@ -83,7 +83,7 @@ class GPSTracker {
 
     public function getParcelGPSTracking($identifier) {
         try {
-            // Checking if identifier is a UUID (parcel_id) or track_number
+          
             $isUUID = preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $identifier);
 
             if ($isUUID) {
@@ -112,7 +112,7 @@ class GPSTracker {
             $tripStatus = null;
             
             if (!empty($parcel['driver_id'])) {
-                // Get driver info including current trip
+               
                 $driverParams = [
                     'id' => 'eq.' . $parcel['driver_id'],
                     'select' => 'current_trip_id'
@@ -120,8 +120,7 @@ class GPSTracker {
                 $driverData = $this->callSupabase('drivers', 'GET', $driverParams);
                 if (!empty($driverData) && !empty($driverData[0]['current_trip_id'])) {
                     $currentTripId = $driverData[0]['current_trip_id'];
-                    
-                    // Get trip status
+                   
                     $tripParams = [
                         'id' => 'eq.' . $currentTripId,
                         'select' => 'trip_status'
@@ -132,7 +131,7 @@ class GPSTracker {
                     }
                 }
                 
-                // Try to get driver location using intelligent fallback system
+               
                 $driverLocation = $this->getDriverLocationWithFallback($parcel['driver_id'], $currentTripId);
             }
 
@@ -168,7 +167,7 @@ class GPSTracker {
                     } else {
                         error_log('No current_trip_id for parcel ' . $parcel['id']);
                     }
-                    // Getting origin outlet
+                    
                     $originData = $this->callSupabase('outlets', 'GET', [
                         'id' => 'eq.' . $parcel['origin_outlet_id'],
                         'select' => 'id,outlet_name,address,latitude,longitude'
@@ -181,7 +180,7 @@ class GPSTracker {
                             'address' => $originData[0]['address']
                         ];
                     }
-                    // Getting destination outlet
+                  
                     $destData = $this->callSupabase('outlets', 'GET', [
                         'id' => 'eq.' . $parcel['destination_outlet_id'],
                         'select' => 'id,outlet_name,address,latitude,longitude'
@@ -221,13 +220,10 @@ class GPSTracker {
         }
     }
     
-    /**
-     * Get driver location with intelligent fallback system
-     * Priority: Current trip location -> Recent location -> Last known location
-     */
+
     private function getDriverLocationWithFallback($driverId, $currentTripId = null) {
         try {
-            // Priority 1: Try current trip location (most recent)
+           
             if ($currentTripId) {
                 $tripLocationParams = [
                     'driver_id' => 'eq.' . $driverId,
@@ -242,14 +238,14 @@ class GPSTracker {
                     $location['source'] = 'current_trip';
                     $location['age_minutes'] = $this->calculateAgeMinutes($location['timestamp']);
                     
-                    // If location is recent (< 30 minutes), use it
+                
                     if ($location['age_minutes'] < 30) {
                         return $location;
                     }
                 }
             }
             
-            // Priority 2: Try recent location from any trip (last 2 hours)
+          
             $recentLocationParams = [
                 'driver_id' => 'eq.' . $driverId,
                 'timestamp' => 'gte.' . date('c', strtotime('-2 hours')),
@@ -263,13 +259,12 @@ class GPSTracker {
                 $location['source'] = 'recent_location';
                 $location['age_minutes'] = $this->calculateAgeMinutes($location['timestamp']);
                 
-                // Validate coordinates are within Zambia
+             
                 if ($this->isWithinZambia($location['latitude'], $location['longitude'])) {
                     return $location;
                 }
             }
-            
-            // Priority 3: Try last known location (last 24 hours)
+           
             $lastKnownParams = [
                 'driver_id' => 'eq.' . $driverId,
                 'timestamp' => 'gte.' . date('c', strtotime('-24 hours')),
@@ -283,13 +278,11 @@ class GPSTracker {
                 $location['source'] = 'last_known';
                 $location['age_minutes'] = $this->calculateAgeMinutes($location['timestamp']);
                 
-                // Validate coordinates are within Zambia
                 if ($this->isWithinZambia($location['latitude'], $location['longitude'])) {
                     return $location;
                 }
             }
             
-            // Priority 4: Default fallback to Lusaka, Zambia
             return [
                 'latitude' => -15.3875,
                 'longitude' => 28.3228,
@@ -308,7 +301,6 @@ class GPSTracker {
         } catch (Exception $e) {
             error_log("Error getting driver location with fallback: " . $e->getMessage());
             
-            // Return default Zambian location on error
             return [
                 'latitude' => -15.3875,
                 'longitude' => 28.3228,
@@ -326,9 +318,7 @@ class GPSTracker {
         }
     }
     
-    /**
-     * Calculate age of location in minutes
-     */
+
     private function calculateAgeMinutes($timestamp) {
         try {
             $locationTime = new DateTime($timestamp);
@@ -340,9 +330,7 @@ class GPSTracker {
         }
     }
     
-    /**
-     * Check if coordinates are within Zambian boundaries
-     */
+    
     private function isWithinZambia($latitude, $longitude) {
         // Zambian boundaries (approximate)
         $zambianBounds = [
@@ -428,7 +416,7 @@ class GPSTracker {
     
   
     private function calculateDistance($lat1, $lon1, $lat2, $lon2) {
-        $earthRadius = 6371; // Earth's radius in kilometers
+        $earthRadius = 6371; 
         
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);

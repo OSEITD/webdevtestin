@@ -25,5 +25,9 @@ class SecurityHeaders {
         
         
         header("Permissions-Policy: geolocation=(self), camera=(), microphone=()");
+
+        // Prevent browser from caching PHP page output (ensures ?v= timestamps are always fresh)
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
     }
 }

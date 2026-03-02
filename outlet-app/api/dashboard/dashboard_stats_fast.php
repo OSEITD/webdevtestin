@@ -43,17 +43,19 @@ class LightweightDashboardAPI {
     private $url = "https://xerpchdsykqafrsxbqef.supabase.co";
     private $key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
     private $companyId;
-    private $cacheTimeout = 60; 
-    
+    private $outletId;
+    private $cacheTimeout = 60;
+
     public function __construct() {
         $this->companyId = $_SESSION['company_id'];
+        $this->outletId  = $_SESSION['outlet_id'] ?? null;
     }
-    
+
     public function getDashboardStats() {
         $startTime = microtime(true);
-        
-        
-        $cacheKey = 'dashboard_' . $this->companyId;
+
+        // Cache key is scoped to both company AND outlet so different outlets never share data
+        $cacheKey = 'dashboard_' . $this->companyId . '_' . ($this->outletId ?? 'no_outlet');
         $cached = $this->getCache($cacheKey);
         if ($cached) {
             $cached['debug'] = [
@@ -63,75 +65,96 @@ class LightweightDashboardAPI {
             ];
             return $cached;
         }
-        
-        
+
         $stats = [
-            'parcels' => $this->getQuickParcelCounts(),
-            'trips' => $this->getQuickTripCounts(),
+            'parcels'  => $this->getQuickParcelCounts(),
+            'trips'    => $this->getQuickTripCounts(),
             'vehicles' => $this->getQuickVehicleCounts(),
-            'revenue' => $this->getQuickRevenue(),
-            'debug' => [
+            'revenue'  => $this->getQuickRevenue(),
+            'debug'    => [
                 'execution_time' => round((microtime(true) - $startTime) * 1000, 2) . 'ms',
-                'cached' => false,
+                'cached'     => false,
                 'api_version' => 'fast'
             ]
         ];
-        
-        
+
         $this->setCache($cacheKey, $stats);
-        
         return $stats;
     }
-    
+
     private function getQuickParcelCounts() {
         $company = $this->companyId;
-        $today = date('Y-m-d');
-        
-        
-        $atOutlet = $this->quickCount('parcels', "company_id=eq.$company&status=eq.at_outlet");
-        $inTransit = $this->quickCount('parcels', "company_id=eq.$company&status=eq.in_transit");
-        $pending = $this->quickCount('parcels', "company_id=eq.$company&status=in.(pending,scheduled,assigned)");
-        $delivered = $this->quickCount('parcels', "company_id=eq.$company&status=eq.delivered&delivered_at=gte.{$today}T00:00:00");
-        
+        $outlet  = $this->outletId;
+        $today   = date('Y-m-d');
+
+        // Outlet scope: parcels whose origin is this outlet
+        // If no outlet_id in session fall back to company-wide so the screen is never blank
+        $outletFilter = $outlet ? "&origin_outlet_id=eq.$outlet" : '';
+
+        // Parcels physically at the outlet (pending / at_outlet / assigned to a trip not yet departed)
+        $atOutletCount = $this->quickCount('parcels',
+            "company_id=eq.$company{$outletFilter}&status=in.(pending,at_outlet,scheduled,assigned)");
+
+        // Parcels currently on a moving trip originating from this outlet
+        $inTransitCount = $this->quickCount('parcels',
+            "company_id=eq.$company{$outletFilter}&status=in.(in_transit)");
+
+        // Parcels delivered today that originated from this outlet
+        $deliveredCount = $this->quickCount('parcels',
+            "company_id=eq.$company{$outletFilter}&status=eq.delivered&delivered_at=gte.{$today}T00:00:00");
+
+        // Parcels that are overdue (older than 3 days, not yet delivered)
+        $cutoff = date('Y-m-d', strtotime('-3 days'));
+        $delayedCount = $this->quickCount('parcels',
+            "company_id=eq.$company{$outletFilter}&status=in.(pending,assigned)&created_at=lt.{$cutoff}T00:00:00");
+
         return [
-            'pending_at_outlet' => $atOutlet + $pending,
-            'at_outlet' => $atOutlet,
-            'in_transit' => $inTransit,
-            'completed' => $delivered,
-            'delayed_urgent' => 0 
+            'pending_at_outlet' => $atOutletCount,
+            'at_outlet'         => $atOutletCount,
+            'in_transit'        => $inTransitCount,
+            'completed'         => $deliveredCount,
+            'delayed_urgent'    => $delayedCount,
         ];
     }
-    
+
     private function getQuickTripCounts() {
         $company = $this->companyId;
-        $today = date('Y-m-d');
-        
-        $scheduled = $this->quickCount('trips', "company_id=eq.$company&trip_status=eq.scheduled");
-        $inTransit = $this->quickCount('trips', "company_id=eq.$company&trip_status=eq.in_transit");
-        $completed = $this->quickCount('trips', "company_id=eq.$company&trip_status=eq.completed&updated_at=gte.{$today}T00:00:00");
-        
+        $outlet  = $this->outletId;
+        $today   = date('Y-m-d');
+
+        // Trips are scoped to this outlet as the origin
+        $outletFilter = $outlet ? "&origin_outlet_id=eq.$outlet" : '';
+
+        $scheduled = $this->quickCount('trips',
+            "company_id=eq.$company{$outletFilter}&trip_status=eq.scheduled");
+        $inTransit = $this->quickCount('trips',
+            "company_id=eq.$company{$outletFilter}&trip_status=eq.in_transit");
+        $completed = $this->quickCount('trips',
+            "company_id=eq.$company{$outletFilter}&trip_status=eq.completed&updated_at=gte.{$today}T00:00:00");
+
         return [
-            'upcoming' => $scheduled,
-            'scheduled' => $scheduled,
-            'in_transit' => $inTransit,
+            'upcoming'       => $scheduled,
+            'scheduled'      => $scheduled,
+            'in_transit'     => $inTransit,
             'completed_today' => $completed,
-            'active' => 0
+            'active'         => 0
         ];
     }
-    
+
     private function getQuickVehicleCounts() {
+        // Vehicles are company-wide assets; outlet managers see the full fleet
         $company = $this->companyId;
-        
-        $available = $this->quickCount('vehicle', "company_id=eq.$company&status=eq.available");
-        $unavailable = $this->quickCount('vehicle', "company_id=eq.$company&status=eq.unavailable");
+
+        $available      = $this->quickCount('vehicle', "company_id=eq.$company&status=eq.available");
+        $unavailable    = $this->quickCount('vehicle', "company_id=eq.$company&status=eq.unavailable");
         $outForDelivery = $this->quickCount('vehicle', "company_id=eq.$company&status=eq.out_for_delivery");
-        
+
         return [
-            'available' => $available,
-            'unavailable' => $unavailable,
+            'available'        => $available,
+            'unavailable'      => $unavailable,
             'assigned_to_trips' => $outForDelivery,
             'out_for_delivery' => $outForDelivery,
-            'total' => $available + $unavailable + $outForDelivery
+            'total'            => $available + $unavailable + $outForDelivery
         ];
     }
     

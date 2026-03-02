@@ -9,24 +9,26 @@ class EnhancedDashboardDetailsAPI {
     private $url = "https://xerpchdsykqafrsxbqef.supabase.co";
     private $key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
     public $companyId;
-    
+    private $outletId;
+
     public function __construct() {
-        if (isset($_SESSION['company_id']) && !empty($_SESSION['company_id'])) {
-            $this->companyId = $_SESSION['company_id'];
-        } else {
-            $this->companyId = "7501f684-a827-46bd-9389-3cf850463eff";
-        }
+        $this->companyId = isset($_SESSION['company_id']) && !empty($_SESSION['company_id'])
+            ? $_SESSION['company_id']
+            : "7501f684-a827-46bd-9389-3cf850463eff";
+        $this->outletId = $_SESSION['outlet_id'] ?? null;
     }
     
     public function handleRequest() {
         $requestMethod = $_SERVER['REQUEST_METHOD'];
         
         if ($requestMethod === 'POST') {
-            $input = json_decode(file_get_contents('php://input'), true);
+            $rawInput = file_get_contents('php://input');
+            $input = json_decode($rawInput, true);
             $type = $input['type'] ?? '';
             $limit = intval($input['limit'] ?? 50);
             $offset = intval($input['offset'] ?? 0);
         } else {
+            $rawInput = '';
             $type = $_GET['type'] ?? '';
             $limit = intval($_GET['limit'] ?? 50);
             $offset = intval($_GET['offset'] ?? 0);
@@ -57,8 +59,16 @@ class EnhancedDashboardDetailsAPI {
                 return $this->getAssignedVehicles($limit, $offset);
             case 'available_vehicles':
                 return $this->getAvailableVehicles($limit, $offset);
+            case 'unavailable_vehicles':
+                return $this->getUnavailableVehicles($limit, $offset);
+            case 'today_transactions':
+                return $this->getTodayTransactions($limit, $offset);
+            case 'week_payments':
+                return $this->getWeekPayments($limit, $offset);
+            case 'cod_collections_today':
+                return $this->getCODCollectionsToday($limit, $offset);
             default:
-                return ['error' => 'Invalid type specified'];
+                return ['error' => 'Invalid type specified', 'debug_type' => $type, 'debug_method' => $_SERVER['REQUEST_METHOD'], 'debug_raw' => substr($rawInput ?? '', 0, 300)];
         }
     }
     
@@ -146,268 +156,220 @@ class EnhancedDashboardDetailsAPI {
     
     private function enrichTripsData($trips) {
         if (empty($trips)) return $trips;
-        
-        $vehicleIds = [];
-        $managerIds = [];
-        
+
+        $vehicleIds  = [];
+        $managerIds  = [];
+        $outletIds   = [];
+        $driverIds   = [];
+
         foreach ($trips as $trip) {
-            if (!empty($trip['vehicle_id'])) {
-                $vehicleIds[] = $trip['vehicle_id'];
-            }
-            if (!empty($trip['outlet_manager_id'])) {
-                $managerIds[] = $trip['outlet_manager_id'];
-            }
+            if (!empty($trip['vehicle_id']))         $vehicleIds[]  = $trip['vehicle_id'];
+            if (!empty($trip['outlet_manager_id']))  $managerIds[]  = $trip['outlet_manager_id'];
+            if (!empty($trip['origin_outlet_id']))   $outletIds[]   = $trip['origin_outlet_id'];
+            if (!empty($trip['destination_outlet_id'])) $outletIds[] = $trip['destination_outlet_id'];
+            if (!empty($trip['driver_id']))          $driverIds[]   = $trip['driver_id'];
         }
-        
+
+        // Vehicles
         $vehicleLookup = [];
         if (!empty($vehicleIds)) {
             $vehicleIds = array_unique($vehicleIds);
-            $vehicleFilter = "id=in.(" . implode(',', $vehicleIds) . ")";
-            $vehicles = $this->query('/rest/v1/vehicle', "id,name,plate_number,status", $vehicleFilter);
-            
-            foreach ($vehicles as $vehicle) {
-                $vehicleLookup[$vehicle['id']] = $vehicle;
-            }
+            $vehicles = $this->query('/rest/v1/vehicle', "id,name,plate_number,status",
+                "id=in.(" . implode(',', $vehicleIds) . ")");
+            foreach ($vehicles as $v) { $vehicleLookup[$v['id']] = $v; }
         }
-        
+
+        // Managers / outlet managers
         $managerLookup = [];
         if (!empty($managerIds)) {
             $managerIds = array_unique($managerIds);
-            $managerFilter = "id=in.(" . implode(',', $managerIds) . ")";
-            $managers = $this->query('/rest/v1/profiles', "id,full_name", $managerFilter);
-            
-            foreach ($managers as $manager) {
-                $managerLookup[$manager['id']] = $manager;
-            }
+            $managers = $this->query('/rest/v1/profiles', "id,full_name",
+                "id=in.(" . implode(',', $managerIds) . ")");
+            foreach ($managers as $m) { $managerLookup[$m['id']] = $m; }
         }
-        
+
+        // Drivers
+        $driverLookup = [];
+        if (!empty($driverIds)) {
+            $driverIds = array_unique($driverIds);
+            $drivers = $this->query('/rest/v1/drivers', "id,driver_name,driver_phone",
+                "company_id=eq.{$this->companyId}&id=in.(" . implode(',', $driverIds) . ")");
+            foreach ($drivers as $d) { $driverLookup[$d['id']] = $d; }
+        }
+
+        // Outlet names
+        $outletLookup = [];
+        if (!empty($outletIds)) {
+            $outletIds = array_unique($outletIds);
+            $outlets = $this->query('/rest/v1/outlets', "id,outlet_name",
+                "company_id=eq.{$this->companyId}&id=in.(" . implode(',', $outletIds) . ")");
+            foreach ($outlets as $o) { $outletLookup[$o['id']] = $o['outlet_name']; }
+        }
+
         foreach ($trips as &$trip) {
-            $vehicle = $vehicleLookup[$trip['vehicle_id']] ?? [];
-            $manager = $managerLookup[$trip['outlet_manager_id']] ?? [];
-            
+            $vehicle = $vehicleLookup[$trip['vehicle_id'] ?? ''] ?? [];
+            $manager = $managerLookup[$trip['outlet_manager_id'] ?? ''] ?? [];
+            $driver  = $driverLookup[$trip['driver_id'] ?? ''] ?? [];
+
             $trip['vehicle'] = [
-                'name' => $vehicle['name'] ?? 'N/A',
+                'name'         => $vehicle['name']         ?? 'N/A',
                 'plate_number' => $vehicle['plate_number'] ?? 'N/A',
-                'status' => $vehicle['status'] ?? 'N/A'
+                'status'       => $vehicle['status']       ?? 'N/A',
             ];
-            
-            $trip['manager_name'] = $manager['full_name'] ?? 'N/A';
-            
-            $trip['vehicle_name'] = $vehicle['name'] ?? 'N/A';
-            $trip['vehicle_plate'] = $vehicle['plate_number'] ?? 'N/A';
-            $trip['vehicle_status'] = $vehicle['status'] ?? 'N/A';
+
+            $trip['manager_name']            = $manager['full_name']   ?? 'N/A';
+            $trip['driver_name']             = $driver['driver_name']  ?? 'N/A';
+            $trip['driver_phone']            = $driver['driver_phone'] ?? 'N/A';
+            $trip['vehicle_name']            = $vehicle['name']         ?? 'N/A';
+            $trip['vehicle_plate']           = $vehicle['plate_number'] ?? 'N/A';
+            $trip['vehicle_status']          = $vehicle['status']       ?? 'N/A';
+            $trip['origin_outlet_name']      = $outletLookup[$trip['origin_outlet_id']      ?? ''] ?? 'N/A';
+            $trip['destination_outlet_name'] = $outletLookup[$trip['destination_outlet_id'] ?? ''] ?? 'N/A';
         }
-        
+
         return $trips;
     }
     
     private function getParcels($limit, $offset) {
-        $select = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
-        $filters = "company_id=eq.{$this->companyId}&limit={$limit}&offset={$offset}&order=created_at.desc";
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&limit={$limit}&offset={$offset}&order=created_at.desc";
         $parcels = $this->query('/rest/v1/parcels', $select, $filters);
-        
-        
         $parcels = $this->enrichWithOutletNames($parcels);
-        
-        return [
-            'success' => true,
-            'data' => $parcels,
-            'count' => count($parcels)
-        ];
+        return ['success' => true, 'data' => $parcels, 'count' => count($parcels)];
     }
     
     private function getUrgentParcels($limit, $offset) {
-        $cutoffDate = date('Y-m-d', strtotime('-3 days'));
-        $select = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
-        $filters = "company_id=eq.{$this->companyId}&status=in.(pending,assigned)&created_at=lt.{$cutoffDate}T00:00:00&limit={$limit}&offset={$offset}&order=created_at.asc";
+        $cutoffDate   = date('Y-m-d', strtotime('-3 days'));
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&status=in.(pending,assigned,at_outlet)&created_at=lt.{$cutoffDate}T00:00:00&limit={$limit}&offset={$offset}&order=created_at.asc";
         $parcels = $this->query('/rest/v1/parcels', $select, $filters);
-        
-        
+        // Calculate days overdue for each parcel
+        foreach ($parcels as &$parcel) {
+            $created  = isset($parcel['created_at']) ? new DateTime($parcel['created_at']) : null;
+            $now      = new DateTime();
+            $parcel['days_overdue'] = $created ? $created->diff($now)->days : 0;
+        }
         $parcels = $this->enrichWithOutletNames($parcels);
-        
-        return [
-            'success' => true,
-            'data' => $parcels,
-            'count' => count($parcels)
-        ];
+        return ['success' => true, 'data' => $parcels, 'count' => count($parcels)];
     }
     
     private function getInTransitParcels($limit, $offset) {
-        $tripSelect = "id,trip_status,departure_time,arrival_time,vehicle_id,outlet_manager_id";
-        $tripFilters = "company_id=eq.{$this->companyId}&trip_status=eq.in_transit&order=created_at.desc";
+        // Only trips that originate from this outlet (or all trips if no outlet set)
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $tripSelect  = "id,trip_status,departure_time,arrival_time,vehicle_id,outlet_manager_id,driver_id,origin_outlet_id,destination_outlet_id";
+        $tripFilters = "company_id=eq.{$this->companyId}{$outletFilter}&trip_status=eq.in_transit&order=departure_time.desc";
         $trips = $this->query('/rest/v1/trips', $tripSelect, $tripFilters);
-        
+
+        // Fallback: no in-transit trips found – show parcels that have in_transit status at the parcel level
         if (empty($trips)) {
-            $select = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
-            $filters = "company_id=eq.{$this->companyId}&status=eq.assigned&limit={$limit}&offset={$offset}&order=created_at.desc";
+            $select  = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
+            $filters = "company_id=eq.{$this->companyId}{$outletFilter}&status=eq.in_transit&limit={$limit}&offset={$offset}&order=created_at.desc";
             $parcels = $this->query('/rest/v1/parcels', $select, $filters);
-            
-            
             $parcels = $this->enrichWithOutletNames($parcels);
-            
             foreach ($parcels as &$parcel) {
-                $parcel['trip_id'] = 'N/A';
-                $parcel['trip_code'] = 'N/A';
-                $parcel['trip_status'] = 'N/A';
+                $parcel['trip_id']      = 'N/A';
+                $parcel['trip_code']    = 'N/A';
+                $parcel['trip_status']  = 'N/A';
                 $parcel['departure_time'] = null;
-                $parcel['arrival_time'] = null;
-                $parcel['vehicle_name'] = 'N/A';
-                $parcel['vehicle_plate'] = 'N/A';
+                $parcel['arrival_time']   = null;
+                $parcel['vehicle_name']   = 'N/A';
+                $parcel['vehicle_plate']  = 'N/A';
                 $parcel['vehicle_status'] = 'N/A';
-                $parcel['manager_name'] = 'N/A';
+                $parcel['driver_name']    = 'N/A';
+                $parcel['manager_name']   = 'N/A';
             }
-            
-            return [
-                'success' => true,
-                'data' => array_slice($parcels, 0, $limit),
-                'count' => count($parcels)
-            ];
+            return ['success' => true, 'data' => $parcels, 'count' => count($parcels)];
         }
-        
-        $tripIds = array_column($trips, 'id');
-        
+
+        // Enrich trips with vehicle / driver / outlet names
+        $trips     = $this->enrichTripsData($trips);
+        $tripIds   = array_column($trips, 'id');
         $tripLookup = [];
-        foreach ($trips as $trip) {
-            $tripLookup[$trip['id']] = $trip;
-        }
-        $parcelListSelect = "id,parcel_id,trip_id,status,created_at";
+        foreach ($trips as $trip) { $tripLookup[$trip['id']] = $trip; }
+
+        // Get parcel_list records for these trips
+        // (trips are already scoped to origin_outlet_id — no need to re-filter by parcel_list.outlet_id,
+        //  which is the DESTINATION outlet and would produce wrong results)
+        $parcelListSelect = "id,parcel_id,trip_id,outlet_id,status";
         $parcelListFilter = "company_id=eq.{$this->companyId}&trip_id=in.(" . implode(',', $tripIds) . ")&limit={$limit}&offset={$offset}&order=created_at.desc";
-        $parcelList = $this->query('/rest/v1/parcel_list', $parcelListSelect, $parcelListFilter);
-        
+        $parcelList          = $this->query('/rest/v1/parcel_list', $parcelListSelect, $parcelListFilter);
+
         if (empty($parcelList)) {
-            return [
-                'success' => true,
-                'data' => [],
-                'count' => 0
-            ];
+            return ['success' => true, 'data' => [], 'count' => 0];
         }
-        
-        
-        $parcelIds = array_column($parcelList, 'parcel_id');
-        
-        
-        $parcelFilter = "id=in.(" . implode(',', $parcelIds) . ")";
+
+        // Fetch parcel details (company-scoped only; outlet was already applied via parcel_list.outlet_id)
+        $parcelIds    = array_filter(array_unique(array_column($parcelList, 'parcel_id')));
         $parcelSelect = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
-        $parcels = $this->query('/rest/v1/parcels', $parcelSelect, $parcelFilter);
-        
-        
+        $rawParcels   = $this->query('/rest/v1/parcels', $parcelSelect,
+            "company_id=eq.{$this->companyId}&id=in.(" . implode(',', $parcelIds) . ")");
+        $rawParcels   = $this->enrichWithOutletNames($rawParcels);
+
         $parcelLookup = [];
-        foreach ($parcels as $parcel) {
-            $parcelLookup[$parcel['id']] = $parcel;
-        }
-        
-        
-        $parcels = $this->enrichWithOutletNames($parcels);
-        foreach ($parcels as $parcel) {
-            $parcelLookup[$parcel['id']] = $parcel;
-        }
-        
-        
-        $vehicleIds = array_filter(array_column($trips, 'vehicle_id'));
-        $managerIds = array_filter(array_column($trips, 'outlet_manager_id'));
-        
-        $vehicleLookup = [];
-        if (!empty($vehicleIds)) {
-            $vehicleFilter = "id=in.(" . implode(',', array_unique($vehicleIds)) . ")";
-            $vehicles = $this->query('/rest/v1/vehicle', "id,name,plate_number,status", $vehicleFilter);
-            foreach ($vehicles as $vehicle) {
-                $vehicleLookup[$vehicle['id']] = $vehicle;
-            }
-        }
-        
-        $managerLookup = [];
-        if (!empty($managerIds)) {
-            $managerFilter = "id=in.(" . implode(',', array_unique($managerIds)) . ")";
-            $managers = $this->query('/rest/v1/profiles', "id,full_name", $managerFilter);
-            foreach ($managers as $manager) {
-                $managerLookup[$manager['id']] = $manager;
-            }
-        }
-        
-        
+        foreach ($rawParcels as $p) { $parcelLookup[$p['id']] = $p; }
+
+        // Build result rows
         $result = [];
         foreach ($parcelList as $item) {
-            $parcel = $parcelLookup[$item['parcel_id']] ?? [];
-            if (empty($parcel)) continue; 
-            
+            $parcel = $parcelLookup[$item['parcel_id']] ?? null;
+            if (!$parcel) continue;
+
             $trip = $tripLookup[$item['trip_id']] ?? [];
-            $vehicle = $vehicleLookup[$trip['vehicle_id'] ?? ''] ?? [];
-            $manager = $managerLookup[$trip['outlet_manager_id'] ?? ''] ?? [];
-            
             $result[] = array_merge($parcel, [
-                'trip_id' => $item['trip_id'],
-                'trip_code' => substr($item['trip_id'], 0, 8), 
-                'trip_status' => $trip['trip_status'] ?? 'N/A',
-                'departure_time' => $trip['departure_time'] ?? null,
-                'arrival_time' => $trip['arrival_time'] ?? null,
-                'vehicle_name' => $vehicle['name'] ?? 'N/A',
-                'vehicle_plate' => $vehicle['plate_number'] ?? 'N/A',
-                'vehicle_status' => $vehicle['status'] ?? 'N/A',
-                'manager_name' => $manager['full_name'] ?? 'N/A'
+                'trip_id'                => $item['trip_id'],
+                'trip_code'              => strtoupper(substr($item['trip_id'], 0, 8)),
+                'trip_status'            => $trip['trip_status']            ?? 'N/A',
+                'departure_time'         => $trip['departure_time']         ?? null,
+                'arrival_time'           => $trip['arrival_time']           ?? null,
+                'vehicle_name'           => $trip['vehicle_name']           ?? 'N/A',
+                'vehicle_plate'          => $trip['vehicle_plate']          ?? 'N/A',
+                'vehicle_status'         => $trip['vehicle_status']         ?? 'N/A',
+                'driver_name'            => $trip['driver_name']            ?? 'N/A',
+                'manager_name'           => $trip['manager_name']           ?? 'N/A',
+                'origin_outlet_name'     => $trip['origin_outlet_name']     ?? ($parcel['origin_outlet_name']      ?? 'N/A'),
+                'destination_outlet_name' => $trip['destination_outlet_name'] ?? ($parcel['destination_outlet_name'] ?? 'N/A'),
             ]);
         }
-        
-        return [
-            'success' => true,
-            'data' => $result,
-            'count' => count($result)
-        ];
+
+        return ['success' => true, 'data' => $result, 'count' => count($result)];
     }
     
     private function getPendingParcels($limit, $offset) {
-        $select = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
-        $filters = "company_id=eq.{$this->companyId}&status=eq.pending&limit={$limit}&offset={$offset}&order=created_at.desc";
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&status=in.(pending,at_outlet,assigned)&limit={$limit}&offset={$offset}&order=created_at.desc";
         $parcels = $this->query('/rest/v1/parcels', $select, $filters);
-        
-        
         $parcels = $this->enrichWithOutletNames($parcels);
-        
-        return [
-            'success' => true,
-            'data' => $parcels,
-            'count' => count($parcels)
-        ];
+        return ['success' => true, 'data' => $parcels, 'count' => count($parcels)];
     }
     
     private function getCompletedParcels($limit, $offset) {
-        $currentDate = date('Y-m-d');
-        $select = "id,track_number,status,delivery_date,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
-        $filters = "company_id=eq.{$this->companyId}&status=eq.delivered&delivery_date=eq.{$currentDate}&limit={$limit}&offset={$offset}&order=delivery_date.desc";
+        $currentDate  = date('Y-m-d');
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,track_number,status,delivery_date,delivered_at,created_at,sender_name,receiver_name,receiver_address,package_details,sender_phone,receiver_phone,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&status=eq.delivered&delivery_date=eq.{$currentDate}&limit={$limit}&offset={$offset}&order=delivered_at.desc";
         $parcels = $this->query('/rest/v1/parcels', $select, $filters);
-        
-        
         $parcels = $this->enrichWithOutletNames($parcels);
-        
-        return [
-            'success' => true,
-            'data' => $parcels,
-            'count' => count($parcels)
-        ];
+        return ['success' => true, 'data' => $parcels, 'count' => count($parcels)];
     }
     
     private function getTrips($limit, $offset) {
-        $select = "id,trip_status,departure_time,arrival_time,created_at,vehicle_id,outlet_manager_id";
-        $filters = "company_id=eq.{$this->companyId}&limit={$limit}&offset={$offset}&order=created_at.desc";
-        $trips = $this->query('/rest/v1/trips', $select, $filters);
-        
-        
-        $trips = $this->enrichTripsData($trips);
-        
-        return [
-            'success' => true,
-            'data' => $trips,
-            'count' => count($trips)
-        ];
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,trip_status,departure_time,arrival_time,created_at,vehicle_id,outlet_manager_id,driver_id,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&limit={$limit}&offset={$offset}&order=created_at.desc";
+        $trips   = $this->query('/rest/v1/trips', $select, $filters);
+        $trips   = $this->enrichTripsData($trips);
+        return ['success' => true, 'data' => $trips, 'count' => count($trips)];
     }
     
     private function getTripsScheduled($limit, $offset) {
-        $select = "id,trip_status,departure_time,arrival_time,created_at,vehicle_id,outlet_manager_id";
-        $filters = "company_id=eq.{$this->companyId}&trip_status=eq.scheduled&limit={$limit}&offset={$offset}&order=created_at.desc";
-        $trips = $this->query('/rest/v1/trips', $select, $filters);
-        
-        
-        $trips = $this->enrichTripsData($trips);
-        
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,trip_status,departure_time,arrival_time,trip_date,created_at,vehicle_id,outlet_manager_id,driver_id,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&trip_status=eq.scheduled&limit={$limit}&offset={$offset}&order=departure_time.asc";
+        $trips   = $this->query('/rest/v1/trips', $select, $filters);
+        $trips   = $this->enrichTripsData($trips);
         return [
             'success' => true,
             'data' => $trips,
@@ -416,33 +378,22 @@ class EnhancedDashboardDetailsAPI {
     }
     
     private function getTripsInTransit($limit, $offset) {
-        $select = "id,trip_status,departure_time,arrival_time,created_at,vehicle_id,outlet_manager_id";
-        $filters = "company_id=eq.{$this->companyId}&trip_status=eq.in_transit&limit={$limit}&offset={$offset}&order=created_at.desc";
-        $trips = $this->query('/rest/v1/trips', $select, $filters);
-        
-        
-        $trips = $this->enrichTripsData($trips);
-        
-        return [
-            'success' => true,
-            'data' => $trips,
-            'count' => count($trips)
-        ];
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,trip_status,departure_time,arrival_time,trip_date,created_at,vehicle_id,outlet_manager_id,driver_id,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&trip_status=eq.in_transit&limit={$limit}&offset={$offset}&order=departure_time.desc";
+        $trips   = $this->query('/rest/v1/trips', $select, $filters);
+        $trips   = $this->enrichTripsData($trips);
+        return ['success' => true, 'data' => $trips, 'count' => count($trips)];
     }
     
     private function getTripsCompleted($limit, $offset) {
-        $select = "id,trip_status,departure_time,arrival_time,created_at,vehicle_id,outlet_manager_id";
-        $filters = "company_id=eq.{$this->companyId}&trip_status=eq.completed&limit={$limit}&offset={$offset}&order=created_at.desc";
-        $trips = $this->query('/rest/v1/trips', $select, $filters);
-        
-        
-        $trips = $this->enrichTripsData($trips);
-        
-        return [
-            'success' => true,
-            'data' => $trips,
-            'count' => count($trips)
-        ];
+        $today        = date('Y-m-d');
+        $outletFilter = $this->outletId ? "&origin_outlet_id=eq.{$this->outletId}" : '';
+        $select  = "id,trip_status,departure_time,arrival_time,trip_date,created_at,updated_at,vehicle_id,outlet_manager_id,driver_id,origin_outlet_id,destination_outlet_id";
+        $filters = "company_id=eq.{$this->companyId}{$outletFilter}&trip_status=eq.completed&updated_at=gte.{$today}T00:00:00&limit={$limit}&offset={$offset}&order=updated_at.desc";
+        $trips   = $this->query('/rest/v1/trips', $select, $filters);
+        $trips   = $this->enrichTripsData($trips);
+        return ['success' => true, 'data' => $trips, 'count' => count($trips)];
     }
     
     private function getVehicles($limit, $offset) {
@@ -748,6 +699,67 @@ class EnhancedDashboardDetailsAPI {
             'success' => true,
             'data' => $vehicles,
             'count' => count($vehicles)
+        ];
+    }
+
+    private function getUnavailableVehicles($limit, $offset) {
+        // status=unavailable matches the count shown on the dashboard card (from dashboard_stats_fast.php)
+        $select  = "id,name,plate_number,status,created_at";
+        $filters = "company_id=eq.{$this->companyId}&status=eq.unavailable&limit={$limit}&offset={$offset}&order=created_at.desc";
+        $vehicles = $this->query('/rest/v1/vehicle', $select, $filters);
+
+        return [
+            'success' => true,
+            'data'    => $vehicles,
+            'count'   => count($vehicles)
+        ];
+    }
+
+    private function getTodayTransactions($limit, $offset) {
+        $today = date('Y-m-d');
+        $outletId = $_SESSION['outlet_id'] ?? null;
+        $outletFilter = $outletId ? "&outlet_id=eq.{$outletId}" : '';
+
+        $select = "id,tx_ref,amount,payment_method,status,paid_at,customer_name,customer_phone,parcel_id,mobile_network";
+        $filters = "company_id=eq.{$this->companyId}&status=eq.successful&paid_at=gte.{$today}T00:00:00{$outletFilter}&limit={$limit}&offset={$offset}&order=paid_at.desc";
+        $transactions = $this->query('/rest/v1/payment_transactions', $select, $filters);
+
+        return [
+            'success' => true,
+            'data' => $transactions,
+            'count' => count($transactions)
+        ];
+    }
+
+    private function getWeekPayments($limit, $offset) {
+        $weekStart = date('Y-m-d', strtotime('monday this week'));
+        $outletId = $_SESSION['outlet_id'] ?? null;
+        $outletFilter = $outletId ? "&outlet_id=eq.{$outletId}" : '';
+
+        $select = "id,tx_ref,amount,payment_method,status,paid_at,customer_name,customer_phone,parcel_id";
+        $filters = "company_id=eq.{$this->companyId}&status=eq.successful&paid_at=gte.{$weekStart}T00:00:00{$outletFilter}&limit={$limit}&offset={$offset}&order=paid_at.desc";
+        $payments = $this->query('/rest/v1/payment_transactions', $select, $filters);
+
+        return [
+            'success' => true,
+            'data' => $payments,
+            'count' => count($payments)
+        ];
+    }
+
+    private function getCODCollectionsToday($limit, $offset) {
+        $today = date('Y-m-d');
+        $outletId = $_SESSION['outlet_id'] ?? null;
+        $outletFilter = $outletId ? "&origin_outlet_id=eq.{$outletId}" : '';
+
+        $select = "id,track_number,cod_amount,status,receiver_name,receiver_phone,delivery_date,delivered_at";
+        $filters = "company_id=eq.{$this->companyId}&cod_amount=gt.0&status=eq.delivered&delivery_date=eq.{$today}{$outletFilter}&limit={$limit}&offset={$offset}&order=delivered_at.desc";
+        $parcels = $this->query('/rest/v1/parcels', $select, $filters);
+
+        return [
+            'success' => true,
+            'data' => $parcels,
+            'count' => count($parcels)
         ];
     }
 }

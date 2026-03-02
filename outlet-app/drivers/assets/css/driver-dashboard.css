@@ -29,7 +29,7 @@
 }
 
 .section-title i {
-    color: #3b82f6;
+    color: #2e0d2a;
 }
 
 /* Live Location Map */
@@ -110,9 +110,19 @@
     background: rgba(5, 150, 105, 0.1);
 }
 
+.map-overlay-btn.satellite-btn:hover {
+    color: #2e0d2a;
+    background: rgba(46, 13, 42, 0.12);
+}
+
+.map-overlay-btn.satellite-btn.active {
+    background: #2e0d2a;
+    color: white;
+}
+
 .map-overlay-btn.fullscreen-btn:hover {
-    color: #dc2626;
-    background: rgba(220, 38, 38, 0.1);
+    color: #2e0d2a;
+    background: rgba(46, 13, 42, 0.12);
 }
 
 .map-overlay-btn.active {
@@ -434,12 +444,12 @@
 }
 
 .btn-sm.btn-primary {
-    background: #2563eb;
+    background: #2e0d2a;
     color: white;
 }
 
 .btn-sm.btn-primary:hover {
-    background: #1d4ed8;
+    background: #4a1547;
 }
 
 .btn-sm.btn-success {
@@ -460,7 +470,7 @@
 }
 
 .progress-btn {
-    background: #6366f1;
+    background: #2e0d2a;
     color: white;
     border: none;
     padding: 0.5rem 1rem;
@@ -474,7 +484,7 @@
 }
 
 .progress-btn:hover {
-    background: #4f46e5;
+    background: #4a1547;
 }
 
 /* Mobile responsive timeline */
@@ -573,7 +583,7 @@ body {
 }
 
 .active-trip-card {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #4a1547 0%, #2e0d2a 100%);
     color: white;
 }
 
@@ -1823,14 +1833,14 @@ input:checked + .toggle-slider:before {
 }
 
 .map-control-btn.btn-primary {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: #2e0d2a;
+    border-color: #2e0d2a;
     color: white;
 }
 
 .map-control-btn.btn-primary:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
+    background: #4a1547;
+    border-color: #4a1547;
 }
 
 .map-control-btn i {
@@ -1880,7 +1890,7 @@ input:checked + .toggle-slider:before {
 }
 
 .fullscreen-map-header {
-    background: #1e293b;
+    background: #2e0d2a;
     color: white;
     padding: 1rem 2rem;
     display: flex;
@@ -1901,7 +1911,7 @@ input:checked + .toggle-slider:before {
 }
 
 .fullscreen-map-title i {
-    color: #3b82f6;
+    color: #e9b4e5;
 }
 
 .fullscreen-map-controls {
@@ -1925,12 +1935,18 @@ input:checked + .toggle-slider:before {
 }
 
 .fullscreen-map-controls .btn-secondary {
-    background: #64748b;
+    background: rgba(255, 255, 255, 0.15);
     color: white;
+    border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .fullscreen-map-controls .btn-secondary:hover {
-    background: #475569;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.fullscreen-map-controls .satellite-btn.active {
+    background: rgba(233, 180, 229, 0.35);
+    border-color: #e9b4e5;
 }
 
 .fullscreen-map-controls .btn-danger {

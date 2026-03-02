@@ -1,5 +1,8 @@
 ﻿
 
+const CACHE_NAME      = 'outlet-manager-v2.0.0';
+const DATA_CACHE_NAME = 'outlet-data-v2.0.0';
+
 self.addEventListener('install', (event) => {
     console.log('[Manager SW] Installing...');
     self.skipWaiting();
@@ -7,7 +10,15 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
     console.log('[Manager SW] Activating...');
-    event.waitUntil(self.clients.claim());
+    // Clear ALL old caches so stale JS/CSS files are evicted immediately
+    event.waitUntil(
+        caches.keys().then(keys =>
+            Promise.all(keys.map(key => {
+                console.log('[Manager SW] Deleting cache:', key);
+                return caches.delete(key);
+            }))
+        ).then(() => self.clients.claim())
+    );
 });
 
 self.addEventListener('push', (event) => {
@@ -85,42 +96,47 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 console.log('[Manager SW] Service Worker loaded - Push notifications ready');
+
+self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
-    
-    
+
     if (request.method !== 'GET') {
         return;
     }
-    
-    
-    if (url.origin !== self.location.origin && 
-        !url.href.includes('fonts.googleapis.com') && 
+
+    if (url.origin !== self.location.origin &&
+        !url.href.includes('fonts.googleapis.com') &&
         !url.href.includes('cdnjs.cloudflare.com') &&
         !url.href.includes('fonts.gstatic.com')) {
         return;
     }
-    
+
     event.respondWith(handleFetch(request));
 });
 
 async function handleFetch(request) {
     const url = new URL(request.url);
-    
+
     try {
-        
+        // Always use network-first for API calls
         if (url.pathname.includes('/api/')) {
             return await networkFirstStrategy(request, DATA_CACHE_NAME);
         }
-        
-        
+
+        // Skip cache for versioned assets (?v=...) — use network directly
+        if (url.search && url.search.includes('v=')) {
+            return await fetch(request);
+        }
+
+        // Cache-first only for truly static assets without version queries
         if (isStaticAsset(url.pathname)) {
             return await cacheFirstStrategy(request, CACHE_NAME);
         }
-        
-        
+
+        // Everything else: network-first
         return await networkFirstStrategy(request, CACHE_NAME);
-        
+
     } catch (error) {
         console.error('[SW] Fetch error:', error);
         

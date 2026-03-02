@@ -540,6 +540,9 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                                 <button type="button" class="map-overlay-btn center-btn" onclick="event.preventDefault(); window.driverDashboard.centerOnDriver(); return false;" title="Center on My Location">
                                     <i class="fas fa-crosshairs"></i>
                                 </button>
+                                <button type="button" class="map-overlay-btn satellite-btn" onclick="event.preventDefault(); window.driverDashboard.toggleSatelliteMode(); return false;" title="Switch to Satellite View">
+                                    <i class="fas fa-satellite"></i>
+                                </button>
                                 <button type="button" class="map-overlay-btn fullscreen-btn" onclick="event.preventDefault(); window.driverDashboard.openFullscreenMap(); return false;" title="View Full Map">
                                     <i class="fas fa-expand"></i>
                                 </button>
@@ -574,6 +577,9 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 <div class="fullscreen-map-controls">
                     <button type="button" id="fullscreenToggleRouteBtn" class="btn-secondary" onclick="event.preventDefault(); window.driverDashboard.toggleRouteStops(); return false;">
                         <i class="fas fa-map-signs"></i> <span>Toggle Route</span>
+                    </button>
+                    <button type="button" id="fullscreenSatelliteBtn" class="btn-secondary satellite-btn" onclick="event.preventDefault(); window.driverDashboard.toggleSatelliteMode(); return false;">
+                        <i class="fas fa-satellite"></i> <span>Satellite</span>
                     </button>
                     <button type="button" id="fullscreenCenterBtn" class="btn-secondary" onclick="event.preventDefault(); window.driverDashboard.centerOnDriver(); return false;">
                         <i class="fas fa-crosshairs"></i> <span>Center</span>
