@@ -748,7 +748,7 @@ if (!$parcel) {
                     <div style="flex: 1; min-width: 250px;">
                         <h3 style="color: white; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px; font-size: 20px;">
                             <i class="fas fa-bell"></i>
-                            <span>Push Notifications</span>
+                            <span>Notifications</span>
                         </h3>
                         <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 14px; line-height: 1.5;">
                             Get instant updates about <strong><?php echo htmlspecialchars($parcel['track_number']); ?></strong> on your phone
@@ -979,7 +979,7 @@ if (!$parcel) {
             const notificationStatus = document.getElementById('notificationStatus');
             
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                updateNotificationStatus('❌ Push notifications are not supported by your browser', '#ef4444');
+                updateNotificationStatus(' notifications are not supported by your browser', '#ef4444');
                 notificationToggle.disabled = true;
                 return;
             }
@@ -996,7 +996,7 @@ if (!$parcel) {
                 
                 if (pushSubscription) {
                     notificationToggle.checked = true;
-                    updateNotificationStatus('✅ Notifications enabled for this parcel', '#10b981');
+                    updateNotificationStatus(' Notifications enabled for this parcel', '#10b981');
                 } else if (Notification.permission === 'granted') {
                     
                     if (notificationEnabled) {
@@ -1004,12 +1004,12 @@ if (!$parcel) {
                         await subscribeToPushNotifications();
                     }
                 } else if (Notification.permission === 'denied') {
-                    updateNotificationStatus('🚫 Notifications blocked. Enable in browser settings.', '#ef4444');
+                    updateNotificationStatus('Notifications blocked. Enable in browser settings.', '#ef4444');
                     notificationToggle.disabled = true;
                 }
             } catch (error) {
                 console.error('Error initializing notifications:', error);
-                updateNotificationStatus('⚠️ Error initializing notifications', '#f59e0b');
+                updateNotificationStatus('Error initializing notifications', '#f59e0b');
             }
             
             notificationToggle.addEventListener('change', async (e) => {

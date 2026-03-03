@@ -537,7 +537,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                                     <i class="fas fa-crosshairs"></i>
                                 </button>
                                 <button type="button" class="map-overlay-btn satellite-btn" onclick="event.preventDefault(); window.driverDashboard.toggleSatelliteMode(); return false;" title="Switch to Satellite View">
-                                    <i class="fas fa-satellite"></i>
+                                    <i class="fas fa-satellite-dish"></i>
                                 </button>
                                 <button type="button" class="map-overlay-btn fullscreen-btn" onclick="event.preventDefault(); window.driverDashboard.openFullscreenMap(); return false;" title="View Full Map">
                                     <i class="fas fa-expand"></i>
@@ -567,6 +567,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         <div class="fullscreen-modal-content">
             <div class="fullscreen-map-header">
                 <h2 class="fullscreen-map-title">
+                    <img src="img/logo.png" alt="WebDev" class="fullscreen-map-logo">
                     <i class="fas fa-map-marked-alt"></i> 
                     Live Route Navigation
                 </h2>
@@ -595,15 +596,15 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 <div id="mapLayerPicker" class="map-layer-picker" style="display:none;">
                     <div class="layer-picker-title">Map Type</div>
                     <div class="layer-picker-options">
-                        <button class="layer-option active" onclick="event.preventDefault(); window.driverDashboard.setMapLayer('street'); return false;" data-layer="street">
+                        <button class="layer-option active" data-map-action="layer-street" data-layer="street">
                             <div class="layer-thumb layer-thumb-street"></div>
                             <span>Map</span>
                         </button>
-                        <button class="layer-option" onclick="event.preventDefault(); window.driverDashboard.setMapLayer('satellite'); return false;" data-layer="satellite">
+                        <button class="layer-option" data-map-action="layer-satellite" data-layer="satellite">
                             <div class="layer-thumb layer-thumb-satellite"></div>
                             <span>Satellite</span>
                         </button>
-                        <button class="layer-option" onclick="event.preventDefault(); window.driverDashboard.setMapLayer('terrain'); return false;" data-layer="terrain">
+                        <button class="layer-option" data-map-action="layer-terrain" data-layer="terrain">
                             <div class="layer-thumb layer-thumb-terrain"></div>
                             <span>Terrain</span>
                         </button>

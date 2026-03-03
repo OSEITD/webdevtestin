@@ -53,7 +53,33 @@ class DriverDashboard {
             // Location tracking will start only when trip is accepted
             this.setupDashboardRefresh(); // Setup auto-refresh
             this.setupFullscreenListener(); // Setup fullscreen change listener
+            this.setupMapControlsDelegation(); // Delegated click handler for all map buttons
         });
+    }
+
+    /**
+     * Delegated click handler for ALL map control buttons.
+     * Lives on document so it works regardless of z-index, Leaflet layers, or DOM re-renders.
+     */
+    setupMapControlsDelegation() {
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-map-action]');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const action = btn.dataset.mapAction;
+            console.log('[MapControl] action:', action);
+            switch (action) {
+                case 'center':        this.centerOnDriver(); break;
+                case 'route-stops':   this.toggleRouteStops(); break;
+                case 'layers':        this.toggleLayerPicker(); break;
+                case 'fit':           this.fitMapToContent(); break;
+                case 'fullscreen':    this.openFullscreenMap(); break;
+                case 'layer-street':  this.setMapLayer('street'); break;
+                case 'layer-satellite': this.setMapLayer('satellite'); break;
+                case 'layer-terrain': this.setMapLayer('terrain'); break;
+            }
+        }, true); // capture phase so it fires before Leaflet sees the event
     }
 
     /**
@@ -1167,40 +1193,40 @@ class DriverDashboard {
                         </div>
                         <div class="trip-map-body">
                             <div id="tripMap" class="trip-map-professional"></div>
-                            <!-- Apple-Maps style layer picker — floats UP over the map when opened -->
+                            <!-- Apple-Maps style layer picker — pure overlay, never intercepts button clicks -->
                             <div class="map-layer-picker" style="display:none;">
                                 <div class="layer-picker-title">Map Type</div>
                                 <div class="layer-picker-options">
-                                    <button class="layer-option active" onclick="event.preventDefault(); event.stopPropagation(); window.driverDashboard.setMapLayer('street'); return false;" data-layer="street">
+                                    <button class="layer-option active" data-map-action="layer-street" data-layer="street">
                                         <div class="layer-thumb layer-thumb-street"></div>
                                         <span>Map</span>
                                     </button>
-                                    <button class="layer-option" onclick="event.preventDefault(); event.stopPropagation(); window.driverDashboard.setMapLayer('satellite'); return false;" data-layer="satellite">
+                                    <button class="layer-option" data-map-action="layer-satellite" data-layer="satellite">
                                         <div class="layer-thumb layer-thumb-satellite"></div>
                                         <span>Satellite</span>
                                     </button>
-                                    <button class="layer-option" onclick="event.preventDefault(); event.stopPropagation(); window.driverDashboard.setMapLayer('terrain'); return false;" data-layer="terrain">
+                                    <button class="layer-option" data-map-action="layer-terrain" data-layer="terrain">
                                         <div class="layer-thumb layer-thumb-terrain"></div>
                                         <span>Terrain</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <!-- Control pill sits BELOW the map — no Leaflet overlap, always clickable -->
-                        <div class="map-controls-professional trip-map-controls-below">
-                            <button class="map-control-btn" onclick="window.driverDashboard?.centerOnDriver()" title="Center on My Location">
+                        <!-- Control buttons OUTSIDE the map so Leaflet never swallows clicks -->
+                        <div class="map-controls-professional trip-map-controls-bar">
+                            <button class="map-control-btn" data-map-action="center" title="Center on My Location">
                                 <i class="fas fa-crosshairs"></i>
                             </button>
-                            <button class="map-control-btn" onclick="window.driverDashboard?.toggleRouteStops()" title="Toggle Route Stops">
+                            <button class="map-control-btn" data-map-action="route-stops" title="Toggle Route Stops">
                                 <i class="fas fa-map-signs"></i>
                             </button>
-                            <button class="map-control-btn" onclick="window.driverDashboard?.toggleLayerPicker()" title="Map Layers">
+                            <button class="map-control-btn" data-map-action="layers" title="Map Layers">
                                 <i class="fas fa-layer-group"></i>
                             </button>
-                            <button class="map-control-btn" onclick="window.driverDashboard?.fitMapToContent()" title="Fit to Content">
+                            <button class="map-control-btn" data-map-action="fit" title="Fit to Content">
                                 <i class="fas fa-expand-arrows-alt"></i>
                             </button>
-                            <button class="map-control-btn fullscreen-btn" onclick="window.driverDashboard?.openFullscreenMap()" title="Fullscreen Map">
+                            <button class="map-control-btn fullscreen-btn" data-map-action="fullscreen" title="Fullscreen Map">
                                 <i class="fas fa-expand"></i>
                             </button>
                         </div>
@@ -2786,6 +2812,20 @@ class DriverDashboard {
         this.startTripMapTracking();
         
         console.log('[DEBUG] Trip map fully initialized');
+        
+        // Prevent Leaflet from swallowing clicks on the overlay controls & layer picker
+        const overlayControls = document.querySelector('.trip-map-controls-overlay');
+        if (overlayControls && L.DomEvent) {
+            L.DomEvent.disableClickPropagation(overlayControls);
+            L.DomEvent.disableScrollPropagation(overlayControls);
+            console.log('[DEBUG] Click propagation disabled on trip-map-controls-overlay');
+        }
+        const embeddedPicker = document.querySelector('.trip-map-body .map-layer-picker');
+        if (embeddedPicker && L.DomEvent) {
+            L.DomEvent.disableClickPropagation(embeddedPicker);
+            L.DomEvent.disableScrollPropagation(embeddedPicker);
+            console.log('[DEBUG] Click propagation disabled on embedded layer picker');
+        }
         
         // Set up interval to check if map container still exists and is visible
         this.mapHealthCheckInterval = setInterval(() => {
@@ -5241,18 +5281,12 @@ class DriverDashboard {
      */
     toggleLayerPicker(forceState) {
         const pickers = document.querySelectorAll('.map-layer-picker');
+        console.log('[LayerPicker] toggle called, pickers found:', pickers.length, 'forceState:', forceState);
         pickers.forEach(picker => {
-            // Skip pickers inside hidden fullscreen modal
-            const inFullscreen = picker.closest('.fullscreen-map-body');
-            if (inFullscreen) {
-                const modal = picker.closest('.fullscreen-modal');
-                if (modal && modal.style.display !== 'flex') return;
-            }
-
-            const show = forceState !== undefined
-                ? forceState
-                : (picker.style.display === 'none' || picker.style.display === '');
+            const isHidden = picker.style.display === 'none' || picker.style.display === '';
+            const show = forceState !== undefined ? Boolean(forceState) : isHidden;
             picker.style.display = show ? 'flex' : 'none';
+            console.log('[LayerPicker] picker', picker.id || '(embedded)', '→', show ? 'shown' : 'hidden');
         });
     }
 

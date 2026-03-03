@@ -41,6 +41,16 @@
         Require all granted
     </Directory>
 </VirtualHost>
+<VirtualHost *:80>
+    ServerName customer.localhost
+    DocumentRoot "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app"
+    <Directory "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+        DirectoryIndex index.php index.html
+    </Directory>
+</VirtualHost>
 
 # Add these to C:\Windows\System32\drivers\etc\hosts (run as administrator):
 # 127.0.0.1 acme.localhost

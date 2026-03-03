@@ -1400,30 +1400,15 @@ body {
     overflow: visible;
 }
 
-/* Control pill below the embedded map — no Leaflet overlap, always clickable */
-.trip-map-controls-below {
-    justify-content: center;
+/* Control bar sits BELOW the map in normal document flow — Leaflet cannot intercept these clicks */
+.trip-map-controls-bar {
     margin-top: 10px;
-    background: rgba(18, 18, 28, 0.82);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 8px 14px;
-    border-radius: 50px;
-    border: 1px solid rgba(255,255,255,0.15);
-    gap: 6px;
-    align-self: center;
-    width: fit-content;
-    margin-left: auto;
-    margin-right: auto;
+    justify-content: center;
 }
 
-/* Layer picker floats UP from the bottom of trip-map-body over the map */
-.trip-map-body {
-    position: relative;
-}
-
+/* Layer picker anchors to the bottom of the map area (inside .trip-map-body) */
 .trip-map-body .map-layer-picker {
-    bottom: 18px;
+    bottom: 14px;
     z-index: 1002;
 }
 
@@ -3346,12 +3331,27 @@ body {
     padding: 1rem;
 }
 
-.fullscreen-btn {
-    background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%) !important;
+/* Fullscreen button — must use double-class specificity to beat .map-overlay-btn */
+.map-overlay-btn.fullscreen-btn {
+    background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
-.fullscreen-btn:hover {
-    background: linear-gradient(135deg, #4A1C40 0%, #2E0D2A 100%) !important;
+.map-overlay-btn.fullscreen-btn i,
+.map-overlay-btn.fullscreen-btn .fas,
+.map-overlay-btn.fullscreen-btn .far,
+.map-overlay-btn.fullscreen-btn .fab {
+    color: #ffffff;
+}
+
+.map-overlay-btn.fullscreen-btn:hover {
+    background: linear-gradient(135deg, #4A1C40 0%, #2E0D2A 100%);
+    color: #ffffff;
+}
+
+.map-overlay-btn.fullscreen-btn:hover i {
+    color: #ffffff;
 }
 
 /* ── Map Overlay Controls ───────────────────────────────────── */
@@ -3437,7 +3437,15 @@ body {
     flex-shrink: 1;  /* allow title to shrink so controls are always visible */
 }
 
-.fullscreen-map-title i { color: #fbbf24; }
+.fullscreen-map-title i { color: #ffffff; }
+
+.fullscreen-map-logo {
+    height: 28px;
+    width: auto;
+    filter: brightness(0) invert(1);   /* force pure white */
+    opacity: 0.92;
+    flex-shrink: 0;
+}
 
 .fullscreen-map-controls {
     display: flex;
