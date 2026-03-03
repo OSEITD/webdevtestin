@@ -1,6 +1,12 @@
 /* Driver Dashboard CSS - Professional Design */
 
 /* Base Styles */
+:root {
+    --accent-blue: #1d4ed8;
+    --accent-blue-strong: #1e3a8a;
+    --accent-blue-soft: #60a5fa;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -64,7 +70,7 @@ body {
 }
 
 .section-title i {
-    color: #3b82f6;
+    color: var(--accent-blue);
 }
 
 /* Dashboard Grid */
@@ -911,26 +917,35 @@ body {
     gap: 8px;
 }
 
+.trip-map-professional .leaflet-top,
+.live-location-map .leaflet-top {
+    top: 70px;
+}
+
+.fullscreen-map .leaflet-top {
+    top: 12px !important;
+}
+
 .map-control-btn {
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    border: 1px solid rgba(29, 78, 216, 0.18);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    color: #374151;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);
+    color: var(--accent-blue);
 }
 
 .map-control-btn:hover {
-    background: white;
+    background: #e8f0ff;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    color: #3b82f6;
+    box-shadow: 0 6px 14px rgba(29, 78, 216, 0.2);
+    color: var(--accent-blue);
 }
 
 .map-control-btn:active {
@@ -1211,7 +1226,7 @@ body {
 }
 
 .trip-badge i {
-    color: #fbbf24;
+    color: var(--accent-blue);
 }
 
 .trip-id {
@@ -1241,7 +1256,7 @@ body {
 }
 
 .trip-info-item i {
-    color: #fbbf24;
+    color: var(--accent-blue);
     font-size: 14px;
     min-width: 16px;
 }
@@ -1329,6 +1344,18 @@ body {
     gap: 0.5rem;
 }
 
+/* GPS stat / route header / action button icons — blue accent */
+.trip-gps-stats .gps-stat-label i,
+.trip-stops-header h4 i,
+.trip-controls-professional .trip-action-btn i {
+    color: var(--accent-blue);
+}
+
+/* map-controls-professional buttons: keep white (they sit on a dark card) */
+.map-controls-professional .map-control-btn i {
+    color: #ffffff;
+}
+
 .map-header .map-title i {
     color: #fbbf24;
 }
@@ -1345,7 +1372,7 @@ body {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #10b981;
+    background: var(--accent-blue);
     animation: pulse 2s infinite;
 }
 
@@ -1363,6 +1390,41 @@ body {
     border: 2px solid rgba(255, 255, 255, 0.2);
     /* Ensure Leaflet map renders properly */
     z-index: 1;
+}
+
+/* Wrapper that holds the trip map + floating layer picker + control pill */
+.trip-map-body {
+    position: relative;
+    /* Ensure the layer picker and controls clip to map bounds visually */
+    border-radius: 12px;
+    overflow: visible;
+}
+
+/* Control pill below the embedded map — no Leaflet overlap, always clickable */
+.trip-map-controls-below {
+    justify-content: center;
+    margin-top: 10px;
+    background: rgba(18, 18, 28, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 8px 14px;
+    border-radius: 50px;
+    border: 1px solid rgba(255,255,255,0.15);
+    gap: 6px;
+    align-self: center;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Layer picker floats UP from the bottom of trip-map-body over the map */
+.trip-map-body {
+    position: relative;
+}
+
+.trip-map-body .map-layer-picker {
+    bottom: 18px;
+    z-index: 1002;
 }
 
 /* Fix for Leaflet map tiles not loading */
@@ -1855,6 +1917,7 @@ body {
 
 .trip-status-badge i {
     font-size: 11px;
+    color: currentColor;
 }
 
 /* Trip Status Colors */
@@ -1871,10 +1934,11 @@ body {
 }
 
 .trip-status-in_transit {
-    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-    color: white;
-    border-color: #D97706;
-    animation: pulse-in-transit 2s infinite;
+    background: #ffffff;
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+    box-shadow: 0 4px 14px rgba(29, 78, 216, 0.15);
+    animation: none;
 }
 
 .trip-status-completed {
@@ -2005,11 +2069,11 @@ body {
 }
 
 .status-timeline-item.active::after {
-    background: #3b82f6;
+    background: var(--accent-blue);
 }
 
 .status-timeline-item.completed::after {
-    background: #22c55e;
+    background: var(--accent-blue);
 }
 
 .timeline-icon {
@@ -2032,14 +2096,15 @@ body {
 }
 
 .timeline-icon.active {
-    background: #3b82f6;
-    color: white;
-    animation: pulse 2s infinite;
+    background: #ffffff;
+    color: var(--accent-blue);
+    border: 2px solid var(--accent-blue);
 }
 
 .timeline-icon.completed {
-    background: #22c55e;
-    color: white;
+    background: #ffffff;
+    color: var(--accent-blue);
+    border: 2px solid var(--accent-blue);
 }
 
 .timeline-label {
@@ -2052,12 +2117,12 @@ body {
 }
 
 .timeline-label.active {
-    color: #3b82f6;
+    color: var(--accent-blue);
     font-weight: 600;
 }
 
 .timeline-label.completed {
-    color: #22c55e;
+    color: var(--accent-blue);
     font-weight: 600;
 }
 
@@ -3296,7 +3361,7 @@ body {
     position: absolute;
     bottom: 12px;
     right: 12px;
-    z-index: 1000;
+    z-index: 1200;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -3305,9 +3370,9 @@ body {
 .map-overlay-btn {
     width: 40px;
     height: 40px;
-    background: #2E0D2A;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
+    background: #ffffff;
+    border: 1px solid rgba(29, 78, 216, 0.18);
+    color: var(--accent-blue);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -3315,17 +3380,18 @@ body {
     cursor: pointer;
     font-size: 15px;
     transition: all 0.2s ease;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 6px 14px rgba(29, 78, 216, 0.2);
 }
 
 .map-overlay-btn:hover {
-    background: #4A1C40;
+    background: #e8f0ff;
     transform: scale(1.08);
 }
 
 .map-overlay-btn.active {
-    background: #4A1C40;
-    border-color: rgba(255, 255, 255, 0.65);
+    background: var(--accent-blue);
+    color: #ffffff;
+    border-color: var(--accent-blue);
 }
 
 /* ── Fullscreen Map Modal ───────────────────────────────────── */
@@ -3365,35 +3431,61 @@ body {
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;  /* allow title to shrink so controls are always visible */
 }
 
 .fullscreen-map-title i { color: #fbbf24; }
 
 .fullscreen-map-controls {
     display: flex;
-    gap: 0.45rem;
-    flex-wrap: wrap;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
     align-items: center;
+    flex-shrink: 0;           /* don't let controls be squeezed by title */
 }
 
-.fullscreen-map-controls .btn-secondary {
+.fullscreen-map-controls .btn-secondary,
+.fullscreen-map-controls .btn-danger {
     background: rgba(255, 255, 255, 0.14);
     border: 1px solid rgba(255, 255, 255, 0.25);
-    padding: 0.38rem 0.7rem;
-    font-size: 0.78rem;
+    padding: 0.45rem 0.55rem;
+    font-size: 0.85rem;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    border-radius: 7px;
+    justify-content: center;
+    border-radius: 8px;
+    flex-shrink: 0;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    min-width: 34px;
+}
+
+/* Hide text labels inside fullscreen header buttons — icons only */
+.fullscreen-map-controls .btn-secondary span,
+.fullscreen-map-controls .btn-danger span {
+    display: none;
 }
 
 .fullscreen-map-controls .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.fullscreen-map-controls .btn-danger {
+    background: rgba(239, 68, 68, 0.7);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.fullscreen-map-controls .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.9);
 }
 
 .fullscreen-map-controls .btn-secondary.active {
-    background: rgba(255, 255, 255, 0.28);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(37, 99, 235, 0.7);
+    border-color: rgba(37, 99, 235, 0.6);
 }
 
 .fullscreen-map {
@@ -3402,7 +3494,159 @@ body {
     min-height: 0;
 }
 
+/* Wrapper that holds both the map and the floating layer picker */
+.fullscreen-map-body {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.fullscreen-map-body .fullscreen-map {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+}
+
+/* ── Apple-Maps style layer picker ───────────────────── */
+.map-layer-picker {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(18, 18, 28, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 18px;
+    padding: 14px 18px 12px;
+    z-index: 99998;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex;           /* toggled via JS */
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    animation: layerPickerIn 0.18s ease-out;
+}
+
+@keyframes layerPickerIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.layer-picker-title {
+    color: rgba(255,255,255,0.55);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.layer-picker-options {
+    display: flex;
+    gap: 14px;
+}
+
+.layer-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.layer-option span {
+    color: rgba(255,255,255,0.8);
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+}
+
+.layer-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    border: 3px solid transparent;
+    transition: border-color 0.18s, transform 0.18s;
+    overflow: hidden;
+}
+
+.layer-option.active .layer-thumb {
+    border-color: #0EA5E9;
+    transform: scale(1.05);
+}
+
+.layer-option:hover .layer-thumb {
+    border-color: rgba(14,165,233,0.6);
+}
+
+.layer-option.active span {
+    color: #0EA5E9;
+    font-weight: 700;
+}
+
+/* Thumbnail visual styles */
+.layer-thumb-street {
+    background:
+        linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px),
+        linear-gradient(135deg, #f0e8d8 0%, #e4d8c0 40%, #d8cbb0 70%, #cfc09e 100%);
+    background-size: 16px 16px, 16px 16px, 100% 100%;
+}
+
+.layer-thumb-satellite {
+    background: linear-gradient(160deg,
+        #0a180a 0%,
+        #1a3a1a 25%,
+        #2a4a2a 45%,
+        #1a2a0a 65%,
+        #0a1a0a 80%,
+        #050e05 100%);
+    position: relative;
+    overflow: hidden;
+}
+.layer-thumb-satellite::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 30px 20px at 20% 70%, rgba(80,130,60,0.5), transparent),
+        radial-gradient(ellipse 20px 15px at 65% 30%, rgba(60,100,40,0.4), transparent),
+        radial-gradient(ellipse 15px 10px at 80% 80%, rgba(50,90,30,0.4), transparent);
+}
+
+.layer-thumb-terrain {
+    background: linear-gradient(160deg,
+        #8aba72 0%,
+        #6a9e55 20%,
+        #bfa060 35%,
+        #9a7840 50%,
+        #6a9e55 65%,
+        #4a7e38 80%,
+        #3a6a28 100%);
+    position: relative;
+    overflow: hidden;
+}
+.layer-thumb-terrain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-linear-gradient(135deg,
+            transparent 0px, transparent 8px,
+            rgba(255,255,255,0.06) 8px, rgba(255,255,255,0.06) 9px);
+}
+
 .fullscreen-map .leaflet-container {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.fullscreen-map-body .fullscreen-map .leaflet-container {
     height: 100% !important;
     width: 100% !important;
 }

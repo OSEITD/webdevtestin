@@ -512,10 +512,6 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             </div>
             <?php endif; ?>
             
-            <div class="dashboard-header">
-                <h1 class="dashboard-title">Driver Dashboard</h1>
-                <p class="welcome-message">Welcome, <?php echo htmlspecialchars($driverName); ?>.</p>
-            </div>
 
             <div class="dashboard-grid">
                 <!-- Active Trip Card -->
@@ -578,8 +574,8 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                     <button type="button" id="fullscreenToggleRouteBtn" class="btn-secondary" onclick="event.preventDefault(); window.driverDashboard.toggleRouteStops(); return false;">
                         <i class="fas fa-map-signs"></i> <span>Toggle Route</span>
                     </button>
-                    <button type="button" id="fullscreenSatelliteBtn" class="btn-secondary satellite-btn" onclick="event.preventDefault(); window.driverDashboard.toggleSatelliteMode(); return false;">
-                        <i class="fas fa-satellite"></i> <span>Satellite</span>
+                    <button type="button" id="fullscreenLayersBtn" class="btn-secondary" onclick="event.preventDefault(); window.driverDashboard.toggleLayerPicker(); return false;" title="Change Map Type">
+                        <i class="fas fa-layer-group"></i> <span>Layers</span>
                     </button>
                     <button type="button" id="fullscreenCenterBtn" class="btn-secondary" onclick="event.preventDefault(); window.driverDashboard.centerOnDriver(); return false;">
                         <i class="fas fa-crosshairs"></i> <span>Center</span>
@@ -592,7 +588,28 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                     </button>
                 </div>
             </div>
-            <div id="fullscreenMap" class="fullscreen-map"></div>
+            <!-- Map area wrapper so layer picker can be positioned inside it -->
+            <div class="fullscreen-map-body">
+                <div id="fullscreenMap" class="fullscreen-map"></div>
+                <!-- Apple-Maps style layer picker -->
+                <div id="mapLayerPicker" class="map-layer-picker" style="display:none;">
+                    <div class="layer-picker-title">Map Type</div>
+                    <div class="layer-picker-options">
+                        <button class="layer-option active" onclick="event.preventDefault(); window.driverDashboard.setMapLayer('street'); return false;" data-layer="street">
+                            <div class="layer-thumb layer-thumb-street"></div>
+                            <span>Map</span>
+                        </button>
+                        <button class="layer-option" onclick="event.preventDefault(); window.driverDashboard.setMapLayer('satellite'); return false;" data-layer="satellite">
+                            <div class="layer-thumb layer-thumb-satellite"></div>
+                            <span>Satellite</span>
+                        </button>
+                        <button class="layer-option" onclick="event.preventDefault(); window.driverDashboard.setMapLayer('terrain'); return false;" data-layer="terrain">
+                            <div class="layer-thumb layer-thumb-terrain"></div>
+                            <span>Terrain</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div class="fullscreen-map-footer">
                 <div class="map-legend">
                     <div class="legend-item">

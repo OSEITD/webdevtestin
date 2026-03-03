@@ -35,6 +35,7 @@ class DriverDashboard {
 
         // Map layer state
         this.isSatelliteMode = false;
+        this.activeMapLayer = 'street'; // 'street' | 'satellite' | 'terrain'
         this.fullscreenMapInstance = null;
         
         // Performance snapshot state preservation
@@ -1164,21 +1165,42 @@ class DriverDashboard {
                                 <span>Live Tracking</span>
                             </div>
                         </div>
-                        <div id="tripMap" class="trip-map-professional"></div>
-                        <div class="map-controls-professional">
+                        <div class="trip-map-body">
+                            <div id="tripMap" class="trip-map-professional"></div>
+                            <!-- Apple-Maps style layer picker — floats UP over the map when opened -->
+                            <div class="map-layer-picker" style="display:none;">
+                                <div class="layer-picker-title">Map Type</div>
+                                <div class="layer-picker-options">
+                                    <button class="layer-option active" onclick="event.preventDefault(); event.stopPropagation(); window.driverDashboard.setMapLayer('street'); return false;" data-layer="street">
+                                        <div class="layer-thumb layer-thumb-street"></div>
+                                        <span>Map</span>
+                                    </button>
+                                    <button class="layer-option" onclick="event.preventDefault(); event.stopPropagation(); window.driverDashboard.setMapLayer('satellite'); return false;" data-layer="satellite">
+                                        <div class="layer-thumb layer-thumb-satellite"></div>
+                                        <span>Satellite</span>
+                                    </button>
+                                    <button class="layer-option" onclick="event.preventDefault(); event.stopPropagation(); window.driverDashboard.setMapLayer('terrain'); return false;" data-layer="terrain">
+                                        <div class="layer-thumb layer-thumb-terrain"></div>
+                                        <span>Terrain</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Control pill sits BELOW the map — no Leaflet overlap, always clickable -->
+                        <div class="map-controls-professional trip-map-controls-below">
                             <button class="map-control-btn" onclick="window.driverDashboard?.centerOnDriver()" title="Center on My Location">
                                 <i class="fas fa-crosshairs"></i>
                             </button>
                             <button class="map-control-btn" onclick="window.driverDashboard?.toggleRouteStops()" title="Toggle Route Stops">
                                 <i class="fas fa-map-signs"></i>
                             </button>
-                            <button class="map-control-btn" onclick="window.driverDashboard?.toggleOutletMarkers()" title="Toggle Outlets">
-                                <i class="fas fa-building"></i>
+                            <button class="map-control-btn" onclick="window.driverDashboard?.toggleLayerPicker()" title="Map Layers">
+                                <i class="fas fa-layer-group"></i>
                             </button>
                             <button class="map-control-btn" onclick="window.driverDashboard?.fitMapToContent()" title="Fit to Content">
                                 <i class="fas fa-expand-arrows-alt"></i>
                             </button>
-                            <button class="map-control-btn fullscreen-btn" onclick="window.driverDashboard?.toggleMapFullscreen()" title="Toggle Fullscreen">
+                            <button class="map-control-btn fullscreen-btn" onclick="window.driverDashboard?.openFullscreenMap()" title="Fullscreen Map">
                                 <i class="fas fa-expand"></i>
                             </button>
                         </div>
@@ -5090,6 +5112,9 @@ class DriverDashboard {
         if (!modal) return;
         modal.style.display = 'none';
         document.body.style.overflow = '';
+        // Close layer picker if open
+        const picker = document.getElementById('mapLayerPicker');
+        if (picker) picker.style.display = 'none';
         if (this.fullscreenMapInstance) {
             this.fullscreenMapInstance.remove();
             this.fullscreenMapInstance = null;
@@ -5169,29 +5194,74 @@ class DriverDashboard {
     }
 
     /**
-     * Toggle between satellite and street map tiles on all active maps
+     * Return an OpenTopoMap terrain tile layer
+     */
+    getTerrainTileLayer() {
+        return L.tileLayer(
+            'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+            {
+                maxZoom: 17,
+                attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Style: &copy; OpenTopoMap'
+            }
+        );
+    }
+
+    /**
+     * Set active map layer type ('street' | 'satellite' | 'terrain')
+     */
+    setMapLayer(type) {
+        this.activeMapLayer = type;
+        this.isSatelliteMode = (type === 'satellite');
+
+        const tileBuilders = {
+            street:    () => this.getStreetTileLayer(),
+            satellite: () => this.getSatelliteTileLayer(),
+            terrain:   () => this.getTerrainTileLayer()
+        };
+        const buildTile = tileBuilders[type] || tileBuilders.street;
+
+        const activeMaps = [this.tripMapInstance, this.mapInstance, this.fullscreenMapInstance].filter(Boolean);
+        activeMaps.forEach(map => {
+            map.eachLayer(layer => { if (layer instanceof L.TileLayer) map.removeLayer(layer); });
+            buildTile().addTo(map);
+        });
+
+        // Sync layer-option active state in picker
+        document.querySelectorAll('.layer-option').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.layer === type);
+        });
+
+        // Close the picker after selection
+        this.toggleLayerPicker(false);
+    }
+
+    /**
+     * Show / hide the Apple-Maps style layer picker panel.
+     * Works for both the embedded trip map and the fullscreen modal.
+     */
+    toggleLayerPicker(forceState) {
+        const pickers = document.querySelectorAll('.map-layer-picker');
+        pickers.forEach(picker => {
+            // Skip pickers inside hidden fullscreen modal
+            const inFullscreen = picker.closest('.fullscreen-map-body');
+            if (inFullscreen) {
+                const modal = picker.closest('.fullscreen-modal');
+                if (modal && modal.style.display !== 'flex') return;
+            }
+
+            const show = forceState !== undefined
+                ? forceState
+                : (picker.style.display === 'none' || picker.style.display === '');
+            picker.style.display = show ? 'flex' : 'none';
+        });
+    }
+
+    /**
+     * Toggle between satellite and street map tiles on all active maps (legacy alias)
      */
     toggleSatelliteMode() {
-        this.isSatelliteMode = !this.isSatelliteMode;
-        const activeMaps = [this.tripMapInstance, this.mapInstance, this.fullscreenMapInstance]
-            .filter(Boolean);
-        activeMaps.forEach(map => {
-            map.eachLayer(layer => {
-                if (layer instanceof L.TileLayer) map.removeLayer(layer);
-            });
-            const newTile = this.isSatelliteMode ? this.getSatelliteTileLayer() : this.getStreetTileLayer();
-            newTile.addTo(map);
-        });
-        // Sync button state across all satellite buttons
-        document.querySelectorAll('.satellite-btn').forEach(btn => {
-            const icon = btn.querySelector('i');
-            if (icon) icon.className = this.isSatelliteMode ? 'fas fa-map' : 'fas fa-satellite';
-            const label = btn.querySelector('span');
-            if (label) label.textContent = this.isSatelliteMode ? 'Street' : 'Satellite';
-            btn.title = this.isSatelliteMode ? 'Switch to Street View' : 'Switch to Satellite View';
-            if (this.isSatelliteMode) btn.classList.add('active');
-            else btn.classList.remove('active');
-        });
+        const next = this.isSatelliteMode ? 'street' : 'satellite';
+        this.setMapLayer(next);
     }
 }
 

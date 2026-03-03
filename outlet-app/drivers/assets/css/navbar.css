@@ -49,7 +49,12 @@ body {
 .topbar-logo {
     height: 35px;
     width: auto;
-    filter: brightness(0) invert(1);
+    /*
+     * Normalise any source colour to black (brightness(0)),
+     * then rotate/shift to exactly #0EA5E9 (sky blue)
+     */
+    filter: brightness(0) saturate(100%) invert(46%) sepia(96%) saturate(550%) hue-rotate(168deg) brightness(105%) contrast(97%);
+    transition: filter 0.2s ease;
 }
 
 .topbar-center {
