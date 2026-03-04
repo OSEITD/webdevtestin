@@ -896,13 +896,20 @@ function validateForm() {
         // A trip is selected - verify it's compatible with destination
         const selectedOption = tripSelect.options[tripSelect.selectedIndex];
         const tripDestination = selectedOption.getAttribute('data-destination');
-        const destinationName = destinationSelect.options[destinationSelect.selectedIndex]?.text;
+        // Outlet select text may include location suffix "OutletZero - Ndeke Inn"; use only the name part.
+        const destinationFullText = destinationSelect.options[destinationSelect.selectedIndex]?.text || '';
+        const destinationName = destinationFullText.split(' - ')[0].trim();
         
-        // Check if trip includes this destination
+        // Check if trip includes this destination (case-insensitive, partial-match)
         const intermediateStops = JSON.parse(selectedOption.getAttribute('data-intermediate-stops') || '[]');
-        const allStops = [selectedOption.getAttribute('data-origin'), ...intermediateStops, tripDestination];
+        const allStops = [
+            selectedOption.getAttribute('data-origin'),
+            ...intermediateStops,
+            tripDestination
+        ].map(s => (s || '').trim().toLowerCase());
+        const destLower = destinationName.toLowerCase();
         
-        if (!allStops.includes(destinationName)) {
+        if (!allStops.some(s => s === destLower || s.startsWith(destLower) || destLower.startsWith(s))) {
             showError('⚠️ The selected trip does not go to the selected destination outlet. Please choose a different trip or destination.');
             tripSelect.classList.add('error');
             isValid = false;

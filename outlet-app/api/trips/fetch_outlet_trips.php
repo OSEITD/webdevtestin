@@ -406,10 +406,14 @@ try {
     }
 
     
+    // Sort: in_transit / at_outlet (ongoing) trips first, then the rest by created_at desc
     usort($enrichedTrips, function($a, $b) {
-        $timeA = strtotime($a['departure_time'] ?? '1970-01-01');
-        $timeB = strtotime($b['departure_time'] ?? '1970-01-01');
-        return $timeB - $timeA;
+        $ongoingStatuses = ['in_transit', 'at_outlet'];
+        $aOngoing = in_array($a['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
+        $bOngoing = in_array($b['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
+        if ($aOngoing !== $bOngoing) return $aOngoing - $bOngoing;
+        // Within each group: newest created_at first
+        return strtotime($b['created_at'] ?? '1970-01-01') - strtotime($a['created_at'] ?? '1970-01-01');
     });
 
     

@@ -32,12 +32,12 @@ try {
     $trackingNumber = $input['tracking_number'];
     $userRole = $input['user_role'] ?? 'customer';
 
-    $config = require __DIR__ . '/../../outlet-app/config.php';
-    $supabaseUrl = $config['supabase']['url'];
-    $supabaseKey = $config['supabase']['service_role_key'];
+    require_once __DIR__ . '/../includes/config.php';
+    $supabaseUrl = SUPABASE_URL;
+    $supabaseKey = SUPABASE_SERVICE_ROLE_KEY;
 
     if (!$supabaseUrl || !$supabaseKey) {
-        throw new Exception('Supabase configuration missing');
+        throw new Exception('Supabase configuration missing. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in .env');
     }
 
     session_start();

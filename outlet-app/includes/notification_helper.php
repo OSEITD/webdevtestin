@@ -218,8 +218,27 @@ class NotificationHelper {
         
         $response = $this->makeSupabaseRequest($url, 'POST', $notificationData);
         
+        $dbSuccess = $response['status_code'] >= 200 && $response['status_code'] < 300;
+        
+        // Also send a real-time Web Push via the unified dispatcher
+        if ($dbSuccess && !empty($data['recipient_id']) && !empty($data['company_id'])) {
+            try {
+                $dispatcherFile = __DIR__ . '/../../shared/NotificationDispatcher.php';
+                if (file_exists($dispatcherFile)) {
+                    require_once $dispatcherFile;
+                    $dispatcher = new \NotificationDispatcher();
+                    $dispatcher->send(array_merge($data, [
+                        'notification_type' => $data['notification_type'] ?? 'system_alert',
+                        'push_only' => true, // DB record already created above
+                    ]));
+                }
+            } catch (\Exception $e) {
+                error_log('[NotificationHelper] Push bridge failed: ' . $e->getMessage());
+            }
+        }
+        
         return [
-            'success' => $response['status_code'] >= 200 && $response['status_code'] < 300,
+            'success' => $dbSuccess,
             'data' => $response['data'],
             'status_code' => $response['status_code']
         ];

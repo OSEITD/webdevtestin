@@ -72,8 +72,59 @@ try {
         }
     }
     
-    $destination_outlet = $parcel['outlets'] ?? null;
-    
+    // Fetch destination outlet details
+    $destination_outlet = null;
+    if (!empty($parcel['destination_outlet_id'])) {
+        try {
+            $outlet_res = $supabase
+                ->from('outlets')
+                ->select('outlet_name,address,latitude,longitude,contact_phone')
+                ->eq('id', $parcel['destination_outlet_id'])
+                ->execute();
+            $destination_outlet = $outlet_res->data[0] ?? null;
+        } catch (Exception $e) {
+            error_log('customer_tracking: outlet fetch failed: ' . $e->getMessage());
+        }
+    }
+
+    // Fetch the driver's latest GPS location (only when parcel is actively moving)
+    $driver_location = null;
+    $show_driver_info = false;
+    $active_statuses = ['assigned', 'in_transit'];
+    if (!empty($parcel['driver_id']) && in_array($parcel['status'], $active_statuses)) {
+        try {
+            // Resolve trip_id for the most accurate location
+            $driver_res = $supabase
+                ->from('drivers')
+                ->select('current_trip_id,driver_name,driver_phone')
+                ->eq('id', $parcel['driver_id'])
+                ->execute();
+            $driver_row = $driver_res->data[0] ?? null;
+            $active_trip_id = $driver_row['current_trip_id'] ?? null;
+
+            $loc_query = $supabase->from('driver_locations')
+                ->select('latitude,longitude,accuracy,speed,heading,timestamp')
+                ->eq('driver_id', $parcel['driver_id']);
+            if ($active_trip_id) {
+                $loc_query = $loc_query->eq('trip_id', $active_trip_id);
+            }
+            $loc_res = $loc_query
+                ->order('timestamp', ['ascending' => false])
+                ->limit(1)
+                ->execute();
+
+            if (!empty($loc_res->data)) {
+                $driver_location = $loc_res->data[0];
+                $show_driver_info = true;
+            } elseif ($driver_row) {
+                // No GPS yet but driver is assigned — still allow map to show
+                $show_driver_info = true;
+            }
+        } catch (Exception $e) {
+            error_log('customer_tracking: driver location fetch failed: ' . $e->getMessage());
+        }
+    }
+
     $tracking_status = [
         'pending' => [
             'label' => 'Pending Pickup',
@@ -131,9 +182,9 @@ try {
             'is_in_transit' => $is_in_transit
         ],
         'destination' => null,
-        'driver_location' => null,
-        'tracking_visible' => false, // Disabled until driver location query is fixed
-        'show_driver_info' => false
+        'driver_location' => $driver_location,
+        'tracking_visible' => true,
+        'show_driver_info' => $show_driver_info
     ];
     
     if ($destination_outlet) {
@@ -175,7 +226,7 @@ try {
     echo json_encode($response);
     
 } catch (Exception $e) {
-    error_log("❌ Error in customer_tracking: " . $e->getMessage());
+    error_log(" Error in customer_tracking: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,

@@ -600,7 +600,8 @@ try {
         'special_instructions' => $input['specialInstructions'] ?? null,
         'photo_urls' => $photoUrls,
         
-        'payment_status' => (isset($input['paymentMethod']) && in_array($input['paymentMethod'], ['cash', 'cod'])) ? 'paid' : 'pending',
+        // COD means payment is collected at delivery — not paid yet
+        'payment_status' => (isset($input['paymentMethod']) && $input['paymentMethod'] === 'cash') ? 'paid' : 'pending',
     ];
 
     // Parse dimensions from JSON string (sent as {"L":x,"W":y,"H":z} from frontend)
@@ -759,7 +760,11 @@ try {
         
         $tripStops = $tripHelper->get('trip_stops', 'trip_id=eq.' . urlencode($tripId) . '&outlet_id=eq.' . urlencode($destinationOutletId));
         
-        if (empty($tripStops)) {
+        // Also accept if destination matches the trip's final destination_outlet_id even when not listed as a trip_stop
+        $tripFinalDestId = $tripData[0]['destination_outlet_id'] ?? null;
+        $destinationMatchesTripFinal = (!empty($tripFinalDestId) && $tripFinalDestId == $destinationOutletId);
+        
+        if (empty($tripStops) && !$destinationMatchesTripFinal) {
             
             error_log("INFO: Trip $tripId does not include destination outlet $destinationOutletId - trip assignment skipped");
             

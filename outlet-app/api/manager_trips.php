@@ -205,7 +205,26 @@ try {
     }
     
     error_log("Built stops map with " . count($tripStopsMap) . " trip entries");
-    
+
+    // Batch-fetch parcel counts per trip from parcel_list
+    $parcelCountByTrip = [];
+    if (!empty($tripIds)) {
+        $tripIdsForParcels = implode(',', $tripIds);
+        $parcelListData = $supabase->get(
+            'parcel_list',
+            "trip_id=in.($tripIdsForParcels)&company_id=eq.$companyId&select=trip_id"
+        );
+        if (is_array($parcelListData)) {
+            foreach ($parcelListData as $pl) {
+                $tid = $pl['trip_id'] ?? null;
+                if ($tid) {
+                    $parcelCountByTrip[$tid] = ($parcelCountByTrip[$tid] ?? 0) + 1;
+                }
+            }
+        }
+    }
+    error_log("Parcel counts fetched for " . count($parcelCountByTrip) . " trips");
+
     $formattedTrips = [];
     
     foreach ($trips as $trip) {
@@ -268,13 +287,20 @@ try {
             'manager_verified_at' => $trip['manager_verified_at'] ?? null,
             // OPTIMIZATION: Include stops data to avoid separate API calls
             'stops' => $tripStopsMap[$trip['id']] ?? [],
-            'stop_count' => count($tripStopsMap[$trip['id']] ?? [])
+            'stop_count' => count($tripStopsMap[$trip['id']] ?? []),
+            'parcel_count' => $parcelCountByTrip[$trip['id']] ?? 0
         ];
     }
     
     
+    // Sort: in_transit / at_outlet (ongoing) trips first, then the rest by created_at desc
     usort($formattedTrips, function($a, $b) {
-        return strtotime($b['created_at']) - strtotime($a['created_at']);
+        $ongoingStatuses = ['in_transit', 'at_outlet'];
+        $aOngoing = in_array($a['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
+        $bOngoing = in_array($b['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
+        if ($aOngoing !== $bOngoing) return $aOngoing - $bOngoing;
+        // Within each group: newest created_at first
+        return strtotime($b['created_at'] ?? '1970-01-01') - strtotime($a['created_at'] ?? '1970-01-01');
     });
     
     $awaitingVerificationCount = count(array_filter($formattedTrips, fn($t) => $t['driver_completed'] && !$t['manager_verified']));

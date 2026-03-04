@@ -16,27 +16,60 @@ $customerRole = $trackingData['customer_role'] ?? 'unknown';
 $companyName = $trackingData['company'] ?? null;
 
 if (!empty($parcel['id'])) {
-    $supabaseUrl = SUPABASE_URL;
-    $supabaseKey = SUPABASE_SERVICE_ROLE_KEY;
-    
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => [
-                "apikey: $supabaseKey",
-                "Authorization: Bearer $supabaseKey"
-            ]
-        ]
-    ]);
-    
-    $url = "$supabaseUrl/rest/v1/parcels?id=eq.{$parcel['id']}&select=status";
-    $response = @file_get_contents($url, false, $context);
-    if ($response) {
-        $data = json_decode($response, true);
-        if (!empty($data[0]['status'])) {
-            $parcel['status'] = $data[0]['status'];
-            $_SESSION['verified_tracking_data']['parcel']['status'] = $data[0]['status'];
+    // Use the supabase.php client (has hardcoded fallback key — never silently fails on empty env)
+    require_once __DIR__ . '/includes/supabase.php';
+    $liveClient = getSupabaseClient();
+
+    // Refresh status, delivery_date, delivered_at on every page load
+    try {
+        $liveResult = $liveClient->from('parcels')
+            ->select('status,delivery_date,delivered_at')
+            ->eq('id', $parcel['id'])
+            ->execute();
+        $row = $liveResult->data[0] ?? null;
+        if (!empty($row)) {
+            if (!empty($row['status'])) {
+                $parcel['status'] = $row['status'];
+                $_SESSION['verified_tracking_data']['parcel']['status'] = $row['status'];
+            }
+            if (!empty($row['delivery_date'])) {
+                $parcel['delivery_date'] = $row['delivery_date'];
+                $_SESSION['verified_tracking_data']['parcel']['delivery_date'] = $row['delivery_date'];
+            }
+            if (!empty($row['delivered_at'])) {
+                $parcel['delivered_at'] = $row['delivered_at'];
+                $_SESSION['verified_tracking_data']['parcel']['delivered_at'] = $row['delivered_at'];
+            }
         }
+    } catch (Exception $e) {
+        error_log('track_details: status refresh failed: ' . $e->getMessage());
+    }
+
+    // Refresh delivery_events so the timeline stays current
+    try {
+        $eventsResult = $liveClient->from('delivery_events')
+            ->select('*')
+            ->eq('shipment_id', $parcel['id'])
+            ->order('event_timestamp', ['ascending' => false])
+            ->execute();
+        $eventsData = $eventsResult->data ?? [];
+        if (is_array($eventsData)) {
+            $normalised = [];
+            foreach ($eventsData as $ev) {
+                $normalised[] = [
+                    'status'    => $ev['status'] ?? $ev['event_type'] ?? 'update',
+                    'timestamp' => $ev['event_timestamp'] ?? $ev['timestamp'] ?? $ev['created_at'] ?? null,
+                    'location'  => $ev['location'] ?? null,
+                    'notes'     => $ev['notes'] ?? $ev['description'] ?? null,
+                ];
+            }
+            if (!empty($normalised)) {
+                $parcel['delivery_events'] = $normalised;
+                $_SESSION['verified_tracking_data']['parcel']['delivery_events'] = $normalised;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('track_details: delivery_events refresh failed: ' . $e->getMessage());
     }
 }
 
@@ -395,9 +428,24 @@ if (!$parcel) {
                 <div class="tracking-number">
                     <?php echo htmlspecialchars($parcel['track_number']); ?>
                 </div>
+                <?php
+                $statusLabels = [
+                    'pending'          => 'Pending',
+                    'assigned'         => 'Assigned to Trip',
+                    'in_transit'       => 'In Transit',
+                    'at_outlet'        => 'Ready for Pickup',
+                    'completed'        => 'Delivered',
+                    'delivered'        => 'Delivered',
+                    'cancelled'        => 'Cancelled',
+                    'out_for_delivery' => 'Out for Delivery',
+                ];
+                $rawStatus   = $parcel['status'] ?? 'unknown';
+                $statusLabel = $statusLabels[$rawStatus] ?? ucwords(str_replace('_', ' ', $rawStatus));
+                $statusClass = 'status-' . strtolower(str_replace([' ', '_'], '-', $rawStatus));
+                ?>
                 <div class="status-display">
-                    <span class="status-badge status-<?php echo strtolower(str_replace([' ', '_'], '-', $parcel['status'] ?? 'default')); ?>">
-                        <?php echo ucwords(str_replace('_', ' ', $parcel['status'] ?? 'Unknown')); ?>
+                    <span class="status-badge <?php echo htmlspecialchars($statusClass); ?>">
+                        <?php echo htmlspecialchars($statusLabel); ?>
                     </span>
                     <?php if (!empty($parcel['delivery_date'])): ?>
                         <span class="text-success">
@@ -442,8 +490,15 @@ if (!$parcel) {
                                     <i class="fas fa-circle"></i>
                                 </div>
                                 <div class="timeline-content">
-                                    <div class="timeline-status"><?php echo ucwords(str_replace('_', ' ', $event['status'])); ?></div>
-                                    <div class="timeline-date"><?php echo isset($event['timestamp']) ? date('M j, Y g:i A', strtotime($event['timestamp'])) : 'No timestamp'; ?></div>
+                                    <?php
+                                    $evStatus = $event['status'] ?? 'update';
+                                    $evLabel  = $statusLabels[$evStatus] ?? ucwords(str_replace('_', ' ', $evStatus));
+                                    ?>
+                                    <div class="timeline-status"><?php echo htmlspecialchars($evLabel); ?></div>
+                                    <?php if (!empty($event['notes'])): ?>
+                                        <div class="timeline-notes" style="font-size:0.82rem;color:var(--text-light);margin-top:2px;"><?php echo htmlspecialchars($event['notes']); ?></div>
+                                    <?php endif; ?>
+                                    <div class="timeline-date"><?php echo !empty($event['timestamp']) ? date('M j, Y g:i A', strtotime($event['timestamp'])) : 'No timestamp'; ?></div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -790,6 +845,12 @@ if (!$parcel) {
                 }
             } elseif (!empty($parcel['driver_info']['gps_available']) && $parcel['driver_info']['gps_available']) {
                 $showGPSButton = true;
+            } elseif (in_array(($parcel['status'] ?? ''), ['in_transit', 'assigned'])) {
+              
+                $showGPSButton = true;
+                $gpsButtonText = ($parcel['status'] ?? '') === 'assigned'
+                    ? ' Track Driver'
+                    : ' Live GPS Tracking';
             }
             ?>
             
@@ -1000,7 +1061,7 @@ if (!$parcel) {
                 } else if (Notification.permission === 'granted') {
                     
                     if (notificationEnabled) {
-                        // Auto-subscribe if user enabled it on tracking page
+                    
                         await subscribeToPushNotifications();
                     }
                 } else if (Notification.permission === 'denied') {
@@ -1063,9 +1124,9 @@ if (!$parcel) {
                 
                 if (result.success) {
                     notificationToggle.checked = true;
-                    updateNotificationStatus('✅ Notifications enabled! You\'ll receive updates about this parcel.', '#10b981');
+                    updateNotificationStatus(' Notifications enabled! You\'ll receive updates about this parcel.', '#10b981');
                     
-                    new Notification('🔔 Notifications Enabled!', {
+                    new Notification(' Notifications Enabled!', {
                         body: `You'll receive updates about parcel ${TRACKING_NUMBER}`,
                         icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📦</text></svg>',
                         tag: 'subscription-success'
@@ -1087,10 +1148,10 @@ if (!$parcel) {
                     await pushSubscription.unsubscribe();
                     pushSubscription = null;
                 }
-                updateNotificationStatus('🔕 Notifications disabled', '#94a3b8');
+                updateNotificationStatus(' Notifications disabled', '#94a3b8');
             } catch (error) {
                 console.error('Unsubscribe error:', error);
-                updateNotificationStatus('⚠️ Error unsubscribing', '#f59e0b');
+                updateNotificationStatus(' Error unsubscribing', '#f59e0b');
             }
         }
         

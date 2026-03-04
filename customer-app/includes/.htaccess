@@ -1,0 +1,4 @@
+# Deny all direct HTTP access to the includes directory.
+# These files are server-side only and must never be served directly.
+Order deny,allow
+Deny from all

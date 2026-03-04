@@ -240,8 +240,9 @@ class SecureParcelTracker {
             $driverData = $response[0] ?? null;
             
             if ($driverData) {
-                // Checking for recent GPS location to determine if GPS tracking is available
-                $driverData['gps_available'] = $this->checkGPSAvailability($driverId);
+                $gpsStatus = $this->getDetailedGPSStatus($driverId);
+                $driverData['gps_status']    = $gpsStatus;
+                $driverData['gps_available'] = in_array($gpsStatus['status'], ['live', 'recent', 'stale']);
             }
             
             return $driverData;
@@ -251,41 +252,44 @@ class SecureParcelTracker {
             return null;
         }
     }
-    
-    private function checkGPSAvailability($driverId) {
+
+    private function getDetailedGPSStatus($driverId) {
         try {
             if (empty($driverId)) {
-                return false;
+                return ['status' => 'no_data', 'message' => 'No GPS data available', 'available' => false];
             }
-            
-        
+
             $params = [
                 'driver_id' => 'eq.' . $driverId,
-                'timestamp' => 'gte.' . date('c', strtotime('-24 hours')),
-                'select' => 'id',
-                'limit' => '1'
+                'select'    => 'timestamp',
+                'order'     => 'timestamp.desc',
+                'limit'     => '1'
             ];
-            
             $response = $this->callSupabase('driver_locations', 'GET', $params);
-            
-            
+
             if (empty($response)) {
-                // Checking if driver exists in drivers table
-                $driverParams = [
-                    'id' => 'eq.' . $driverId,
-                    'select' => 'id',
-                    'limit' => '1'
-                ];
-                $driverResponse = $this->callSupabase('drivers', 'GET', $driverParams);
-                return !empty($driverResponse); 
+                return ['status' => 'no_data', 'message' => 'No GPS data available', 'available' => false];
             }
-            
-            return !empty($response);
-            
+
+            $lastTs      = $response[0]['timestamp'];
+            $ageMinutes  = (int) round((time() - strtotime($lastTs)) / 60);
+
+            if ($ageMinutes <= 5) {
+                return ['status' => 'live',     'message' => 'Live GPS – updated ' . $ageMinutes . ' min ago', 'available' => true,  'age_minutes' => $ageMinutes];
+            } elseif ($ageMinutes <= 30) {
+                return ['status' => 'recent',   'message' => 'Recent location – ' . $ageMinutes . ' min ago',   'available' => true,  'age_minutes' => $ageMinutes];
+            } elseif ($ageMinutes <= 120) {
+                return ['status' => 'stale',    'message' => 'Location from ' . $ageMinutes . ' min ago',        'available' => true,  'age_minutes' => $ageMinutes];
+            } elseif ($ageMinutes <= 1440) {
+                $hours = round($ageMinutes / 60, 1);
+                return ['status' => 'very_old', 'message' => 'Last seen ' . $hours . ' h ago',                  'available' => false, 'age_minutes' => $ageMinutes];
+            } else {
+                return ['status' => 'very_old', 'message' => 'GPS data older than 24 h',                        'available' => false, 'age_minutes' => $ageMinutes];
+            }
+
         } catch (Exception $e) {
-            error_log("Error checking GPS availability: " . $e->getMessage());
-            
-            return true;
+            error_log("Error getting detailed GPS status: " . $e->getMessage());
+            return ['status' => 'error', 'message' => 'GPS status unavailable', 'available' => false];
         }
     }
     
@@ -323,7 +327,7 @@ class SecureParcelTracker {
         $phone = preg_replace('/[^0-9]/', '', $phone);
         
         if (strlen($phone) === 9 && substr($phone, 0, 1) === '9') {
-            $phone = '260' . $phone; //  country code
+            $phone = '260' . $phone; 
         } elseif (strlen($phone) === 10 && substr($phone, 0, 2) === '09') {
             $phone = '260' . substr($phone, 1); 
         } elseif (strlen($phone) === 12 && substr($phone, 0, 3) === '260') {
@@ -398,11 +402,14 @@ class SecureParcelTracker {
         // Driver information (limited for security)
         if ($parcel['driver_details']) {
             $baseData['driver_info'] = [
-                'driver_name' => $parcel['driver_details']['driver_name'] ?? $parcel['driver_details']['name'] ?? null,
-                'driver_phone' => $parcel['driver_details']['driver_phone'] ?? $parcel['driver_details']['phone'] ?? null,
+                'driver_name'      => $parcel['driver_details']['driver_name']  ?? $parcel['driver_details']['name']  ?? null,
+                'driver_phone'     => !empty($parcel['driver_details']['driver_phone'])
+                                        ? (string)$parcel['driver_details']['driver_phone']
+                                        : null,
                 'current_location' => $parcel['driver_details']['current_location'] ?? null,
-                'status' => $parcel['driver_details']['status'] ?? null,
-                'gps_available' => $parcel['driver_details']['gps_available'] ?? false
+                'status'           => $parcel['driver_details']['status'] ?? null,
+                'gps_available'    => $parcel['driver_details']['gps_available'] ?? false,
+                'gps_status'       => $parcel['driver_details']['gps_status']    ?? null,
             ];
         }
         
@@ -416,7 +423,7 @@ class SecureParcelTracker {
             ];
         }
         
-        // Always include global customer details for proper name display
+     
         if ($parcel['global_sender_details']) {
             $baseData['global_sender_details'] = [
                 'full_name' => $parcel['global_sender_details']['full_name'] ?? null,
@@ -435,7 +442,7 @@ class SecureParcelTracker {
             ];
         }
         
-        // Role-specific customer details (backward compatibility)
+        // Role-specific customer details 
         if ($customerRole === 'sender' && $parcel['global_receiver_details']) {
             $baseData['receiver_details'] = [
                 'full_name' => $parcel['global_receiver_details']['full_name'],

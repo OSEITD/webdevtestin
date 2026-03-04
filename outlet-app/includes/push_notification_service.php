@@ -48,6 +48,19 @@ class PushNotificationService {
         }
     }
     
+    /**
+     * Send a push notification to any user by their user_id.
+     * Queries push_subscriptions for sender/receiver/customer roles.
+     */
+    public function sendToUser($userId, $title, $body, $data = array()) {
+        // Build a parcel-like array so we can reuse sendToCustomer logic
+        $parcel = [
+            'global_receiver_id' => $userId,
+            'track_number' => $data['track_number'] ?? ''
+        ];
+        return $this->sendToCustomer($parcel, $title, $body, $data);
+    }
+
     public function sendToDriver($driverId, $title, $body, $data = array()) {
         if ($this->webPush === null) {
             error_log("WebPush not initialized - skipping push notification for driver: $driverId");
@@ -685,6 +698,10 @@ class PushNotificationService {
     }
     
     private function sendToCustomer($parcel, $title, $body, $data = array()) {
+        if ($this->webPush === null) {
+            error_log("WebPush not initialized - skipping push notification for customer parcel: " . ($parcel['track_number'] ?? 'unknown'));
+            return array('success' => false, 'message' => 'Push notifications disabled');
+        }
         try {
             
             $subscriptions = $this->getCustomerSubscriptions($parcel);

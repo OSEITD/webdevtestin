@@ -396,6 +396,15 @@
             transform: scale(1.05);
         }
 
+        .zoom-button.active {
+            background: #000;
+            color: white;
+        }
+
+        .zoom-button.active:hover {
+            background: #333;
+        }
+
         
         .loading-overlay {
             position: fixed;
@@ -560,6 +569,9 @@
         <button class="zoom-button" id="centerMap" title="Center on vehicle">
             <i class="fas fa-crosshairs"></i>
         </button>
+        <button class="zoom-button" id="satelliteToggle" title="Toggle satellite view">
+            <i class="fas fa-satellite"></i>
+        </button>
     </div>
 
     
@@ -656,6 +668,9 @@
                 this.parcelId = new URLSearchParams(window.location.search).get('parcel_id');
                 this.refreshInterval = null;
                 this.isMinimized = false;
+                this.isSatellite = false;
+                this.streetLayer = null;
+                this.satelliteLayer = null;
                 this.init();
             }
             async init() {
@@ -673,9 +688,18 @@
                     zoomControl: false,
                     attributionControl: false
                 }).setView([-15.3875, 28.3228], 12);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+
+                this.streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     maxZoom: 19
-                }).addTo(this.map);
+                });
+
+                this.satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri'
+                });
+
+                this.streetLayer.addTo(this.map);
+
                 L.control.attribution({
                     position: 'bottomleft',
                     prefix: false
@@ -685,6 +709,9 @@
                 document.getElementById('zoomIn').addEventListener('click', () => {
                     this.map.zoomIn();
                 });
+                document.getElementById('zoomOut').addEventListener('click', () => {
+                    this.map.zoomOut();
+                });
                 document.getElementById('centerMap').addEventListener('click', () => {
                     if (this.vehicleMarker) {
                         this.map.setView(this.vehicleMarker.getLatLng(), 15, {
@@ -692,6 +719,9 @@
                             duration: 0.5
                         });
                     }
+                });
+                document.getElementById('satelliteToggle').addEventListener('click', () => {
+                    this.toggleSatellite();
                 });
                 const dragHandle = document.getElementById('dragHandle');
                 const infoCard = document.getElementById('infoCard');
@@ -817,17 +847,21 @@
                     document.getElementById('distanceRemaining').textContent = 
                         `${Math.round(data.route_data.distance_remaining || 0)} km`;
                 }
-                if (data.current_location?.timestamp) {
-                    try {
-                        const timestamp = new Date(data.current_location.timestamp);
-                        document.getElementById('lastUpdate').textContent = timestamp.toLocaleTimeString();
-                    } catch (e) {
-                        document.getElementById('lastUpdate').textContent = 'Just now';
-                    }
-                }
                 let mapData = { ...data };
                 if (data.driver_location) {
                     mapData.current_location = data.driver_location;
+                }
+
+                const locationData = mapData.current_location;
+                if (locationData?.timestamp) {
+                    try {
+                        const timestamp  = new Date(locationData.timestamp);
+                        const minutesAgo = Math.floor((Date.now() - timestamp.getTime()) / 60000);
+                        document.getElementById('lastUpdate').textContent =
+                            minutesAgo < 1 ? 'Just now' : minutesAgo + ' min ago';
+                    } catch (e) {
+                        document.getElementById('lastUpdate').textContent = 'Just now';
+                    }
                 }
                 if (
                     mapData.current_location &&
@@ -872,11 +906,18 @@
                 currentLat = parseFloat(data.current_location.latitude);
                 currentLng = parseFloat(data.current_location.longitude);
                 try {
+                    const heading = parseFloat(data.current_location.heading) || 0;
+                    const rotateStyle = `transform: rotate(${heading}deg);`;
                     if (this.vehicleMarker) {
                         this.vehicleMarker.setLatLng([currentLat, currentLng]);
+                        const el = this.vehicleMarker.getElement();
+                        if (el) {
+                            const inner = el.querySelector('.vehicle-marker');
+                            if (inner) inner.style.cssText += rotateStyle;
+                        }
                     } else {
                         const vehicleIcon = L.divIcon({
-                            html: `<div class="custom-marker vehicle-marker">
+                            html: `<div class="custom-marker vehicle-marker" style="${rotateStyle}">
                                 <i class="fas fa-truck" style="font-size: 18px;"></i>
                             </div>`,
                             className: '',
@@ -1021,6 +1062,19 @@
                 } else {
                     this.map.setView([currentLat, currentLng], 14);
                 }
+            }
+            toggleSatellite() {
+                const btn = document.getElementById('satelliteToggle');
+                if (this.isSatellite) {
+                    this.map.removeLayer(this.satelliteLayer);
+                    this.streetLayer.addTo(this.map);
+                    btn.classList.remove('active');
+                } else {
+                    this.map.removeLayer(this.streetLayer);
+                    this.satelliteLayer.addTo(this.map);
+                    btn.classList.add('active');
+                }
+                this.isSatellite = !this.isSatellite;
             }
             showError(message) {
                 const errorEl = document.getElementById('errorMessage');

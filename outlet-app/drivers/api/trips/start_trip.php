@@ -70,8 +70,52 @@ try {
         
         require_once '../../../includes/MultiTenantSupabaseHelper.php';
         $bgSupabase = new MultiTenantSupabaseHelper($bgCompanyId);
-        
-        
+
+        // --- Parcel status updates ---
+        // Fetch parcel_list entries for this trip
+        $bgNow = date('Y-m-d H:i:s');
+        $parcelList = $bgSupabase->get('parcel_list', 'trip_id=eq.' . urlencode($bgTripId), 'id,parcel_id');
+        $parcelIds  = array_values(array_filter(array_column($parcelList ?? [], 'parcel_id')));
+
+        // Update all parcel_list entries to in_transit (at_outlet not valid in parcel_list constraint)
+        if (!empty($parcelList)) {
+            $bgSupabase->put('parcel_list?trip_id=eq.' . urlencode($bgTripId), ['status' => 'in_transit', 'updated_at' => $bgNow]);
+        }
+
+        if (!empty($parcelIds)) {
+            // All parcels start as in_transit when trip begins.
+            // at_outlet is set by arrive_at_stop.php when driver physically arrives.
+            $idsStr = implode(',', array_map('urlencode', $parcelIds));
+            $bgSupabase->put('parcels?id=in.(' . $idsStr . ')', ['status' => 'in_transit', 'updated_at' => $bgNow]);
+        }
+        // --- End parcel status updates ---
+
+        // Update vehicle → out_for_delivery
+        if (!empty($bgTripData['vehicle_id'])) {
+            try {
+                $bgSupabase->put('vehicle?id=eq.' . urlencode($bgTripData['vehicle_id']), [
+                    'status'     => 'out_for_delivery',
+                    'updated_at' => $bgNow
+                ]);
+            } catch (Exception $e) {
+                error_log('BG: Failed to update vehicle: ' . $e->getMessage());
+            }
+        }
+
+        // Update driver → unavailable
+        $bgDriverUserId = $bgTripData['driver_id'] ?? null;
+        if (!empty($bgDriverUserId)) {
+            try {
+                $bgSupabase->put('drivers?id=eq.' . urlencode($bgDriverUserId), [
+                    'status'          => 'unavailable',
+                    'current_trip_id' => $bgTripId,
+                    'updated_at'      => $bgNow
+                ]);
+            } catch (Exception $e) {
+                error_log('BG: Failed to update driver status: ' . $e->getMessage());
+            }
+        }
+
         $originOutlet = $bgSupabase->get('outlets', "id=eq.{$bgTripData['origin_outlet_id']}", 'outlet_name');
         $destOutlet = $bgSupabase->get('outlets', "id=eq.{$bgTripData['destination_outlet_id']}", 'outlet_name');
         

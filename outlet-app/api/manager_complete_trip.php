@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once '../includes/supabase.php';
+require_once '../includes/OutletAwareSupabaseHelper.php';
 require_once '../includes/push_notification_service.php';
 
 try {
@@ -37,7 +37,7 @@ try {
         throw new Exception('Trip ID is required');
     }
 
-    $supabase = new SupabaseHelper();
+    $supabase = new OutletAwareSupabaseHelper();
 
     
     $trip = $supabase->get('trips', "id=eq.$tripId&company_id=eq.$companyId", '*');
@@ -54,21 +54,73 @@ try {
     }
 
     
-    $updateData = json_encode([
-        'trip_status' => 'completed',
-        'arrival_time' => date('Y-m-d H:i:s'),
-        'updated_at' => date('Y-m-d H:i:s')
-    ]);
+    $now = date('Y-m-d H:i:s');
 
-    $updateResult = $supabase->update('trips', "id=eq.$tripId", $updateData);
+    // Fix: correct arg order — update($table, $data_array, $filter_string)
+    $updateResult = $supabase->update('trips', [
+        'trip_status' => 'completed',
+        'arrival_time' => $now,
+        'updated_at'   => $now
+    ], "id=eq.$tripId");
 
     if (!$updateResult) {
         throw new Exception('Failed to complete trip');
     }
 
-    
-    $parcelUpdate = json_encode(['status' => 'delivered']);
-    $supabase->update('parcel_list', "trip_id=eq.$tripId", $parcelUpdate);
+    // Update parcel_list → completed
+    $supabase->update('parcel_list', ['status' => 'completed', 'updated_at' => $now], "trip_id=eq.$tripId");
+
+    // Update parcels → delivered
+    $parcelListItems = $supabase->get('parcel_list', "trip_id=eq.$tripId", 'parcel_id');
+    $completedParcelIds = array_values(array_filter(array_column($parcelListItems ?? [], 'parcel_id')));
+    if (!empty($completedParcelIds)) {
+        $pIdsStr = implode(',', array_map('urlencode', $completedParcelIds));
+        $supabase->update('parcels', [
+            'status'        => 'delivered',
+            'updated_at'    => $now,
+            'delivered_at'  => $now,
+            'delivery_date' => date('Y-m-d')
+        ], 'id=in.(' . $pIdsStr . ')');
+    }
+
+    // Update driver → available
+    if (!empty($tripData['driver_id'])) {
+        $supabase->update('drivers', [
+            'status'          => 'available',
+            'current_trip_id' => null,
+            'updated_at'      => $now
+        ], 'id=eq.' . urlencode($tripData['driver_id']));
+    }
+
+    // Update vehicle → available
+    if (!empty($tripData['vehicle_id'])) {
+        $supabase->update('vehicle', [
+            'status'     => 'available',
+            'updated_at' => $now
+        ], 'id=eq.' . urlencode($tripData['vehicle_id']));
+    }
+
+    // Update driver_qps
+    if (!empty($tripData['driver_id'])) {
+        $today = date('Y-m-d');
+        $parcelsHandledCount = count($completedParcelIds);
+        $existingQps = $supabase->get('driver_qps', "driver_id=eq.{$tripData['driver_id']}&date=eq.$today");
+        if (!empty($existingQps)) {
+            $supabase->update('driver_qps', [
+                'trips_completed' => ($existingQps[0]['trips_completed'] ?? 0) + 1,
+                'parcels_handled' => ($existingQps[0]['parcels_handled'] ?? 0) + $parcelsHandledCount,
+                'updated_at'      => $now
+            ], "driver_id=eq.{$tripData['driver_id']}&date=eq.$today");
+        } else {
+            $supabase->insert('driver_qps', [
+                'driver_id'        => $tripData['driver_id'],
+                'company_id'       => $companyId,
+                'date'             => $today,
+                'trips_completed'  => 1,
+                'parcels_handled'  => $parcelsHandledCount
+            ]);
+        }
+    }
     
     
     $outletIds = array_unique(array_filter([$tripData['origin_outlet_id'], $tripData['destination_outlet_id']]));

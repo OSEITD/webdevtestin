@@ -795,6 +795,40 @@ textarea.error {
     color: white;
 }
 
+/* ---------- Trip Assignment – white-card overrides (dark text on white bg) ---------- */
+.trip-assignment-container .trip-info {
+    background: var(--gray-50) !important;
+    border-color: var(--gray-200) !important;
+    backdrop-filter: none !important;
+}
+.trip-assignment-container .trip-info h4 {
+    color: #000 !important;
+    border-bottom-color: var(--gray-200) !important;
+}
+.trip-assignment-container .detail-row {
+    background: white !important;
+    border: 1px solid var(--gray-100) !important;
+}
+.trip-assignment-container .detail-row .label {
+    color: var(--gray-500) !important;
+}
+.trip-assignment-container .detail-row .value {
+    color: #000 !important;
+}
+.trip-assignment-container .trip-selector .form-help {
+    color: var(--gray-600) !important;
+}
+.trip-assignment-container .trip-instruction-message {
+    background: var(--gray-50) !important;
+    border-color: var(--gray-300) !important;
+    color: var(--gray-700) !important;
+}
+.trip-assignment-container .trip-instruction-message i,
+.trip-assignment-container .trip-instruction-message p {
+    color: var(--gray-700) !important;
+    opacity: 1 !important;
+}
+
 .status-badge {
     display: inline-block;
     padding: var(--space-1) var(--space-3);

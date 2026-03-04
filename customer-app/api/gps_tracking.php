@@ -36,7 +36,7 @@ class GPSTracker {
         }
         
         try {
-            $query = $this->supabase->from($table);
+            $query = $this->supabase->table($table);
             
             if ($method === 'GET') {
                 if (isset($params['select'])) {
@@ -115,7 +115,7 @@ class GPSTracker {
                
                 $driverParams = [
                     'id' => 'eq.' . $parcel['driver_id'],
-                    'select' => 'current_trip_id'
+                    'select' => 'current_trip_id,driver_name,driver_phone,status'
                 ];
                 $driverData = $this->callSupabase('drivers', 'GET', $driverParams);
                 if (!empty($driverData) && !empty($driverData[0]['current_trip_id'])) {
@@ -198,16 +198,47 @@ class GPSTracker {
                 error_log('Error fetching stops/outlets: ' . $e->getMessage());
             }
 
+            // Calculate distance remaining and progress percentage
+            $distanceRemaining = null;
+            $progressPct = null;
+            if ($origin && $destination &&
+                !empty($origin['latitude']) && !empty($origin['longitude']) &&
+                !empty($destination['latitude']) && !empty($destination['longitude']) &&
+                !empty($driverLocation['latitude']) && !empty($driverLocation['longitude'])) {
+                $totalDist = $this->calculateDistance(
+                    $origin['latitude'], $origin['longitude'],
+                    $destination['latitude'], $destination['longitude']
+                );
+                $distFromOrigin = $this->calculateDistance(
+                    $origin['latitude'], $origin['longitude'],
+                    $driverLocation['latitude'], $driverLocation['longitude']
+                );
+                $distToDestination = $this->calculateDistance(
+                    $driverLocation['latitude'], $driverLocation['longitude'],
+                    $destination['latitude'], $destination['longitude']
+                );
+                $distanceRemaining = round($distToDestination, 2);
+                $progressPct = $totalDist > 0
+                    ? round(min(100, ($distFromOrigin / $totalDist) * 100), 2)
+                    : 0;
+            }
+
             return [
                 'success' => true,
                 'tracking_available' => true,
-                'parcel' => $parcel,
+                'parcel' => array_merge($parcel, [
+                    'driver_name'  => !empty($driverData[0]['driver_name'])  ? $driverData[0]['driver_name']       : null,
+                    'driver_phone' => !empty($driverData[0]['driver_phone']) ? (string)$driverData[0]['driver_phone'] : null,
+                    'driver_status'=> !empty($driverData[0]['status'])       ? $driverData[0]['status']             : null,
+                ]),
                 'driver_location' => $driverLocation,
                 'route_data' => [
-                    'origin' => $origin,
-                    'destination' => $destination,
-                    'stops' => $stops,
-                    'trip_status' => $tripStatus
+                    'origin'              => $origin,
+                    'destination'         => $destination,
+                    'stops'               => $stops,
+                    'trip_status'         => $tripStatus,
+                    'distance_remaining'  => $distanceRemaining,
+                    'progress_percentage' => $progressPct,
                 ]
             ];
 
@@ -332,7 +363,7 @@ class GPSTracker {
     
     
     private function isWithinZambia($latitude, $longitude) {
-        // Zambian boundaries (approximate)
+        // Zambian boundaries 
         $zambianBounds = [
             'north' => -8.2,    // Northern border
             'south' => -18.1,   // Southern border  

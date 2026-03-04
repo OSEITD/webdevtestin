@@ -1,5 +1,4 @@
 
-// Install event
 self.addEventListener('install', function(event) {
     console.log('[Customer SW] Installing...');
     self.skipWaiting();
@@ -78,7 +77,7 @@ self.addEventListener('notificationclick', function(event) {
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            // Checking if tracking page is already open
+          
             for (const client of clientList) {
                 if (client.url.includes('track_parcel') && 'focus' in client) {
                     return client.focus().then(() => {

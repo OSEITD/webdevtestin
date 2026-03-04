@@ -145,38 +145,118 @@ try {
         throw new Exception('Failed to update trip stop arrival time');
     }
     
+    // === Parcel status updates on arrival at stop ===
+    // 1. Get parcels linked by trip_stop_id
     $parcelList = $supabase->get(
         'parcel_list',
         'trip_stop_id=eq.' . urlencode($stopId),
         'id,parcel_id,status'
     );
+
+    // 2. Also find parcels on this trip whose destination matches this stop's outlet
+    //    (covers parcels without an explicit trip_stop_id)
+    $extraParcels = [];
+    if ($outletId) {
+        $allTripParcels = $supabase->get(
+            'parcel_list',
+            'trip_id=eq.' . urlencode($tripId) . '&status=in.(pending,assigned,in_transit)',
+            'id,parcel_id,status'
+        );
+        if (!empty($allTripParcels)) {
+            $existingIds = array_column($parcelList ?? [], 'id');
+            $candidateParcelIds = array_values(array_filter(
+                array_column($allTripParcels, 'parcel_id')
+            ));
+            if (!empty($candidateParcelIds)) {
+                $pIdsStr = implode(',', array_map('urlencode', $candidateParcelIds));
+                $parcelsWithDest = $supabase->get(
+                    'parcels',
+                    'id=in.(' . $pIdsStr . ')&destination_outlet_id=eq.' . urlencode($outletId),
+                    'id'
+                );
+                $matchingParcelIds = array_column($parcelsWithDest ?? [], 'id');
+                if (!empty($matchingParcelIds)) {
+                    foreach ($allTripParcels as $pl) {
+                        if (!in_array($pl['id'], $existingIds) && in_array($pl['parcel_id'], $matchingParcelIds)) {
+                            $extraParcels[] = $pl;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Merge both sets
+    $allParcelListItems = array_merge($parcelList ?? [], $extraParcels);
+
     $deliverableStatuses = ['pending', 'assigned', 'in_transit'];
-    $parcelListItems = array_filter($parcelList ?? [], function ($item) use ($deliverableStatuses) {
+    $parcelListItems = array_filter($allParcelListItems, function ($item) use ($deliverableStatuses) {
         return isset($item['status']) && in_array($item['status'], $deliverableStatuses, true);
     });
     $updatedParcelListIds = [];
     $parcelIds = [];
-    
+    $destinationMatchedParcelIds = []; // parcels that reached their final destination
+
     if (!empty($parcelListItems)) {
         $parcelListIds = array_column($parcelListItems, 'id');
-        $parcelIds = array_filter(array_column($parcelListItems, 'parcel_id'));
-        
+        $parcelIds = array_values(array_filter(array_column($parcelListItems, 'parcel_id')));
+
+        // Update parcel_list → 'completed' (at_outlet violates CHECK constraint)
         if (!empty($parcelListIds)) {
             $listIdsStr = implode(',', array_map('urlencode', $parcelListIds));
             $supabase->update('parcel_list', [
-                'status' => 'at_outlet',
+                'status' => 'completed',
                 'updated_at' => $currentTime
             ], 'id=in.(' . $listIdsStr . ')');
             $updatedParcelListIds = $parcelListIds;
         }
     }
-    
+
+    // Update parcels table: at_outlet for those whose destination matches this outlet,
+    // otherwise just mark at_outlet for all (driver arrived at this stop)
     if (!empty($parcelIds)) {
-        $parcelIdsStr = implode(',', array_map('urlencode', $parcelIds));
-        $supabase->update('parcels', [
-            'status' => 'at_outlet',
-            'updated_at' => $currentTime
-        ], 'id=in.(' . $parcelIdsStr . ')');
+        if ($outletId) {
+            // Check which parcels have this outlet as their final destination
+            $parcelIdsStr = implode(',', array_map('urlencode', $parcelIds));
+            $parcelsDetail = $supabase->get(
+                'parcels',
+                'id=in.(' . $parcelIdsStr . ')',
+                'id,destination_outlet_id'
+            );
+            $atDestIds = [];
+            $transitIds = [];
+            foreach ($parcelsDetail ?? [] as $pd) {
+                if (!empty($pd['destination_outlet_id']) && $pd['destination_outlet_id'] === $outletId) {
+                    $atDestIds[] = $pd['id'];
+                } else {
+                    $transitIds[] = $pd['id'];
+                }
+            }
+            // Parcels that reached their destination → at_outlet + record for notification
+            if (!empty($atDestIds)) {
+                $ids = implode(',', array_map('urlencode', $atDestIds));
+                $supabase->update('parcels', [
+                    'status' => 'at_outlet',
+                    'updated_at' => $currentTime
+                ], 'id=in.(' . $ids . ')');
+                $destinationMatchedParcelIds = $atDestIds;
+            }
+            // Parcels still in transit (passing through) → keep in_transit
+            if (!empty($transitIds)) {
+                $ids = implode(',', array_map('urlencode', $transitIds));
+                $supabase->update('parcels', [
+                    'status' => 'in_transit',
+                    'updated_at' => $currentTime
+                ], 'id=in.(' . $ids . ')');
+            }
+        } else {
+            $parcelIdsStr = implode(',', array_map('urlencode', $parcelIds));
+            $supabase->update('parcels', [
+                'status' => 'at_outlet',
+                'updated_at' => $currentTime
+            ], 'id=in.(' . $parcelIdsStr . ')');
+            $destinationMatchedParcelIds = $parcelIds;
+        }
     }
     
     if (isset($input['latitude'], $input['longitude']) && $input['latitude'] !== '' && $input['longitude'] !== '') {
@@ -231,6 +311,7 @@ try {
     $bgStopId = $stopId;
     $bgOutletId = $outletId;
     $bgParcelIds = $parcelIds;
+    $bgDestMatchedIds = $destinationMatchedParcelIds;
     $bgCurrentTime = $currentTime;
     $bgSupabase = new OutletAwareSupabaseHelper();
     
@@ -312,9 +393,100 @@ try {
             if (!empty($tripData)) {
                 $pushService->sendTripArrivedAtOutletNotification($bgTripId, $bgOutletId, $tripData[0]);
             }
+
+            // === Push notifications for parcels that reached their destination ===
+            if (!empty($bgDestMatchedIds)) {
+                error_log('BG: Sending destination-arrival push for ' . count($bgDestMatchedIds) . ' parcel(s): ' . implode(',', $bgDestMatchedIds));
+                $destIdsStr = implode(',', array_map('urlencode', $bgDestMatchedIds));
+                $destParcels = $bgSupabase->get(
+                    'parcels',
+                    'id=in.(' . $destIdsStr . ')',
+                    'id,track_number,receiver_name,receiver_phone,global_receiver_id,global_sender_id,sender_name,destination_outlet_id'
+                );
+
+                foreach ($destParcels ?? [] as $dp) {
+                    $trackNum = $dp['track_number'] ?? '';
+
+                    // Notify receiver
+                    if (!empty($dp['global_receiver_id'])) {
+                        try {
+                            $bgSupabase->insert('notifications', [
+                                'company_id' => $bgCompanyId,
+                                'outlet_id' => $bgOutletId,
+                                'recipient_id' => $dp['global_receiver_id'],
+                                'sender_id' => $bgDriverId,
+                                'title' => '📦 Parcel Ready for Pickup',
+                                'message' => 'Your parcel (' . $trackNum . ') has arrived at ' . $outletName . ' and is ready for collection.',
+                                'notification_type' => 'parcel_status_change',
+                                'parcel_id' => $dp['id'],
+                                'priority' => 'high',
+                                'status' => 'unread',
+                                'data' => json_encode([
+                                    'track_number' => $trackNum,
+                                    'status' => 'at_outlet',
+                                    'outlet_name' => $outletName,
+                                    'outlet_id' => $bgOutletId,
+                                    'arrival_time' => $bgCurrentTime,
+                                    'action' => 'parcel_arrived_destination'
+                                ]),
+                                'created_at' => $bgCurrentTime
+                            ]);
+                            // Also send push to receiver device
+                            $pushService->sendToUser($dp['global_receiver_id'], '📦 Parcel Ready for Pickup',
+                                'Your parcel (' . $trackNum . ') has arrived at ' . $outletName . ' and is ready for collection.', [
+                                    'type' => 'parcel_arrived_destination',
+                                    'parcel_id' => $dp['id'],
+                                    'track_number' => $trackNum,
+                                    'outlet_name' => $outletName
+                                ]);
+                        } catch (Exception $e) {
+                            error_log('BG: Failed to notify receiver for parcel ' . $dp['id'] . ': ' . $e->getMessage());
+                        }
+                    }
+
+                    // Notify sender
+                    if (!empty($dp['global_sender_id'])) {
+                        try {
+                            $bgSupabase->insert('notifications', [
+                                'company_id' => $bgCompanyId,
+                                'outlet_id' => $bgOutletId,
+                                'recipient_id' => $dp['global_sender_id'],
+                                'sender_id' => $bgDriverId,
+                                'title' => '✅ Parcel Delivered to Destination',
+                                'message' => 'Your parcel (' . $trackNum . ') has been delivered to ' . $outletName . '.',
+                                'notification_type' => 'delivery_completed',
+                                'parcel_id' => $dp['id'],
+                                'priority' => 'medium',
+                                'status' => 'unread',
+                                'data' => json_encode([
+                                    'track_number' => $trackNum,
+                                    'status' => 'at_outlet',
+                                    'outlet_name' => $outletName,
+                                    'outlet_id' => $bgOutletId,
+                                    'arrival_time' => $bgCurrentTime,
+                                    'action' => 'parcel_arrived_destination'
+                                ]),
+                                'created_at' => $bgCurrentTime
+                            ]);
+                            // Also send push to sender device
+                            $pushService->sendToUser($dp['global_sender_id'], '✅ Parcel Delivered to Destination',
+                                'Your parcel (' . $trackNum . ') has been delivered to ' . $outletName . '.', [
+                                    'type' => 'parcel_arrived_destination',
+                                    'parcel_id' => $dp['id'],
+                                    'track_number' => $trackNum,
+                                    'outlet_name' => $outletName
+                                ]);
+                        } catch (Exception $e) {
+                            error_log('BG: Failed to notify sender for parcel ' . $dp['id'] . ': ' . $e->getMessage());
+                        }
+                    }
+                }
+            } else {
+                error_log('BG: No destination-matched parcels at outlet ' . $bgOutletId . ' (trip ' . $bgTripId . ') — skipping destination push notifications');
+            }
         }
-    } catch (Exception $bgException) {
-        error_log('Background notification error: ' . $bgException->getMessage());
+    } catch (\Throwable $bgException) {
+        error_log('Background notification error: ' . $bgException->getMessage() . ' in ' . $bgException->getFile() . ':' . $bgException->getLine());
     }
     
     // Clean up any background output

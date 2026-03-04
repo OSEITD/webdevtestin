@@ -102,17 +102,47 @@ try {
     try {
         $bgSupabase = new OutletAwareSupabaseHelper();
         
-        // Background Task 1: Update driver status
+        // Background Task 1: Update driver → available
         try {
             $bgSupabase->update('drivers', 
-                [
-                    'status' => 'available',
-                    'current_trip_id' => null
-                ],
+                ['status' => 'available', 'current_trip_id' => null, 'updated_at' => $bgCurrentTime],
                 "id=eq.$bgDriverId"
             );
         } catch (Exception $e) {
             error_log("BG: Failed to update driver: " . $e->getMessage());
+        }
+
+        // Background Task 1b: Update vehicle → available
+        if (!empty($bgTrip['vehicle_id'])) {
+            try {
+                $bgSupabase->update('vehicle',
+                    ['status' => 'available', 'updated_at' => $bgCurrentTime],
+                    'id=eq.' . urlencode($bgTrip['vehicle_id'])
+                );
+            } catch (Exception $e) {
+                error_log("BG: Failed to update vehicle: " . $e->getMessage());
+            }
+        }
+
+        // Background Task 1c: Update parcel_list → completed, parcels → delivered
+        try {
+            $bgSupabase->update('parcel_list',
+                ['status' => 'completed', 'updated_at' => $bgCurrentTime],
+                "trip_id=eq.$bgTripId"
+            );
+            $bgParcelListItems = $bgSupabase->get('parcel_list', "trip_id=eq.$bgTripId", 'parcel_id');
+            $bgParcelIds = array_values(array_filter(array_column($bgParcelListItems ?? [], 'parcel_id')));
+            if (!empty($bgParcelIds)) {
+                $pIdsStr = implode(',', array_map('urlencode', $bgParcelIds));
+                $bgSupabase->update('parcels', [
+                    'status'        => 'delivered',
+                    'updated_at'    => $bgCurrentTime,
+                    'delivered_at'  => $bgCurrentTime,
+                    'delivery_date' => date('Y-m-d')
+                ], 'id=in.(' . $pIdsStr . ')');
+            }
+        } catch (Exception $e) {
+            error_log("BG: Failed to update parcel statuses on complete: " . $e->getMessage());
         }
         
         // Background Task 2: Update QPS stats

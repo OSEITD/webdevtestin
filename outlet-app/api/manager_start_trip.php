@@ -83,16 +83,23 @@ try {
         throw new Exception('Failed to update trip status');
     }
 
-    
+
+    // Update parcel statuses when trip starts:
+    // - parcel_list: all set to in_transit (at_outlet not in parcel_list constraint)
+    // - parcels: in_transit by default; at_outlet if destination matches a trip stop
     try {
-        $parcelList = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($tripId) . '&select=parcel_id');
-        $parcelIds = array_values(array_filter(array_map(function($p){ return $p['parcel_id'] ?? null; }, $parcelList)));
-        
+        // Fetch parcel_list entries
+        $parcelList = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($tripId), 'id,parcel_id');
+        $parcelIds = array_values(array_filter(array_column($parcelList ?? [], 'parcel_id')));
+
+        // Update all parcel_list entries to in_transit
         if (!empty($parcelList)) {
             $supabase->update('parcel_list', ['status' => 'in_transit', 'updated_at' => $now], 'trip_id=eq.' . urlencode($tripId));
         }
-        
+
         if (!empty($parcelIds)) {
+            // All parcels start as in_transit when trip begins.
+            // at_outlet is set by arrive_at_stop.php when driver physically arrives.
             $idsStr = implode(',', array_map('urlencode', $parcelIds));
             $supabase->update('parcels', ['status' => 'in_transit', 'updated_at' => $now], 'id=in.(' . $idsStr . ')');
         }
@@ -100,25 +107,67 @@ try {
         error_log('Manager start trip parcel update failed: ' . $e->getMessage());
     }
 
-    
+    // Update vehicle → out_for_delivery
+    if (!empty($tripData['vehicle_id'])) {
+        try {
+            $supabase->update('vehicle', [
+                'status'     => 'out_for_delivery',
+                'updated_at' => $now
+            ], 'id=eq.' . urlencode($tripData['vehicle_id']));
+        } catch (Exception $e) {
+            error_log('Failed to update vehicle status on trip start: ' . $e->getMessage());
+        }
+    }
+
+    // Update driver → unavailable
+    if (!empty($tripData['driver_id'])) {
+        try {
+            $supabase->update('drivers', [
+                'status'          => 'unavailable',
+                'current_trip_id' => $tripId,
+                'updated_at'      => $now
+            ], 'id=eq.' . urlencode($tripData['driver_id']));
+        } catch (Exception $e) {
+            error_log('Failed to update driver status on trip start: ' . $e->getMessage());
+        }
+    }
+
     try {
         $push = new PushNotificationService($supabase);
-        
-        // Send notification to driver
+
+        // Enrich tripData with outlet names and parcel IDs for sendTripStartedNotification
+        $originOutletData = $supabase->get('outlets', 'id=eq.' . urlencode($tripData['origin_outlet_id']), 'outlet_name');
+        $destOutletData   = $supabase->get('outlets', 'id=eq.' . urlencode($tripData['destination_outlet_id']), 'outlet_name');
+        $tripData['origin_outlet_name']      = !empty($originOutletData) ? $originOutletData[0]['outlet_name'] : 'Origin';
+        $tripData['destination_outlet_name'] = !empty($destOutletData)   ? $destOutletData[0]['outlet_name']   : 'Destination';
+
+        $parcelListForNotif = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($tripId), 'parcel_id');
+        $tripData['parcel_ids'] = array_values(array_filter(array_column($parcelListForNotif ?? [], 'parcel_id')));
+
+        // 1. Notify driver
         if (!empty($tripData['driver_id'])) {
             error_log("Sending trip started notification to driver: {$tripData['driver_id']}");
-            $push->sendToDriver($tripData['driver_id'], '🚗 Trip Started', 'The trip has been started by the outlet manager.', ['trip_id' => $tripId, 'action' => 'trip_started']);
+            $push->sendToDriver(
+                $tripData['driver_id'],
+                '🚗 Trip Started',
+                'Your trip from ' . $tripData['origin_outlet_name'] . ' to ' . $tripData['destination_outlet_name'] . ' has been started.',
+                ['trip_id' => $tripId, 'action' => 'trip_started', 'url' => '/outlet-app/drivers/dashboard.php']
+            );
         }
-        
-        // Send notification to ALL outlets in the route (origin, destination, and stops)
+
+        // 2. Notify manager + customers via sendTripStartedNotification
+        error_log("Sending trip started notification (manager + customers) for trip: $tripId");
+        $push->sendTripStartedNotification($tripId, $tripData);
+
+        // 3. Notify all outlet staff along the route
         error_log("Sending trip started notifications to all outlets in route for trip: $tripId");
-        $push->sendToAllOutletsInRoute($tripId, '🚗 Trip Started', "Trip has started and is now in transit", [
-            'trip_id' => $tripId,
-            'action' => 'trip_started',
-            'url' => '/outlet-app/pages/manager_trips.php',
-            'type' => 'parcel_status_change'
+        $push->sendToAllOutletsInRoute($tripId, '🚗 Trip Started', 'Trip has started and is now in transit', [
+            'trip_id'  => $tripId,
+            'action'   => 'trip_started',
+            'url'      => '/outlet-app/pages/manager_trips.php',
+            'type'     => 'parcel_status_change'
         ]);
-        
+
     } catch (Exception $e) {
         error_log('Push notification failed: ' . $e->getMessage());
     }

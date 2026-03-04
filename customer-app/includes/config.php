@@ -20,7 +20,7 @@ if (!defined('CONFIG_LOADED')) {
         }
     }
 
-    define('SUPABASE_URL', getenv('SUPABASE_URL') ?: 'https://xerpchdsykqafrsxbqef.supabase.co');
+    define('SUPABASE_URL', getenv('SUPABASE_URL') ?: '');
     define('SUPABASE_ANON_KEY', getenv('SUPABASE_ANON_KEY') ?: '');
     define('SUPABASE_SERVICE_ROLE_KEY', getenv('SUPABASE_SERVICE_ROLE_KEY') ?: '');
 
