@@ -38,8 +38,10 @@ header("Expires: 0");
 function tripIncludesOutlet($tripId, $companyId, $outletId) {
     if (!$outletId) return true; 
 
-    $supabaseUrl = "https://xerpchdsykqafrsxbqef.supabase.co";
-    $supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+    if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+    EnvLoader::load();
+    $supabaseUrl = getenv('SUPABASE_URL');
+    $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 
     try {
         
@@ -91,8 +93,10 @@ function tripIncludesOutlet($tripId, $companyId, $outletId) {
 }
 
 function getTripRouteDetails($tripId, $companyId) {
-    $supabaseUrl = "https://xerpchdsykqafrsxbqef.supabase.co";
-    $supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+    if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+    EnvLoader::load();
+    $supabaseUrl = getenv('SUPABASE_URL');
+    $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
     
     $defaultResponse = [
         'route_description' => "Trip " . substr($tripId, 0, 8) . " - No route info",
@@ -255,8 +259,10 @@ try {
     
     
     if (empty($trips)) {
-        $supabaseUrl = "https://xerpchdsykqafrsxbqef.supabase.co";
-        $supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+        if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+        EnvLoader::load();
+        $supabaseUrl = getenv('SUPABASE_URL');
+        $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
         
         
         $queryParams = [
@@ -497,8 +503,9 @@ try {
         
         
         if (!empty($tripIds)) {
-            $supabaseUrl = "https://xerpchdsykqafrsxbqef.supabase.co";
-            $supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+            // Credentials loaded from env (already initialized above)
+            $supabaseUrl = getenv('SUPABASE_URL');
+            $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
             
             $tripIdsStr = implode(',', $tripIds);
             $stopsUrl = $supabaseUrl . "/rest/v1/trip_stops?trip_id=in.($tripIdsStr)&company_id=eq.$companyId&order=stop_order.asc&select=trip_id,outlet_id,stop_order";

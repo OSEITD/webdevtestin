@@ -47,7 +47,7 @@ require_once '../includes/company_helper.php';
 
 $companyInfo = null;
 if (isset($_SESSION['company_id']) && !empty($_SESSION['company_id'])) {
-    $supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
+    $supabaseUrl = getenv('SUPABASE_URL');
     $accessToken = $_SESSION['access_token'] ?? '';
     $companyInfo = getCompanyInfo($_SESSION['company_id'], $supabaseUrl, $accessToken);
 }

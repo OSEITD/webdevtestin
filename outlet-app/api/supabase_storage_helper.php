@@ -1,9 +1,19 @@
 <?php
 
 class SupabaseStorageHelper {
-    private $supabaseUrl = "https://xerpchdsykqafrsxbqef.supabase.co";
-    private $supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+    private $supabaseUrl;
+    private $supabaseKey;
     private $bucket = "parcel_photos";
+
+    public function __construct() {
+        if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../includes/env.php'; }
+        EnvLoader::load();
+        $this->supabaseUrl = getenv('SUPABASE_URL');
+        $this->supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
+        if (empty($this->supabaseUrl) || empty($this->supabaseKey)) {
+            throw new RuntimeException('Supabase credentials are not configured in outlet-app/.env');
+        }
+    }
 
     public function upload($bucket, $fileName, $tmpName) {
         

@@ -24,11 +24,11 @@ $supabase = new OutletAwareSupabaseHelper();
 try {
     switch ($action) {
         case 'last_known':
-            $url = 'https://xerpchdsykqafrsxbqef.supabase.co/rest/v1/driver_locations?driver_id=eq.' .
+            $serviceKey = $supabase->getKey();
+            $url = rtrim($supabase->getUrl(), '/') . '/rest/v1/driver_locations?driver_id=eq.' .
                    urlencode($driver_id) . '&company_id=eq.' . urlencode($company_id) .
                    '&select=latitude,longitude,accuracy,speed,heading,timestamp,created_at' .
                    '&order=timestamp.desc&limit=1';
-            $serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
             $headers = [
                 "apikey: " . $serviceKey,
                 "Authorization: Bearer " . $serviceKey,
@@ -88,10 +88,10 @@ try {
             }
             break;
         case 'cache_status':
-            $url = 'https://xerpchdsykqafrsxbqef.supabase.co/rest/v1/driver_locations?driver_id=eq.' .
+            $serviceKey = $supabase->getKey();
+            $url = rtrim($supabase->getUrl(), '/') . '/rest/v1/driver_locations?driver_id=eq.' .
                    urlencode($driver_id) . '&company_id=eq.' . urlencode($company_id) .
                    '&select=latitude,longitude,timestamp&order=timestamp.desc&limit=1';
-            $serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9zZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
             $headers = [
                 "apikey: " . $serviceKey,
                 "Authorization: Bearer " . $serviceKey,

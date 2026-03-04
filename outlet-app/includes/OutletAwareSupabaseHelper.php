@@ -18,8 +18,21 @@ class OutletAwareSupabaseHelper {
     ];
 
     public function __construct() {
-        $this->url = getenv('SUPABASE_URL') ?: 'https://xerpchdsykqafrsxbqef.supabase.co';
-        $this->key = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
+        // Load .env if not already loaded
+        if (!class_exists('EnvLoader')) {
+            require_once __DIR__ . '/env.php';
+        }
+        EnvLoader::load();
+
+        $this->url = getenv('SUPABASE_URL');
+        $this->key = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
+
+        if (empty($this->url) || empty($this->key)) {
+            throw new RuntimeException(
+                'Supabase credentials are not configured. ' .
+                'Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in outlet-app/.env'
+            );
+        }
 
         $this->companyId = $_SESSION['company_id'] ?? null;
         $this->outletId = $_SESSION['outlet_id'] ?? null;
@@ -214,6 +227,9 @@ class OutletAwareSupabaseHelper {
             'role' => $this->role
         ];
     }
+
+    public function getUrl(): string { return $this->url; }
+    public function getKey(): string { return $this->key; }
 
     private function shouldApplyCompanyFilter($table) {
         return !in_array($table, $this->tablesWithoutCompanyFilter, true);

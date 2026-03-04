@@ -5,8 +5,8 @@ echo "Checking notifications in database...\n\n";
 
 try {
     
-    $supabaseUrl = 'https://neiglxdsxgqhskcaxhqk.supabase.co';
-    $supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5laWdseGRzeGdxaHNrY2F4aHFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg2ODczMTcsImV4cCI6MjA0NDI2MzMxN30.ORAQq5tEEt6BPcaKcImEhU2Z6dM7t_wSaTl3VFOJXgM';
+    $supabaseUrl = getenv('SUPABASE_URL');
+    $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
     
     $client = new \Supabase\CreateClient($supabaseUrl, $supabaseKey);
     $db = $client->db;

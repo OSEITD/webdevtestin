@@ -66,13 +66,14 @@ try {
     
     
     try {
-        $url = "https://xerpchdsykqafrsxbqef.supabase.co/rest/v1/driver_locations";
+        $supabaseServiceKey = $supabase->getKey();
+        $url = rtrim($supabase->getUrl(), '/') . '/rest/v1/driver_locations';
         $options = [
             'http' => [
                 'method' => 'POST',
                 'header' => [
-                    'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzEzNDE1NjUsImV4cCI6MjA0NjkxNzU2NX0.2c0y3CgjdnT38i4r0qHuwTuHgAOCDIZyqXoRG5UD3W0',
-                    'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzEzNDE1NjUsImV4cCI6MjA0NjkxNzU2NX0.2c0y3CgjdnT38i4r0qHuwTuHgAOCDIZyqXoRG5UD3W0',
+                    'Authorization: Bearer ' . $supabaseServiceKey,
+                    'apikey: ' . $supabaseServiceKey,
                     'Content-Type: application/json',
                     'Prefer: return=representation'
                 ],

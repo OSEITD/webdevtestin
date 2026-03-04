@@ -7,15 +7,18 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 class DriverScheduleAPI {
-    private $url = "https://xerpchdsykqafrsxbqef.supabase.co";
-    private $key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+    private $url;
+    private $key;
     private $companyId;
     private $driverId;
     public function __construct() {
-        if (isset($_SESSION['company_id']) && !empty($_SESSION['company_id'])) {
-            $this->companyId = $_SESSION['company_id'];
-        } else {
-            $this->companyId = "7501f684-a827-46bd-9389-3cf850463eff";
+        if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+        EnvLoader::load();
+        $this->url = getenv('SUPABASE_URL');
+        $this->key = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
+        $this->companyId = $_SESSION['company_id'] ?? null;
+        if (!$this->companyId) {
+            throw new RuntimeException('Company ID is required');
         }
         $this->driverId = $_GET['driver_id'] ?? $_SESSION['user_id'] ?? null;
         if (!$this->driverId) {

@@ -21,8 +21,10 @@ $company_id = $_SESSION['company_id'];
 $outlet_id = $_SESSION['outlet_id'];
 $staff_id = $_SESSION['user_id'];
 
-$supabaseUrl = "https://xerpchdsykqafrsxbqef.supabase.co";
-$supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+EnvLoader::load();
+$supabaseUrl = getenv('SUPABASE_URL');
+$supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $today_start = date('Y-m-d') . 'T00:00:00';

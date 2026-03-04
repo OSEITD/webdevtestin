@@ -61,10 +61,10 @@ try {
     ];
     
     // Use UPSERT via Supabase - insert with conflict resolution on driver_id+trip_id
-    $serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
-    
+    $serviceKey = $supabase->getKey();
+
     // Fast upsert using Supabase's on_conflict
-    $url = 'https://xerpchdsykqafrsxbqef.supabase.co/rest/v1/driver_locations';
+    $url = rtrim($supabase->getUrl(), '/') . '/rest/v1/driver_locations';
     $headers = [
         "apikey: " . $serviceKey,
         "Authorization: Bearer " . $serviceKey,

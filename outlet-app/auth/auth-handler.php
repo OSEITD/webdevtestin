@@ -5,9 +5,13 @@ class AuthHandler {
     private $supabaseKey;
     
     public function __construct() {
-        
-        $this->supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
-        $this->supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
+        if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../includes/env.php'; }
+        EnvLoader::load();
+        $this->supabaseUrl = getenv('SUPABASE_URL');
+        $this->supabaseKey = getenv('SUPABASE_ANON_KEY');
+        if (empty($this->supabaseUrl) || empty($this->supabaseKey)) {
+            throw new RuntimeException('Supabase credentials are not configured in outlet-app/.env');
+        }
     }
     
     public function authenticate($email, $password) {

@@ -33,8 +33,8 @@ try {
     
     
     
-    $supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
-    $supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
+    $supabaseUrl = $supabase->getUrl();
+    $supabaseKey = $supabase->getKey();
     
     
     $profileData = $supabase->get('profiles', "id=eq.{$userId}", 'email,username');

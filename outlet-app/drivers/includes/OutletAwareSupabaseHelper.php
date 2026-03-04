@@ -6,10 +6,22 @@ class OutletAwareSupabaseHelper {
     private $tablePrefix;
 
     public function __construct() {
-        
-        $this->supabaseUrl = getenv('SUPABASE_URL') ?: 'https://xerpchdsykqafrsxbqef.supabase.co';
-        $this->supabaseKey = getenv('SUPABASE_SERVICE_KEY') ?: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
+        // Load .env if not already loaded
+        if (!class_exists('EnvLoader')) {
+            require_once __DIR__ . '/../../includes/env.php';
+        }
+        EnvLoader::load();
+
+        $this->supabaseUrl = getenv('SUPABASE_URL');
+        $this->supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
         $this->tablePrefix = getenv('SUPABASE_TABLE_PREFIX') ?: '';
+
+        if (empty($this->supabaseUrl) || empty($this->supabaseKey)) {
+            throw new RuntimeException(
+                'Supabase credentials are not configured. ' .
+                'Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in outlet-app/.env'
+            );
+        }
     }
 
     
@@ -88,4 +100,7 @@ class OutletAwareSupabaseHelper {
         }
         return false;
     }
+
+    public function getUrl(): string { return $this->supabaseUrl; }
+    public function getKey(): string { return $this->supabaseKey; }
 }

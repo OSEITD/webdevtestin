@@ -1,0 +1,17 @@
+# Prevent directory listing in the drivers sub-app
+Options -Indexes
+
+# Block .env files
+<FilesMatch "^\.env(\..*)?$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block log and backup files
+<FilesMatch "\.(log|bak|backup|old|swp)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+php_flag  display_errors  off
+php_flag  log_errors      on

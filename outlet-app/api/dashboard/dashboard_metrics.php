@@ -39,8 +39,10 @@ try {
     $outletId = $_SESSION['outlet_id'] ?? null;
 
     
-    $supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
-    $supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
+    if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+    EnvLoader::load();
+    $supabaseUrl = getenv('SUPABASE_URL');
+    $supabaseKey = getenv('SUPABASE_ANON_KEY') ?: getenv('SUPABASE_SERVICE_ROLE_KEY');
     $accessToken = $_SESSION['access_token'] ?? $supabaseKey;
 
     

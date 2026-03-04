@@ -40,13 +40,20 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['company_id'])) {
 }
 
 class LightweightDashboardAPI {
-    private $url = "https://xerpchdsykqafrsxbqef.supabase.co";
-    private $key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+    private $url;
+    private $key;
     private $companyId;
     private $outletId;
     private $cacheTimeout = 60;
 
     public function __construct() {
+        if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+        EnvLoader::load();
+        $this->url = getenv('SUPABASE_URL');
+        $this->key = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
+        if (empty($this->url) || empty($this->key)) {
+            throw new RuntimeException('Supabase credentials are not configured in outlet-app/.env');
+        }
         $this->companyId = $_SESSION['company_id'];
         $this->outletId  = $_SESSION['outlet_id'] ?? null;
     }

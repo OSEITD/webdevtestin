@@ -17,8 +17,10 @@ if (!$track_number) {
     exit;
 }
 
-$supabaseUrl = "https://xerpchdsykqafrsxbqef.supabase.co";
-$supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+EnvLoader::load();
+$supabaseUrl = getenv('SUPABASE_URL');
+$supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 
 $ch = curl_init("$supabaseUrl/rest/v1/parcels?track_number=eq.$track_number&select=*");
 

@@ -1,0 +1,34 @@
+# ---------------------------------------------------------------
+# Outlet App – Apache security rules
+# ---------------------------------------------------------------
+
+# Block all .env files from being served over HTTP
+<FilesMatch "^\.env(\..*)?$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block log files
+<FilesMatch "\.log$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block backup / temp files
+<FilesMatch "\.(bak|backup|old|swp|swo)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block direct access to composer files
+<FilesMatch "^composer\.(json|lock)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes
+
+# Disable PHP error display for all requests
+php_flag  display_errors  off
+php_flag  log_errors      on

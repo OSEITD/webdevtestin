@@ -23,7 +23,9 @@ if (!$outlet_id) {
 }
 
 $SUPABASE_URL = "https://xerpchdsykqafrsxbqef.supabase.co";
-$SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../../includes/env.php'; }
+EnvLoader::load();
+$SUPABASE_API_KEY = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 
 if (is_numeric($outlet_id)) {
     

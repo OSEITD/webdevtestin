@@ -5,8 +5,10 @@ class MultiTenantManager {
     private $companyId;
 
     public function __construct($companyId = null) {
-        $this->url = getenv('SUPABASE_URL') ?: 'https://xerpchdsykqafrsxbqef.supabase.co';
-        $this->key = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
+        if (!class_exists('EnvLoader')) { require_once __DIR__ . '/env.php'; }
+        EnvLoader::load();
+        $this->url = getenv('SUPABASE_URL');
+        $this->key = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
         $this->companyId = $companyId ?? $_SESSION['company_id'] ?? null;
 
         if (!$this->companyId) {
