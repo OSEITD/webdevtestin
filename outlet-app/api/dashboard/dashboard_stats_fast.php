@@ -61,7 +61,7 @@ class LightweightDashboardAPI {
     public function getDashboardStats() {
         $startTime = microtime(true);
 
-        // Cache key is scoped to both company AND outlet so different outlets never share data
+   
         $cacheKey = 'dashboard_' . $this->companyId . '_' . ($this->outletId ?? 'no_outlet');
         $cached = $this->getCache($cacheKey);
         if ($cached) {
@@ -94,23 +94,22 @@ class LightweightDashboardAPI {
         $outlet  = $this->outletId;
         $today   = date('Y-m-d');
 
-        // Outlet scope: parcels whose origin is this outlet
-        // If no outlet_id in session fall back to company-wide so the screen is never blank
+    
         $outletFilter = $outlet ? "&origin_outlet_id=eq.$outlet" : '';
 
-        // Parcels physically at the outlet (pending / at_outlet / assigned to a trip not yet departed)
+
         $atOutletCount = $this->quickCount('parcels',
             "company_id=eq.$company{$outletFilter}&status=in.(pending,at_outlet,scheduled,assigned)");
 
-        // Parcels currently on a moving trip originating from this outlet
+     
         $inTransitCount = $this->quickCount('parcels',
             "company_id=eq.$company{$outletFilter}&status=in.(in_transit)");
 
-        // Parcels delivered today that originated from this outlet
+
         $deliveredCount = $this->quickCount('parcels',
             "company_id=eq.$company{$outletFilter}&status=eq.delivered&delivered_at=gte.{$today}T00:00:00");
 
-        // Parcels that are overdue (older than 3 days, not yet delivered)
+      
         $cutoff = date('Y-m-d', strtotime('-3 days'));
         $delayedCount = $this->quickCount('parcels',
             "company_id=eq.$company{$outletFilter}&status=in.(pending,assigned)&created_at=lt.{$cutoff}T00:00:00");
@@ -149,7 +148,7 @@ class LightweightDashboardAPI {
     }
 
     private function getQuickVehicleCounts() {
-        // Vehicles are company-wide assets; outlet managers see the full fleet
+       
         $company = $this->companyId;
 
         $available      = $this->quickCount('vehicle', "company_id=eq.$company&status=eq.available");
@@ -171,16 +170,14 @@ class LightweightDashboardAPI {
         $outlet = $_SESSION['outlet_id'] ?? null;
         $outletFilter = $outlet ? "&outlet_id=eq.$outlet" : '';
 
-        // count successful payments from payment_transactions
         $paidFilter = "company_id=eq.$company" . $outletFilter . "&status=eq.successful&paid_at=gte.{$today}T00:00:00";
         $todayPayments = $this->simpleSum('payment_transactions', 'amount', $paidFilter);
         $transactionCount = $this->quickCount('payment_transactions', $paidFilter);
 
-        // cod collections: amount where payment_method=eq.cod and same date
         $codFilter = $paidFilter . "&payment_method=eq.cod";
         $codCollected = $this->simpleSum('payment_transactions', 'amount', $codFilter);
 
-        // week/month approximated by another query instead of multiplication
+  
         $weekStart = date('Y-m-d', strtotime('monday this week'));
         $weekFilter = "company_id=eq.$company" . $outletFilter . "&status=eq.successful&paid_at=gte.{$weekStart}T00:00:00";
         $weekPayments = $this->simpleSum('payment_transactions', 'amount', $weekFilter);
