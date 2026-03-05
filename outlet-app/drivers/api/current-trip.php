@@ -6,7 +6,8 @@ header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
 require_once '../../config.php';
 try {
     $driver_id = $_GET['driver_id'] ?? $_SESSION['user_id'] ?? null;

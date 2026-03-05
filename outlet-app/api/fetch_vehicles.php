@@ -9,7 +9,8 @@ header("Access-Control-Allow-Methods: GET");
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-session_start();
+require_once __DIR__ . '/../includes/session_manager.php';
+initSession();
 if (!isset($_SESSION['user_id'])) {
     error_log("Unauthorized access attempt - no user_id in session");
     http_response_code(401);

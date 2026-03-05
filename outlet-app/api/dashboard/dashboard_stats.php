@@ -6,7 +6,8 @@ header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
 
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    require_once __DIR__ . '/../../includes/session_manager.php';
+    initSession();
 }
 
 require_once '../../includes/OutletAwareSupabaseHelper.php';

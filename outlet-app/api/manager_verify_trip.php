@@ -2,7 +2,8 @@
 
 
 ob_start();
-session_start();
+require_once __DIR__ . '/../includes/session_manager.php';
+initSession();
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');

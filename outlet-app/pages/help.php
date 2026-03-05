@@ -10,7 +10,8 @@ require_once __DIR__ . '/../includes/security_headers.php';
 SecurityHeaders::apply();
 
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    require_once __DIR__ . '/../includes/session_manager.php';
+    initSession();
 }
 
 require_once '../includes/auth_guard.php';

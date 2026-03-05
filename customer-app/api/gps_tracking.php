@@ -36,7 +36,7 @@ class GPSTracker {
         }
         
         try {
-            $query = $this->supabase->table($table);
+            $query = $this->supabase->from($table);
             
             if ($method === 'GET') {
                 if (isset($params['select'])) {

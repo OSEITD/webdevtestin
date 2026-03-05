@@ -7,7 +7,8 @@ header('Access-Control-Allow-Headers: Content-Type');
 require_once '../includes/MultiTenantSupabaseHelper.php';
 
 try {
-    session_start();
+    require_once __DIR__ . '/../includes/session_manager.php';
+    initSession();
     
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['user_id'] = 'test-user';

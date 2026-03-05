@@ -1,6 +1,7 @@
 <?php
 ob_start();
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
 
 try {
     require_once '../../includes/OutletAwareSupabaseHelper.php';

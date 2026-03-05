@@ -6,7 +6,8 @@ ini_set('display_errors', 0);
 ob_start();
 
 if (session_status() == PHP_SESSION_NONE) {
-    session_start();
+    require_once __DIR__ . '/../../includes/session_manager.php';
+    initSession();
 }
 
 ob_clean();

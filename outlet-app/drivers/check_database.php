@@ -1,7 +1,8 @@
 <?php
 require_once '../includes/OutletAwareSupabaseHelper.php';
 
-session_start();
+require_once __DIR__ . '/../includes/session_manager.php';
+initSession();
 $_SESSION['company_id'] = '1';
 
 try {

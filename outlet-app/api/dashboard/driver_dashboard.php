@@ -1,7 +1,8 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/supabase-helper.php';
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
 
 $driverId = $_SESSION['driver_id'] ?? ($_GET['driver_id'] ?? null);
 $companyId = $_SESSION['company_id'] ?? ($_GET['company_id'] ?? null);

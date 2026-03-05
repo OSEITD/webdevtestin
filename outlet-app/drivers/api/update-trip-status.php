@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/error_handler.php';
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
 require_once '../../config.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'driver') {
     http_response_code(401);

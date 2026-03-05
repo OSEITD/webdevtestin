@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
 header("Content-Type: application/json");
 
 error_log("fetch_parcel_details.php called with track_number: " . ($_GET['track_number'] ?? 'not set'));

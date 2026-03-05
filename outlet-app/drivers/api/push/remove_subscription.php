@@ -1,7 +1,8 @@
 <?php
 
 
-session_start();
+require_once __DIR__ . '/../../../includes/session_manager.php';
+initSession();
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../../includes/supabase-helper.php';

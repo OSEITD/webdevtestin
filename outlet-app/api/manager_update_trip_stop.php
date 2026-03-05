@@ -6,7 +6,8 @@ ini_set('display_errors', 0);
 require_once __DIR__ . '/../includes/OutletAwareSupabaseHelper.php';
 
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    require_once __DIR__ . '/../includes/session_manager.php';
+    initSession();
 }
 
 header('Content-Type: application/json');

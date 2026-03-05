@@ -16,7 +16,7 @@ ini_set('log_errors', 1);
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
-require_once __DIR__ . '/../includes/session_manager.php';
+require_once __DIR__ . '/../../includes/session_manager.php';
 
 try {
     

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/session_manager.php';
+require_once __DIR__ . '/../includes/session_manager.php';
 
 function requireAuth() {
     if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {

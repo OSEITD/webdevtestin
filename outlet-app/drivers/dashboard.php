@@ -10,7 +10,8 @@ if (session_status() === PHP_SESSION_NONE) {
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
-    session_start();
+    require_once __DIR__ . '/../includes/session_manager.php';
+    initSession();
 }
 
 require_once '../includes/env.php';

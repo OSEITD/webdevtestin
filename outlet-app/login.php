@@ -10,27 +10,16 @@ ob_end_clean();
 
 SecurityHeaders::apply();
 
+require_once __DIR__ . '/includes/session_manager.php';
+
 if (isset($_GET['clear_session'])) {
-    session_start();
+    initSession();
     session_destroy();
     header("Location: login.php");
     exit();
 }
 
-if (session_status() === PHP_SESSION_NONE) {
-    $sessionLifetime = (int)EnvLoader::get('SESSION_LIFETIME', 86400);
-    ini_set('session.gc_maxlifetime', $sessionLifetime);
-    ini_set('session.cookie_lifetime', $sessionLifetime);
-    session_set_cookie_params([
-        'lifetime' => $sessionLifetime,
-        'path' => '/',
-        'domain' => '',
-        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    session_start();
-}
+initSession();
 
 $supabaseUrl = EnvLoader::get('SUPABASE_URL');
 $supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');

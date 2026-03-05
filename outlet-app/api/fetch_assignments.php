@@ -4,7 +4,8 @@ ob_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 
-session_start();
+require_once __DIR__ . '/../includes/session_manager.php';
+initSession();
 
 if (!file_exists('../includes/MultiTenantSupabaseHelper.php')) {
     ob_clean();

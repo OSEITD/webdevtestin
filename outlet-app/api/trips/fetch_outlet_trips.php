@@ -11,7 +11,8 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Cache-Control: private, max-age=30"); 
 header("Vary: Cookie"); 
 
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);

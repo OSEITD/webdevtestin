@@ -6,7 +6,8 @@ class CSRF {
     
     public static function generateToken() {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            require_once __DIR__ . '/../includes/session_manager.php';
+            initSession();
         }
         
         $token = bin2hex(random_bytes(32));
@@ -19,7 +20,7 @@ class CSRF {
     
     public static function getToken() {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            initSession();
         }
         
         if (!isset($_SESSION[self::$tokenName]) || self::isTokenExpired()) {
@@ -32,7 +33,7 @@ class CSRF {
     
     public static function validateToken($token) {
         if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+            initSession();
         }
         
         if (!isset($_SESSION[self::$tokenName])) {
