@@ -4,5 +4,5 @@
  * Redirects to secure tracking interface
  */
 
-header("Location: https://WDParcelSendReceiverPWA/customer-app/secure_tracking.html");
+header("Location: secure_tracking.html");
 exit();
