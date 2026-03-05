@@ -1405,6 +1405,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
+        const managerOutletId = '<?php echo htmlspecialchars($_SESSION['outlet_id'] ?? '', ENT_QUOTES); ?>';
         let activeTrips = [];
         let allTrips = [];
         let trackingMap = null;
@@ -1463,7 +1464,9 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                     ${!isPending && trip.trip_status === 'scheduled' && (!trip.vehicle_id || !trip.driver_id) ? `<button class="action-btn btn-assign" onclick="openAssignModal('${trip.id}')"><i class="fas fa-user-plus"></i> Assign</button>` : ''}
                     ${!isPending && ['accepted','in_transit'].includes(trip.trip_status) ? `<button class="action-btn btn-track" onclick="trackTrip('${trip.id}')"><i class="fas fa-map-marker-alt"></i> Live Track</button>` : ''}
                     ${!isPending && trip.trip_status === 'at_outlet' ? `<button class="action-btn btn-complete" onclick="completeTrip('${trip.id}')"><i class="fas fa-flag-checkered"></i> Mark Complete</button>` : ''}
-                    ${isPending ? `<button class="action-btn btn-verify" onclick="verifyTrip('${trip.id}')"><i class="fas fa-check-double"></i> Verify &amp; Complete</button>` : ''}
+                    ${isPending && trip.destination_outlet_id === managerOutletId ? `<button class="action-btn btn-verify" onclick="verifyTrip('${trip.id}')">
+<i class="fas fa-check-double"></i> Verify &amp; Complete</button>` : ''}
+                    ${isPending && trip.destination_outlet_id !== managerOutletId ? `<span style="font-size:.8rem;color:#92400e;padding:.5rem .75rem;background:#fef3c7;border-radius:8px;display:inline-flex;align-items:center;gap:.35rem;"><i class="fas fa-info-circle"></i> Awaiting destination outlet verification</span>` : ''}
                     <button class="action-btn btn-details" onclick="viewTripDetails('${trip.id}')"><i class="fas fa-eye"></i> Details</button>`;
             }
 
@@ -1665,10 +1668,14 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                                 <i class="fas fa-flag-checkered"></i> Mark Complete
                             </button>` : ''}
 
-                        ${isPending ? `
+                        ${isPending && trip.destination_outlet_id === managerOutletId ? `
                             <button class="action-btn btn-verify" onclick="verifyTrip('${trip.id}')">
                                 <i class="fas fa-check-double"></i> Verify &amp; Complete
                             </button>` : ''}
+                    ${isPending && trip.destination_outlet_id !== managerOutletId ? `
+                            <span style="font-size:.8rem;color:#92400e;padding:.5rem .75rem;background:#fef3c7;border-radius:8px;display:inline-flex;align-items:center;gap:.35rem;">
+                                <i class="fas fa-info-circle"></i> Awaiting verification at destination outlet
+                            </span>` : ''}
 
                         <button class="action-btn btn-details" onclick="viewTripDetails('${trip.id}')">
                             <i class="fas fa-eye"></i> Details
@@ -1891,10 +1898,12 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             // ── Recovery banner: all stops done but trip not yet marked complete ──
             const trip = activeTrips.find(t => t.id === tripId);
             const allDone = stops.length > 0 && stops.every(s => s.arrival_time && s.departure_time);
+            const isDestinationManager = trip && trip.destination_outlet_id === managerOutletId;
             const needsRecovery = allDone
                 && trip
                 && !trip.driver_completed
                 && !trip.manager_verified
+                && isDestinationManager
                 && ['in_transit','at_outlet','scheduled','accepted'].includes(trip.trip_status);
 
             if (needsRecovery) {

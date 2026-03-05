@@ -1,6 +1,13 @@
 <?php
 require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
+
+// require a driver session before showing POD
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'driver') {
+    header('Location: /login.php');
+    exit();
+}
+
 $parcelId = $_GET['parcel_id'] ?? '';
 ?>
 <!DOCTYPE html>

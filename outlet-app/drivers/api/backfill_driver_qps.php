@@ -1,17 +1,13 @@
 <?php
-/**
- * Backfill driver_qps table with historical performance data
- * This script populates the driver_qps aggregated table from trips and parcel_list data
- * 
- * Usage: Run via browser as manager
- * URL: http://outlet.localhost/drivers/api/backfill_driver_qps.php
- */
+
+// include session manager early so we can call initSession() before using $_SESSION
+require_once __DIR__ . '/../../includes/session_manager.php';
+initSession();
 
 require_once '../../includes/OutletAwareSupabaseHelper.php';
 require_once '../../config.php';
 
 header('Content-Type: text/html; charset=utf-8');
-require_once __DIR__ . '/../../includes/session_manager.php';
 
 // Security: Only allow managers or admins to run this
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['manager', 'admin'])) {
@@ -163,30 +159,29 @@ try {
     
     foreach ($aggregated as $record) {
         try {
-            // Check if record exists
+           
             $existing = $supabase->get('driver_qps', [
                 'driver_id' => 'eq.' . $record['driver_id'],
                 'date' => 'eq.' . $record['date']
             ]);
             
             if ($existing && count($existing) > 0) {
-                // Update existing
-                $result = $supabase->patch('driver_qps', [
+              
+                $result = $supabase->update('driver_qps', [
                     'trips_completed' => $record['trips_completed'],
                     'parcels_handled' => $record['parcels_handled']
-                ], [
-                    'driver_id' => 'eq.' . $record['driver_id'],
-                    'date' => 'eq.' . $record['date']
-                ]);
-                if ($result !== false) {
+                ],
+                'driver_id=eq.' . $record['driver_id'] . '&date=eq.' . $record['date']);
+
+                if ($result === true) {
                     $updated++;
                 } else {
                     $errors++;
                 }
             } else {
-                // Insert new
-                $result = $supabase->post('driver_qps', $record);
-                if ($result) {
+              
+                $result = $supabase->insert('driver_qps', $record);
+                if ($result && is_array($result) && count($result) > 0) {
                     $inserted++;
                 } else {
                     $errors++;
@@ -206,9 +201,9 @@ try {
     }
     
     echo "<script>updateProgress(100);</script>";
-    echo "<script>log('✅ Backfill complete!', 'success');</script>";
+    echo "<script>log(' Backfill complete!', 'success');</script>";
     
-    $summaryHtml = "<h3>📊 Backfill Summary</h3>";
+    $summaryHtml = "<h3> Backfill Summary</h3>";
     $summaryHtml .= "<p><strong>Completed Trips Processed:</strong> {$total_trips}</p>";
     $summaryHtml .= "<p><strong>Driver-Date Records:</strong> {$total_records}</p>";
     $summaryHtml .= "<p><strong>Inserted:</strong> {$inserted}</p>";
@@ -220,7 +215,7 @@ try {
     
 } catch (Exception $e) {
     error_log("Backfill error: " . $e->getMessage());
-    echo "<script>log('❌ Error: " . addslashes($e->getMessage()) . "', 'error');</script>";
+    echo "<script>log(' Error: " . addslashes($e->getMessage()) . "', 'error');</script>";
     flush();
 }
 ?>

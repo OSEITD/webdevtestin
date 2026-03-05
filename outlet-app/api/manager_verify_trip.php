@@ -48,9 +48,14 @@ ob_end_clean();
 try {
     $managerId = $_SESSION['user_id'];
     $companyId = $_SESSION['company_id'] ?? null;
+    $managerOutletId = $_SESSION['outlet_id'] ?? null;
 
     if (!$companyId) {
         throw new Exception('Company ID missing from session');
+    }
+
+    if (!$managerOutletId) {
+        throw new Exception('Outlet ID missing from session');
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -78,8 +83,13 @@ try {
         throw new Exception('This trip has already been verified');
     }
 
+    // Only the outlet manager at the DESTINATION outlet can verify a trip
+    $tripDestination = $trip['destination_outlet_id'] ?? null;
+    if (!$tripDestination || $tripDestination !== $managerOutletId) {
+        throw new Exception('Only the manager at the destination outlet can verify this trip');
+    }
+
     if (!$trip['driver_completed']) {
-      
         error_log("WARN: Manager $managerId verifying trip $tripId that driver has NOT marked as completed");
     }
 
