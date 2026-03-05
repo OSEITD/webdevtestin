@@ -646,7 +646,8 @@ class NotificationManager {
             const active = this.currentFilter === key ? 'active' : '';
             const badgeHtml = badge && this.unreadCount > 0
                 ? ` <span class="notif-filter-badge">${this.unreadCount}</span>` : '';
-            return `<button class="notif-filter-tab ${active}" onclick="notificationManager.setFilter('${key}')">${label}${badgeHtml}</button>`;
+            // data-filter-key used later to bind event
+            return `<button class="notif-filter-tab ${active}" data-filter-key="${key}">${label}${badgeHtml}</button>`;
         };
 
         header.innerHTML = `
@@ -656,7 +657,7 @@ class NotificationManager {
                     <div class="notif-header-subtitle">${subtitle}</div>
                 </div>
                 <div class="notif-header-actions">
-                    <button class="notif-action-btn" onclick="notificationManager.refreshPanel()" title="Refresh">
+                    <button class="notif-action-btn" id="notifRefreshBtn" title="Refresh">
                         <i class="fas fa-sync-alt" id="notifRefreshIcon"></i>
                     </button>
                 </div>
@@ -666,11 +667,31 @@ class NotificationManager {
                 ${tab('unread', 'Unread', true)}
                 ${tab('urgent', 'Urgent')}
             </div>`;
+        // Attach event listeners to tabs to stop propagation and call setFilter
+        const tabs = header.querySelectorAll('.notif-filter-tab');
+        tabs.forEach(tabEl => {
+            tabEl.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent document handler closing panel
+                const key = tabEl.dataset.filterKey || tabEl.textContent.toLowerCase().trim();
+                this.setFilter(key);
+            });
+        });
+        // refresh button listener
+        const refreshBtn = header.querySelector('#notifRefreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.refreshPanel();
+            });
+        }
     }
 
     async setFilter(filter) {
         this.currentFilter = filter;
-        this.renderPanelHeader();
+        // postpone header re-render so the click event can finish bubbling
+        setTimeout(() => {
+            this.renderPanelHeader();
+        }, 0);
         this.renderFilteredNotifications();
     }
 
