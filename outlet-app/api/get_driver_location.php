@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-require_once '../includes/supabase.php';
+require_once __DIR__ . '/../includes/supabase-helper.php';
 
 try {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'outlet_manager') {

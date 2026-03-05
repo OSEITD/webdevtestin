@@ -17,7 +17,6 @@ try {
         throw new Exception('Authentication required');
     }
     
-    // Get trip ID from query
     $tripId = $_GET['trip_id'] ?? null;
     
     if (!$tripId) {
@@ -31,7 +30,7 @@ try {
     
     $supabase = new SupabaseHelper();
     
-    // Verify trip belongs to user's company
+ 
     $trip = $supabase->get('trips', "id=eq.$tripId&company_id=eq.$companyId&select=id,driver_id,trip_status");
     
     if (empty($trip)) {
@@ -40,7 +39,6 @@ try {
     
     $tripData = $trip[0];
     
-    // Fetch driver locations for this trip (last 50 locations)
     $locationsQuery = "trip_id=eq.$tripId&company_id=eq.$companyId&order=timestamp.desc&limit=50&select=id,latitude,longitude,accuracy,speed,heading,timestamp,created_at,is_manual,source";
     $locations = $supabase->get('driver_locations', $locationsQuery);
     
@@ -48,7 +46,6 @@ try {
         $locations = [];
     }
     
-    // Reverse to get chronological order (oldest to newest)
     $locations = array_reverse($locations);
     
     // Format locations
@@ -67,7 +64,6 @@ try {
         ];
     }
     
-    // Get current location (most recent)
     $currentLocation = null;
     if (!empty($formattedLocations)) {
         $currentLocation = end($formattedLocations);

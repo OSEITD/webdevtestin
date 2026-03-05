@@ -2,7 +2,7 @@
 error_reporting(0);
 ini_set('display_errors', 0);
 
-session_start();
+require_once '../includes/session_manager.php';
 require_once '../includes/auth_guard.php';
 requireAuth();
 requireRole(['outlet_staff', 'outlet_manager']);

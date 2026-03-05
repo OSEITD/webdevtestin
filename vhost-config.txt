@@ -44,11 +44,13 @@
 <VirtualHost *:80>
     ServerName customer.localhost
     DocumentRoot "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app"
+    ErrorLog "logs/customer.localhost-error.log"
+    CustomLog "logs/customer.localhost-access.log" common
+
     <Directory "C:/xampp/htdocs/WDParcelSendReceiverPWA/customer-app">
         Options Indexes FollowSymLinks
         AllowOverride All
         Require all granted
-        DirectoryIndex index.php index.html
     </Directory>
 </VirtualHost>
 

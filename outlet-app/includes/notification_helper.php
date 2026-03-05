@@ -24,12 +24,12 @@ class NotificationHelper {
             'notification_type' => 'parcel_created',
             'parcel_id' => $parcelData['id'],
             'priority' => 'medium',
-            'data' => json_encode([
+            'data' => [
                 'parcel_track_number' => $parcelData['track_number'],
                 'sender_name' => $parcelData['sender_name'],
                 'receiver_name' => $parcelData['receiver_name'],
                 'weight' => $parcelData['parcel_weight'] ?? null
-            ])
+            ]
         ]);
     }
     
@@ -51,13 +51,13 @@ class NotificationHelper {
             'notification_type' => 'parcel_status_change',
             'parcel_id' => $parcelData['id'],
             'priority' => $priority,
-            'data' => json_encode([
+            'data' => [
                 'parcel_track_number' => $parcelData['track_number'],
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
                 'sender_name' => $parcelData['sender_name'],
                 'receiver_name' => $parcelData['receiver_name']
-            ])
+            ]
         ]);
     }
     
@@ -75,12 +75,12 @@ class NotificationHelper {
             'delivery_id' => $deliveryData['id'],
             'parcel_id' => $deliveryData['parcel_id'],
             'priority' => 'high',
-            'data' => json_encode([
+            'data' => [
                 'tracking_number' => $deliveryData['tracking_number'],
                 'driver_name' => $driverData['driver_name'],
                 'driver_phone' => $driverData['driver_number'],
                 'estimated_delivery' => $deliveryData['estimated_delivery_date']
-            ])
+            ]
         ]);
     }
     
@@ -98,11 +98,11 @@ class NotificationHelper {
             'delivery_id' => $deliveryData['id'],
             'parcel_id' => $deliveryData['parcel_id'],
             'priority' => 'high',
-            'data' => json_encode([
+            'data' => [
                 'tracking_number' => $deliveryData['tracking_number'],
                 'delivery_date' => $deliveryData['actual_delivery_date'],
                 'delivery_address' => $deliveryData['delivery_address']
-            ])
+            ]
         ]);
     }
     
@@ -119,12 +119,12 @@ class NotificationHelper {
             'notification_type' => 'urgent_delivery',
             'parcel_id' => $parcelData['id'],
             'priority' => 'urgent',
-            'data' => json_encode([
+            'data' => [
                 'parcel_track_number' => $parcelData['track_number'],
                 'reason' => $reason,
                 'sender_name' => $parcelData['sender_name'],
                 'receiver_name' => $parcelData['receiver_name']
-            ])
+            ]
         ]);
     }
     
@@ -142,11 +142,11 @@ class NotificationHelper {
             'delivery_id' => $deliveryData['id'],
             'parcel_id' => $deliveryData['parcel_id'],
             'priority' => 'high',
-            'data' => json_encode([
+            'data' => [
                 'tracking_number' => $deliveryData['tracking_number'],
                 'driver_name' => $driverData['driver_name'],
                 'driver_id' => $driverData['id']
-            ])
+            ]
         ]);
     }
     
@@ -163,12 +163,12 @@ class NotificationHelper {
             'notification_type' => 'payment_received',
             'parcel_id' => $parcelData['id'],
             'priority' => 'medium',
-            'data' => json_encode([
+            'data' => [
                 'parcel_track_number' => $parcelData['track_number'],
                 'amount' => $paymentData['amount'],
                 'payment_method' => $paymentData['method'],
                 'transaction_ref' => $paymentData['transaction_ref']
-            ])
+            ]
         ]);
     }
     
@@ -181,7 +181,7 @@ class NotificationHelper {
             'message' => $message,
             'notification_type' => 'system_alert',
             'priority' => $priority,
-            'data' => json_encode(['alert_type' => 'system'])
+            'data' => ['alert_type' => 'system']
         ]);
     }
     

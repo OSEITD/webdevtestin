@@ -18,9 +18,9 @@ if (isset($_GET['clear_session'])) {
 }
 
 if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.gc_maxlifetime', 1296000);
-    ini_set('session.cookie_lifetime', 1296000);
-    $sessionLifetime = (int)EnvLoader::get('SESSION_LIFETIME', 1296000);
+    $sessionLifetime = (int)EnvLoader::get('SESSION_LIFETIME', 86400);
+    ini_set('session.gc_maxlifetime', $sessionLifetime);
+    ini_set('session.cookie_lifetime', $sessionLifetime);
     session_set_cookie_params([
         'lifetime' => $sessionLifetime,
         'path' => '/',
@@ -351,11 +351,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             $_SESSION['access_token'] = $accessToken;
                             $_SESSION['refresh_token'] = $authData['refresh_token'] ?? null;
+                            $_SESSION['token_expires_at'] = time() + ($authData['expires_in'] ?? 3600);
                             $_SESSION['full_name'] = $profile['full_name'] ?? '';
-                            
-                            
-                            session_write_close();
-                            session_start(); 
                             
                             echo "<!-- DEBUG: Session data committed - Role: " . ($_SESSION['role'] ?? 'NOT SET') . " -->";
                             

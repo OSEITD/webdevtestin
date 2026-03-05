@@ -110,8 +110,7 @@ try {
         error_log("No route defined, using current outlet only: $outletId");
     }
     
-    // Fetch parcels - only require destination to be in route (not origin)
-    // This allows parcels from any origin to be added as long as they're going to a route outlet
+    
     $parcelsFilter = "destination_outlet_id=in.(" . implode(',', array_map('urlencode', $routeOutlets)) . ")" .
                      "&status=in.(pending,scheduled)" .
                      "&company_id=eq." . urlencode($companyId);
@@ -121,7 +120,7 @@ try {
     error_log("Found " . count($parcels) . " parcels with status pending/scheduled on route");
 
     if (empty($parcels)) {
-        // Debug: Check if there are any parcels with any status going to route outlets
+       
         $debugFilter = "destination_outlet_id=in.(" . implode(',', array_map('urlencode', $routeOutlets)) . ")" . 
                       "&company_id=eq." . urlencode($companyId) . 
                       "&select=id,track_number,status,origin_outlet_id,destination_outlet_id";
@@ -202,10 +201,10 @@ try {
             ];
         }
 
-        // build enriched parcel object with some pre‑formatted fields
+        
         $weight = is_numeric($parcel['parcel_weight'] ?? null) ? $parcel['parcel_weight'] : 0;
         $fee = is_numeric($parcel['delivery_fee'] ?? null) ? $parcel['delivery_fee'] : 0;
-        // prefer parcel_value when positive, otherwise fall back to declared_value if available
+       
         $value = 0;
         if (isset($parcel['parcel_value']) && is_numeric($parcel['parcel_value']) && $parcel['parcel_value'] > 0) {
             $value = $parcel['parcel_value'];
@@ -225,7 +224,6 @@ try {
             'receiver_address' => $parcel['receiver_address'] ?? null,
             'receiver_phone' => $parcel['receiver_phone'] ?? null,
             'package_details' => $parcel['package_details'] ?? null,
-            // numeric fields
             'parcel_weight' => $weight,
             'delivery_fee' => $fee,
             'parcel_value' => $value,
@@ -239,7 +237,7 @@ try {
             'destination_outlet_name' => $destinationOutlet['outlet_name'] ?? null,
             'created_at' => $parcel['created_at'],
             'barcode_url' => $parcel['barcode_url'] ?? null,
-            // display helpers
+          
             'weight_display' => $weight . ' kg',
             'fee_display' => 'ZMW ' . number_format($fee, 2),
             'value_display' => 'ZMW ' . number_format($value, 2)

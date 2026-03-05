@@ -21,9 +21,8 @@ $supabaseCandidates = [
     __DIR__ . '/../includes/supabase-helper.php',
     __DIR__ . '/../includes/OutletAwareSupabaseHelper.php',
     __DIR__ . '/../includes/supabase-client.php',
-    __DIR__ . '/../includes/supabase-helper-bypass.php',
-    __DIR__ . '/../../customer-app/includes/supabase.php'
-];
+    __DIR__ . '/../includes/supabase-helper-bypass.php'
+]; 
 $loaded = false;
 foreach ($supabaseCandidates as $candidate) {
     if (file_exists($candidate)) {

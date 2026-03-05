@@ -600,11 +600,9 @@ try {
         'special_instructions' => $input['specialInstructions'] ?? null,
         'photo_urls' => $photoUrls,
         
-        // COD means payment is collected at delivery — not paid yet
         'payment_status' => (isset($input['paymentMethod']) && $input['paymentMethod'] === 'cash') ? 'paid' : 'pending',
     ];
 
-    // Parse dimensions from JSON string (sent as {"L":x,"W":y,"H":z} from frontend)
     $parcelLength = null;
     $parcelWidth = null;
     $parcelHeight = null;
@@ -616,12 +614,11 @@ try {
             $parcelHeight = isset($dimData['H']) ? (float)$dimData['H'] : null;
         }
     }
-    // Also check individual fields as fallback
+
     if ($parcelLength === null && isset($input['parcelLength'])) $parcelLength = (float)$input['parcelLength'];
     if ($parcelWidth === null && isset($input['parcelWidth'])) $parcelWidth = (float)$input['parcelWidth'];
     if ($parcelHeight === null && isset($input['parcelHeight'])) $parcelHeight = (float)$input['parcelHeight'];
 
-    // validate that if any dimension was provided it is positive and numeric
     foreach (['Length' => $parcelLength, 'Width' => $parcelWidth, 'Height' => $parcelHeight] as $name => $val) {
         if ($val !== null && (!is_numeric($val) || $val <= 0)) {
             http_response_code(400);
@@ -760,7 +757,6 @@ try {
         
         $tripStops = $tripHelper->get('trip_stops', 'trip_id=eq.' . urlencode($tripId) . '&outlet_id=eq.' . urlencode($destinationOutletId));
         
-        // Also accept if destination matches the trip's final destination_outlet_id even when not listed as a trip_stop
         $tripFinalDestId = $tripData[0]['destination_outlet_id'] ?? null;
         $destinationMatchesTripFinal = (!empty($tripFinalDestId) && $tripFinalDestId == $destinationOutletId);
         
@@ -840,44 +836,43 @@ try {
     }
     
     
-    // Handle Payment Transaction Creation
+    //  Payment Transaction Creation
     $paymentTransactionId = null;
     $paymentResult = null;
     
     try {
-        // Create payment transactions for ALL payment methods
+
         $paymentMethod = $input['paymentMethod'] ?? '';
         $paymentProvider = $input['paymentProvider'] ?? $paymentMethod;
         
         require_once __DIR__ . '/../../includes/PaymentTransactionDB.php';
         $paymentDB = new PaymentTransactionDB();
         
-        // Calculate total amount based on payment method
+        //  total amount based on payment method
         $deliveryFee = (float)($input['deliveryFee'] ?? 0);
         $insuranceAmount = (float)($input['insuranceAmount'] ?? 0);
         $codAmount = (float)($input['codAmount'] ?? 0);
         $cashAmount = (float)($input['cashAmount'] ?? 0);
         
-        // For cash payments at outlet, use the cash amount field
-        // Fall back to deliveryFee + insurance if cashAmount wasn't entered
+      
         if ($paymentMethod === 'cash') {
             $totalAmount = ($cashAmount > 0) ? $cashAmount : ($deliveryFee + $insuranceAmount);
         }
-        // For COD, use delivery fee + insurance + cod amount
+   
         elseif ($paymentMethod === 'cod') {
             $totalAmount = $deliveryFee + $insuranceAmount + $codAmount;
         }
-        // For online payments (lenco), use delivery fee + insurance
+
         else {
             $totalAmount = $deliveryFee + $insuranceAmount;
         }
         
-        // Determine company commission percentage (fetch from companies table)
+        //  company commission 
         $companyCommissionPercent = 0;
         try {
             $companyIdForCommission = $input['companyId'] ?? null;
             if ($companyIdForCommission) {
-                // Use the initialized Supabase helper instance
+            
                 if (!isset($supabaseHelper)) {
                     require_once __DIR__ . '/../../includes/supabase-helper.php';
                     $supabaseHelper = new SupabaseHelper();
@@ -897,24 +892,21 @@ try {
             $companyCommissionPercent = floatval(getenv('DEFAULT_COMMISSION_RATE') ?: 0);
         }
 
-        // Determine payment status based on method
         // Cash: Already paid at outlet -> 'successful'
         // COD: To be paid on delivery -> 'pending'
         // Online: Awaiting payment -> 'pending'
         $paymentStatus = ($paymentMethod === 'cash') ? 'successful' : 'pending';
         $paidAt = ($paymentMethod === 'cash') ? date('Y-m-d H:i:s') : null;
 
-        // Calculate commission and net amounts
+        //  commission and net amounts
         $commissionAmount = round(($totalAmount * $companyCommissionPercent / 100), 2);
         $netAmount = round($totalAmount - $commissionAmount, 2);
 
-        // Customer email is required by payment_transactions table — use a fallback
         $customerEmail = $input['senderEmail'] ?? '';
         if (empty($customerEmail)) {
             $customerEmail = 'noemail@outlet.local';
         }
 
-        // Prepare payment transaction data
         $paymentData = [
             'tx_ref' => 'TXN-' . $trackingNumber . '-' . time(),
             'company_id' => $input['companyId'],
@@ -954,18 +946,17 @@ try {
             ]
         ];
         
-        // Add mobile money specific data
+   
         if ($paymentProvider === 'lenco_mobile' || $paymentMethod === 'mobile_money') {
             $paymentData['mobile_network'] = $input['mobileProvider'] ?? null;
             $paymentData['mobile_number'] = $input['mobileNumber'] ?? null;
         }
         
-        // Add card specific data (if available from payment processor)
         if ($paymentProvider === 'lenco_card' || $paymentMethod === 'card') {
             $paymentData['payment_type'] = 'card';
         }
         
-        // Create payment transaction
+      
         $paymentResult = $paymentDB->createTransaction($paymentData);
         
         if ($paymentResult['success']) {
@@ -980,13 +971,13 @@ try {
             error_log("Payment transaction created successfully: " . $paymentTransactionId . " with status: " . $paymentStatus);
         } else {
             error_log("Failed to create payment transaction: " . ($paymentResult['error'] ?? 'Unknown error'));
-            // Don't fail the parcel creation, but log the issue
+       
             $response['payment_warning'] = 'Payment transaction creation failed, but parcel was created successfully';
         }
         
     } catch (Exception $e) {
         error_log("Payment transaction creation error: " . $e->getMessage());
-        // Don't fail parcel creation for payment issues
+ 
         $response['payment_error'] = 'Payment setup failed, but parcel was created successfully';
     }
     

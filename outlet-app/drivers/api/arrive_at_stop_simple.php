@@ -3,7 +3,7 @@ error_reporting(E_ALL);
 ob_start();
 require_once '../../includes/OutletAwareSupabaseHelper.php';
 header('Content-Type: application/json');
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
 if (!isset($_SESSION['user_id'])) {
     
     if (ob_get_length()) {

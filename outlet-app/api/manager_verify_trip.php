@@ -1,20 +1,5 @@
 <?php
-/**
- * POST /api/manager_verify_trip.php
- *
- * Outlet manager verifies that the driver has completed a trip.
- * Sets:
- *   trips.manager_verified        = true
- *   trips.manager_verified_at     = now()
- *   trips.manager_verified_by     = manager profile id
- *   trips.trip_status             = 'completed'
- *   trips.arrival_time            = now()  (if not already set)
- * Then cascades:
- *   parcel_list  status → 'completed'
- *   parcels      status → 'delivered', delivered_at = now()
- *   drivers      status → 'available', current_trip_id = null
- *   vehicle      status → 'available'
- */
+
 
 ob_start();
 session_start();
@@ -93,7 +78,7 @@ try {
     }
 
     if (!$trip['driver_completed']) {
-        // Still allow manual verification but log a warning
+      
         error_log("WARN: Manager $managerId verifying trip $tripId that driver has NOT marked as completed");
     }
 
@@ -107,7 +92,7 @@ try {
         'manager_verified_by' => $managerId,
         'updated_at'          => $now,
     ];
-    // Only set arrival_time if it has never been recorded
+
     if (empty($trip['arrival_time'])) {
         $tripUpdate['arrival_time'] = $now;
     }
@@ -119,7 +104,7 @@ try {
 
     error_log("Trip $tripId verified as completed by manager $managerId");
 
-    // ── Cascade: parcel_list → completed ────────────────────────────────────
+    // ──  parcel_list → completed ────────────────────────────────────
     try {
         $supabase->put("parcel_list?trip_id=eq.$tripId", [
             'status'     => 'completed',
@@ -129,9 +114,9 @@ try {
         error_log("Non-fatal: could not update parcel_list for trip $tripId: " . $e->getMessage());
     }
 
-    // ── Cascade: parcels → delivered ────────────────────────────────────────
+    // ──  parcels → delivered ────────────────────────────────────────
     try {
-        // Find parcel IDs linked to this trip
+       
         $parcelListRows = $supabase->get('parcel_list', "trip_id=eq.$tripId", 'parcel_id');
         if (!empty($parcelListRows)) {
             $parcelIds = array_filter(array_unique(array_column($parcelListRows, 'parcel_id')));
@@ -148,7 +133,7 @@ try {
         error_log("Non-fatal: could not mark parcels as delivered for trip $tripId: " . $e->getMessage());
     }
 
-    // ── Cascade: driver → available ─────────────────────────────────────────
+    // ── driver → available ─────────────────────────────────────────
     $driverId = $trip['driver_id'] ?? null;
     if ($driverId) {
         try {
@@ -162,7 +147,7 @@ try {
         }
     }
 
-    // ── Cascade: vehicle → available ────────────────────────────────────────
+    // ── vehicle → available ────────────────────────────────────────
     $vehicleId = $trip['vehicle_id'] ?? null;
     if ($vehicleId) {
         try {

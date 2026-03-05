@@ -30,7 +30,6 @@ EnvLoader::load();
 $supabaseUrl = getenv('SUPABASE_URL');
 $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 
-// ── Step 1: check if a record already exists ────────────────────────────────
 $checkCh = curl_init("$supabaseUrl/rest/v1/outlet_hours?outlet_id=eq.$outlet_id&select=id");
 curl_setopt_array($checkCh, [
     CURLOPT_RETURNTRANSFER => true,

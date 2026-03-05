@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 require_once '../../includes/OutletAwareSupabaseHelper.php';
 require_once '../../includes/ResponseCache.php';
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
 if (!ob_start('ob_gzhandler')) ob_start();
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'driver') {
     echo json_encode(['success' => false, 'error' => 'Unauthorized']);

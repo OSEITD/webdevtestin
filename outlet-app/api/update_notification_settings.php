@@ -25,7 +25,6 @@ if (!$input) {
     exit;
 }
 
-// Map incoming fields to `profiles` table columns
 $payload = [];
 
 if (isset($input['notify_parcel']))          $payload['notify_parcel']          = (bool) $input['notify_parcel'];

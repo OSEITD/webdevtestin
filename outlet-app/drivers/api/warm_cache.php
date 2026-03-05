@@ -3,7 +3,7 @@ require_once '../../includes/OutletAwareSupabaseHelper.php';
 require_once '../../includes/ResponseCache.php';
 $isCLI = php_sapi_name() === 'cli';
 if (!$isCLI) {
-    session_start();
+    require_once __DIR__ . '/../../includes/session_manager.php';
     
     if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['manager', 'admin'])) {
         http_response_code(401);

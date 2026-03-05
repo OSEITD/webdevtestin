@@ -8,6 +8,10 @@ function requireAuth() {
         header("Location: $loginPath");
         exit();
     }
+
+    // Silently refresh the Supabase JWT when it is close to expiry so the
+    // PHP session (24 h) and the API token stay in sync.
+    refreshSupabaseTokenIfNeeded();
 }
 
 function requireRole($allowedRoles = ['outlet_manager', 'outlet_admin', 'driver']) {

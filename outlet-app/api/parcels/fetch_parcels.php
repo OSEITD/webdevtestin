@@ -113,17 +113,17 @@ $counts['pending'] = 0;
 $driver_ids = array_filter(array_column($all_parcels, 'driver_id'));
 $drivers_data = [];
 
-error_log("🔥 Driver IDs found in parcels: " . json_encode($driver_ids));
+error_log(" Driver IDs found in parcels: " . json_encode($driver_ids));
 
 if (!empty($driver_ids)) {
     $driver_ids_str = implode(',', array_map(function($id) { return "'$id'"; }, $driver_ids));
     $drivers_url = "$supabaseUrl/rest/v1/drivers?id=in.($driver_ids_str)&select=id,driver_name,driver_phone,status,vehicle_number,vehicle_type,license_number";
     
-    error_log("🔥 Driver fetch URL: " . $drivers_url);
+    error_log(" Driver fetch URL: " . $drivers_url);
     
     $drivers_result = makeApiCall($drivers_url, $supabaseKey);
     
-    error_log("🔥 Drivers API result: " . json_encode($drivers_result));
+    error_log("Drivers API result: " . json_encode($drivers_result));
     
     
     foreach ($drivers_result as $driver) {
@@ -134,11 +134,11 @@ if (!empty($driver_ids)) {
 foreach ($all_parcels as &$parcel) {
     if (!empty($parcel['driver_id']) && isset($drivers_data[$parcel['driver_id']])) {
         $parcel['driver_info'] = $drivers_data[$parcel['driver_id']];
-        error_log("🔥 Driver info added for parcel " . $parcel['track_number'] . ": " . json_encode($parcel['driver_info']));
+        error_log(" Driver info added for parcel " . $parcel['track_number'] . ": " . json_encode($parcel['driver_info']));
     } else {
         $parcel['driver_info'] = null;
         if (!empty($parcel['driver_id'])) {
-            error_log("🔥 Driver ID " . $parcel['driver_id'] . " found but no driver data retrieved for parcel " . $parcel['track_number']);
+            error_log(" Driver ID " . $parcel['driver_id'] . " found but no driver data retrieved for parcel " . $parcel['track_number']);
         }
     }
 }

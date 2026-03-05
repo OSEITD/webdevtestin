@@ -36,7 +36,7 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
 
     error_log('===== OUTLET MANAGER SUBSCRIPTION REQUEST =====');
-    error_log('✅✅✅ CORRECT API FILE: /api/manager_save_push_subscription.php (OUTLET MANAGER API) ✅✅✅');
+    error_log(' CORRECT API FILE: /api/manager_save_push_subscription.php (OUTLET MANAGER API) ✅✅✅');
     error_log('Input data: ' . json_encode($input));
     error_log('Session user_id: ' . ($_SESSION['user_id'] ?? 'NULL'));
     error_log('Session company_id: ' . ($_SESSION['company_id'] ?? 'NULL'));
@@ -71,7 +71,6 @@ try {
         throw new Exception('Supabase configuration missing');
     }
 
-    // First check if subscription with same endpoint already exists
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "$supabaseUrl/rest/v1/push_subscriptions?user_id=eq.$userId&user_role=eq.$userRole&endpoint=eq." . urlencode($subscription['endpoint']));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -93,7 +92,7 @@ try {
     error_log('Check existing result (HTTP ' . $httpCode . '): ' . (empty($existingData) ? 'No existing subscription' : 'Found ' . count($existingData) . ' subscription(s)'));
 
     if (!empty($existingData)) {
-        // Update existing subscription
+       
         $subscriptionId = $existingData[0]['id'];
 
         error_log('Updating existing subscription: ' . $subscriptionId);
@@ -127,7 +126,7 @@ try {
             throw new Exception('Failed to update subscription');
         }
 
-        error_log('✅ Subscription updated successfully: ' . $subscriptionId);
+        error_log(' Subscription updated successfully: ' . $subscriptionId);
 
         echo json_encode([
             'success' => true,
@@ -135,7 +134,7 @@ try {
             'subscription_id' => $subscriptionId
         ]);
     } else {
-        // Deactivate old subscriptions before creating new one
+       
         $deactivateData = json_encode([
             'is_active' => false,
             'updated_at' => date('c')
@@ -159,7 +158,7 @@ try {
 
         error_log('Deactivate response (HTTP ' . $deactivateHttpCode . '): ' . $deactivateResponse);
 
-        // Create new subscription
+        //  new subscription
         error_log('Creating new subscription for user: ' . $userId);
 
         $insertData = json_encode([
@@ -200,7 +199,7 @@ try {
 
         $resultData = json_decode($response, true);
 
-        error_log('✅ Subscription created successfully: ' . ($resultData[0]['id'] ?? 'unknown'));
+        error_log(' Subscription created successfully: ' . ($resultData[0]['id'] ?? 'unknown'));
         error_log('Insert response: ' . $response);
 
         echo json_encode([

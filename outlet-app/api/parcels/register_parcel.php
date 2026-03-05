@@ -272,7 +272,7 @@ try {
         }
     }
 
-    // validate parsed dimensions
+    // validating parsed dimensions
     if ($parsedDimensions) {
         foreach (['L' => 'Length', 'W' => 'Width', 'H' => 'Height'] as $key => $name) {
             if (!isset($parsedDimensions[$key]) || !is_numeric($parsedDimensions[$key]) || $parsedDimensions[$key] <= 0) {

@@ -63,10 +63,10 @@ try {
 
             if ($updateHttpCode >= 200 && $updateHttpCode < 300) {
                 $successCount++;
-                logMessage("✅ Marked subscription {$sub['id']} as inactive");
+                logMessage("Marked subscription {$sub['id']} as inactive");
             } else {
                 $failCount++;
-                logMessage("❌ Failed to update subscription {$sub['id']}: HTTP $updateHttpCode");
+                logMessage("Failed to update subscription {$sub['id']}: HTTP $updateHttpCode");
             }
         }
 
@@ -78,7 +78,7 @@ try {
     logMessage("=== VAPID KEY RESET COMPLETE - Users must re-enable push notifications ===");
 
 } catch (Exception $e) {
-    logMessage("❌ ERROR: " . $e->getMessage());
+    logMessage(" ERROR: " . $e->getMessage());
     http_response_code(500);
 }
 ?>

@@ -4,7 +4,7 @@ header('Content-Type: application/json');
 error_reporting(0);
 ini_set('display_errors', 0);
 
-session_start();
+require_once __DIR__ . '/../includes/session_manager.php';
 require_once '../includes/OutletAwareSupabaseHelper.php';
 
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['company_id'])) {
@@ -50,9 +50,14 @@ try {
 
             
             foreach ($notifications as &$notif) {
-                
+                // data column is JSONB — Supabase returns it already decoded as an array.
+                // Guard against legacy rows that may still hold a JSON string.
                 if (!empty($notif['data'])) {
-                    $notif['parsed_data'] = json_decode($notif['data'], true);
+                    if (is_string($notif['data'])) {
+                        $notif['parsed_data'] = json_decode($notif['data'], true) ?? $notif['data'];
+                    } else {
+                        $notif['parsed_data'] = $notif['data'];
+                    }
                 }
                 
                 
@@ -178,7 +183,6 @@ try {
                 exit;
             }
 
-            // Perform a permanent delete, limited to the owner
             $filters = 'id=eq.' . urlencode($notificationId) . '&recipient_id=eq.' . urlencode($userId);
             $deleted = $supabase->delete('notifications', $filters);
 

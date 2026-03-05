@@ -187,7 +187,7 @@ try {
     $updateData = [
         'status' => 'in_process'
     ];
-    $updateResult = $supabase->put('parcels', $updateData, "id=eq.{$input['parcel_id']}");
+    $updateResult = $supabase->patch('parcels', $updateData, "id=eq.{$input['parcel_id']}");
     
     
     echo json_encode([

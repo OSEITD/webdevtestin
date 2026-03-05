@@ -37,10 +37,7 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['company_id'])) {
 try {
     $supabase = new OutletAwareSupabaseHelper();
 
-    // All non-deleted vehicles for company (OutletAwareSupabaseHelper auto-adds company_id filter)
     $vehicles = $supabase->get('vehicle', 'deleted_at=is.null&order=name.asc', 'id,name,plate_number,status') ?: [];
-
-    // All non-deleted drivers for company
     $drivers = $supabase->get('drivers', 'deleted_at=is.null&order=driver_name.asc', 'id,driver_name,driver_phone,status') ?: [];
 
     echo json_encode([

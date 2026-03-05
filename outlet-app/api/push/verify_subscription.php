@@ -1,15 +1,10 @@
 <?php
-/**
- * Verify Push Subscription Status
- * Checks if a subscription is still active on the server
- */
+
 
 header('Content-Type: application/json');
 
-// Start session
 session_start();
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode([
@@ -22,7 +17,6 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/../../includes/supabase-helper.php';
 
 try {
-    // Get request data
     $input = json_decode(file_get_contents('php://input'), true);
     
     if (!isset($input['endpoint'])) {
@@ -37,7 +31,6 @@ try {
     $endpoint = $input['endpoint'];
     $userId = $_SESSION['user_id'];
     
-    // Query subscription from database
     $supabase = new SupabaseHelper();
     
     $subscriptions = $supabase->get(
@@ -56,7 +49,6 @@ try {
     
     $subscription = $subscriptions[0];
     
-    // Check if subscription is active
     if (!$subscription['is_active']) {
         echo json_encode([
             'success' => true,
@@ -67,7 +59,6 @@ try {
         exit;
     }
     
-    // Check if subscription is too old (older than 90 days might need renewal)
     $createdAt = strtotime($subscription['created_at']);
     $daysSinceCreated = (time() - $createdAt) / (60 * 60 * 24);
     

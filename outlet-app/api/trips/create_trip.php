@@ -49,7 +49,7 @@ try {
     error_log("Session data: " . json_encode(['user_id' => $_SESSION['user_id'] ?? 'NOT SET', 'company_id' => $_SESSION['company_id'] ?? 'NOT SET']));
     
     $supabase = new MultiTenantSupabaseHelper($_SESSION['company_id']);
-    error_log("✅ Supabase helper initialized");
+    error_log(" Supabase helper initialized");
     
     
     $input = null;
@@ -144,15 +144,14 @@ try {
         ];
     }
     
-    
-    // count the stops we attempted to create so we can report even if Supabase doesn't return rows
+
     $intendedStopsCount = count($stops);
     try {
         $createdStops = $supabase->post('trip_stops', $stops);
-        // helper may return nested array for batch inserts, flatten it
+        
         if (is_array($createdStops) && isset($createdStops[0]) && is_array($createdStops[0]) && 
             (isset($createdStops[0][0]) || (array_values($createdStops[0]) === $createdStops[0] && !isset($createdStops[0]['id']))) ) {
-            // first element itself looks like the full list
+         
             $createdStops = $createdStops[0];
         }
         if (!is_array($createdStops)) {
@@ -163,7 +162,7 @@ try {
         error_log("Batch trip stop creation failed: " . $e->getMessage());
         $createdStops = [];
     }
-    // if Supabase didn't return the created rows we still need them for parcel assignment
+
     if (empty($createdStops) && !empty($stops)) {
         error_log("Warning: supabase returned no trip stops. Attempting to re-query by trip_id");
         try {
@@ -255,10 +254,10 @@ try {
         if (!empty($parcelListBatch)) {
             try {
                 $resultBatch = $supabase->post('parcel_list', $parcelListBatch);
-                error_log("✅ Batch created " . count($parcelListBatch) . " parcel list entries");
+                error_log(" Batch created " . count($parcelListBatch) . " parcel list entries");
                 error_log("Parcel list insert result: " . json_encode($resultBatch));
             } catch (Exception $e) {
-                error_log("❌ Batch parcel list insert failed: " . $e->getMessage());
+                error_log(" Batch parcel list insert failed: " . $e->getMessage());
             }
         }
         
@@ -267,9 +266,9 @@ try {
             $parcelIdsStr = implode(',', array_map('urlencode', $assignedParcels));
             try {
                 $supabase->put("parcels?id=in.($parcelIdsStr)", ['status' => 'assigned']);
-                error_log("✅ Updated " . count($assignedParcels) . " parcels to 'assigned' status");
+                error_log(" Updated " . count($assignedParcels) . " parcels to 'assigned' status");
             } catch (Exception $e) {
-                error_log("❌ Failed to update parcel statuses: " . $e->getMessage());
+                error_log(" Failed to update parcel statuses: " . $e->getMessage());
             }
         }
         if (!empty($skippedParcels)) {
@@ -289,9 +288,8 @@ try {
     $response = [
         "success" => true,
         "trip_id" => $tripId,
-        // use intendedStopsCount to ensure we have a non-zero value if insertion response is empty
+
         "trip_stops_created" => $intendedStopsCount,
-        // parcels_assigned reflect how many we actually managed to flag; fall back to selected count if zero
         "parcels_assigned" => count($assignedParcels) > 0 ? count($assignedParcels) : (isset($input['selected_parcels']) ? count($input['selected_parcels']) : 0),
         "selected_parcels_count" => isset($input['selected_parcels']) ? count($input['selected_parcels']) : 0,
         "message" => "Trip created successfully",
@@ -347,8 +345,7 @@ try {
     set_time_limit(30);
     
     
-    // Background processing - ensure no output
-    ob_start(); // Start new output buffer for background processing
+    ob_start(); 
     
     if (isset($bgDriverId) && !empty($bgDriverId)) {
         try {
@@ -398,7 +395,6 @@ try {
         }
     }
     
-    // Clean up any background output
     if (ob_get_level() > 0) {
         ob_end_clean();
     }

@@ -72,8 +72,17 @@ try {
     $barcodeGenerator = new BarcodeGenerator($supabaseHelper);
 
     
+    // helper to quote filter values for Supabase
+    $quote = function($value) {
+        // always single-quote strings; uuid and numeric are fine quoted as well
+        if (is_numeric($value)) {
+            return $value;
+        }
+        return "'" . str_replace("'", "''", $value) . "'";
+    };
+
     if ($parcelId && !$trackingNumber) {
-        $parcels = $supabaseHelper->get('parcels', "id=eq.$parcelId");
+        $parcels = $supabaseHelper->get('parcels', "id=eq." . $quote($parcelId));
         if (empty($parcels)) {
             http_response_code(404);
             echo json_encode([
@@ -86,7 +95,7 @@ try {
         $existingBarcodeUrl = $parcels[0]['barcode_url'] ?? null;
     } else if ($trackingNumber && !$parcelId) {
         
-        $parcels = $supabaseHelper->get('parcels', "track_number=eq.$trackingNumber");
+        $parcels = $supabaseHelper->get('parcels', "track_number=eq." . $quote($trackingNumber));
         if (empty($parcels)) {
             http_response_code(404);
             echo json_encode([
@@ -99,7 +108,7 @@ try {
         $existingBarcodeUrl = $parcels[0]['barcode_url'] ?? null;
     } else {
         
-        $parcels = $supabaseHelper->get('parcels', "id=eq.$parcelId");
+        $parcels = $supabaseHelper->get('parcels', "id=eq." . $quote($parcelId));
         $existingBarcodeUrl = !empty($parcels) ? ($parcels[0]['barcode_url'] ?? null) : null;
     }
 
@@ -135,7 +144,7 @@ try {
     $updateData = ['barcode_url' => $barcodeUrl];
     
     try {
-        $supabaseHelper->put('parcels', $updateData, "id=eq.$parcelId");
+        $supabaseHelper->patch('parcels', $updateData, "id=eq." . $quote($parcelId));
     } catch (Exception $e) {
         
         echo json_encode([

@@ -9,7 +9,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once __DIR__ . '/../includes/supabase.php';
+
+require_once __DIR__ . '/../includes/supabase-helper.php';
 
 try {
     $userId = $_SESSION['user_id'];
@@ -34,7 +35,7 @@ try {
     
     $query .= "&order=created_at.desc&limit=$limit";
     
-    $notifications = $supabase->get('notifications', $query, '*');
+    $notifications = $supabase->get('notifications', $query);
     
     if (!is_array($notifications)) {
         $notifications = [];
@@ -47,7 +48,7 @@ try {
         if ($companyId) {
             $countQuery .= "&company_id=eq.$companyId";
         }
-        $unreadNotifications = $supabase->get('notifications', $countQuery, 'id');
+        $unreadNotifications = $supabase->get('notifications', $countQuery);
         $unreadCount = is_array($unreadNotifications) ? count($unreadNotifications) : 0;
     } else {
         $unreadCount = count($notifications);

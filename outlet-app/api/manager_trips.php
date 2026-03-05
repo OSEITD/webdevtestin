@@ -21,9 +21,9 @@ $supabaseCandidates = [
     __DIR__ . '/../includes/supabase-helper.php',
     __DIR__ . '/../includes/OutletAwareSupabaseHelper.php',
     __DIR__ . '/../includes/supabase-client.php',
-    __DIR__ . '/../includes/supabase-helper-bypass.php',
-    __DIR__ . '/../../customer-app/includes/supabase.php'
-];
+    __DIR__ . '/../includes/supabase-helper-bypass.php'
+]; 
+
 $loaded = false;
 foreach ($supabaseCandidates as $candidate) {
     if (file_exists($candidate)) {
@@ -68,24 +68,23 @@ try {
     $offset = ($page - 1) * $pageSize;
 
     
-    // OPTIMIZATION: Get trip IDs from stops first (single query)
+  
     $tripStopsQuery = "outlet_id=eq.$outletId&company_id=eq.$companyId&select=trip_id";
     $tripStops = $supabase->get('trip_stops', $tripStopsQuery);
     $tripIdsFromStops = !empty($tripStops) ? array_unique(array_column($tripStops, 'trip_id')) : [];
     
-    // OPTIMIZATION: Build efficient OR query letting database filter
+
     if (empty($tripIdsFromStops)) {
-        // No intermediate stops, use simple origin/destination query
+       
         $tripQuery = "company_id=eq.$companyId&trip_status=in.(scheduled,accepted,in_transit,at_outlet)&or=(origin_outlet_id.eq.$outletId,destination_outlet_id.eq.$outletId)&order=created_at.desc&limit=$pageSize&offset=$offset";
         $trips = $supabase->get('trips', $tripQuery);
     } else {
-        // Has intermediate stops - combine with origin/destination
+      
         $tripIdsStr = implode(',', $tripIdsFromStops);
-        // Get trips where: outlet is stop OR origin OR destination
+        
         $tripQuery = "company_id=eq.$companyId&trip_status=in.(scheduled,accepted,in_transit,at_outlet)&or=(id.in.($tripIdsStr),origin_outlet_id.eq.$outletId,destination_outlet_id.eq.$outletId)&order=created_at.desc";
         $allRelevantTrips = $supabase->get('trips', $tripQuery);
         
-        // Remove duplicates and apply pagination
         $uniqueTrips = [];
         $seen = [];
         foreach ($allRelevantTrips as $trip) {
@@ -101,7 +100,7 @@ try {
         throw new Exception("Failed to fetch trips from database");
     }
 
-    // OPTIMIZATION: Batch fetch ALL trip stops in ONE query (eliminates N+1)
+    
     $tripIds = array_column($trips, 'id');
     $allTripStops = [];
     if (!empty($tripIds)) {
@@ -109,7 +108,7 @@ try {
         $stopsQuery = "trip_id=in.($tripIdsForStops)&order=stop_order.asc&select=id,trip_id,outlet_id,stop_order,arrival_time,departure_time";
         $allTripStops = $supabase->get('trip_stops', $stopsQuery);
         
-        // Ensure it's an array
+       
         if (!is_array($allTripStops)) {
             error_log("Failed to fetch trip stops - got non-array response");
             $allTripStops = [];
@@ -118,8 +117,7 @@ try {
         error_log("Fetched " . count($allTripStops) . " trip stops for " . count($tripIds) . " trips");
     }
 
-    // Merge in trips awaiting manager verification (driver_completed=true, manager_verified=false)
-    // These may not be in the active-status list but must still appear for the manager to action.
+
     $verificationPendingQuery = "driver_completed=eq.true&manager_verified=eq.false&company_id=eq.$companyId&or=(origin_outlet_id.eq.$outletId,destination_outlet_id.eq.$outletId)";
     $verificationPendingTrips = $supabase->get('trips', $verificationPendingQuery);
     if (!empty($verificationPendingTrips) && is_array($verificationPendingTrips)) {
@@ -141,7 +139,7 @@ try {
         if (!empty($t['origin_outlet_id'])) $originOutletIds[] = $t['origin_outlet_id'];
         if (!empty($t['destination_outlet_id'])) $destinationOutletIds[] = $t['destination_outlet_id'];
     }
-    // OPTIMIZATION: Also collect outlet IDs from stops
+    
     foreach ($allTripStops as $stop) {
         if (!empty($stop['outlet_id'])) {
             $originOutletIds[] = $stop['outlet_id'];
@@ -187,7 +185,6 @@ try {
         }
     }
     
-    // OPTIMIZATION: Build stop lookup map to include in response
     $tripStopsMap = [];
     foreach ($allTripStops as $stop) {
         $tid = $stop['trip_id'];
@@ -285,21 +282,20 @@ try {
             'driver_completed_at' => $trip['driver_completed_at'] ?? null,
             'manager_verified'    => (bool)($trip['manager_verified']    ?? false),
             'manager_verified_at' => $trip['manager_verified_at'] ?? null,
-            // OPTIMIZATION: Include stops data to avoid separate API calls
+
             'stops' => $tripStopsMap[$trip['id']] ?? [],
             'stop_count' => count($tripStopsMap[$trip['id']] ?? []),
             'parcel_count' => $parcelCountByTrip[$trip['id']] ?? 0
         ];
     }
     
-    
-    // Sort: in_transit / at_outlet (ongoing) trips first, then the rest by created_at desc
+
     usort($formattedTrips, function($a, $b) {
         $ongoingStatuses = ['in_transit', 'at_outlet'];
         $aOngoing = in_array($a['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
         $bOngoing = in_array($b['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
         if ($aOngoing !== $bOngoing) return $aOngoing - $bOngoing;
-        // Within each group: newest created_at first
+    
         return strtotime($b['created_at'] ?? '1970-01-01') - strtotime($a['created_at'] ?? '1970-01-01');
     });
     

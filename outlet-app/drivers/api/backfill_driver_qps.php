@@ -11,7 +11,7 @@ require_once '../../includes/OutletAwareSupabaseHelper.php';
 require_once '../../config.php';
 
 header('Content-Type: text/html; charset=utf-8');
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
 
 // Security: Only allow managers or admins to run this
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['manager', 'admin'])) {

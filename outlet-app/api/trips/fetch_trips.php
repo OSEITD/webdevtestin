@@ -223,16 +223,16 @@ try {
     $includeNullDestinations = false; 
     
     if ($disableFilter) {
-        error_log("⚠️ FILTER DISABLED - Will show ALL trips for debugging");
+        error_log(" FILTER DISABLED - Will show ALL trips for debugging");
         if (empty($destinationOutlet)) {
             error_log("WARNING: No destination_outlet parameter provided!");
         }
     }
     
     if ($includeNullDestinations) {
-        error_log("⚠️ TEMPORARY MODE: Including trips with NULL destinations");
+        error_log(" TEMPORARY MODE: Including trips with NULL destinations");
     } else {
-        error_log("✅ STRICT MODE: Only trips with matching destinations will show");
+        error_log("STRICT MODE: Only trips with matching destinations will show");
     }
     
     $trips = [];
@@ -351,14 +351,14 @@ try {
                 if (!empty($tripDestId) && $tripDestId == $destinationOutlet) {
                     $shouldInclude = true;
                     $filterReason = "destination_outlet_id matches (exact: $tripDestId == $destinationOutlet)";
-                    error_log("  ✅ MATCH via destination_outlet_id");
+                    error_log("   MATCH via destination_outlet_id");
                 }
                 
                 
                 if (!$shouldInclude && empty($tripDestId) && $includeNullDestinations) {
                     $shouldInclude = true;
                     $filterReason = "TEMPORARY: NULL destination included (needs fixing)";
-                    error_log("  ⚠️ INCLUDED despite NULL destination (TEMPORARY MODE)");
+                    error_log("   INCLUDED despite NULL destination (TEMPORARY MODE)");
                 }
                 
                 
@@ -367,15 +367,15 @@ try {
                     if (tripIncludesOutlet($tripId, $companyId, $destinationOutlet)) {
                         $shouldInclude = true;
                         $filterReason = "trip_stops includes outlet $destinationOutlet";
-                        error_log("  ✅ MATCH via trip_stops");
+                        error_log("   MATCH via trip_stops");
                     } else {
-                        error_log("  ❌ No match in trip_stops");
+                        error_log("   No match in trip_stops");
                     }
                 }
                 
                 if (!$shouldInclude) {
                     $tripDestName = isset($trip['destination_outlet']['outlet_name']) ? $trip['destination_outlet']['outlet_name'] : 'unknown';
-                    error_log("❌ Trip $tripId FILTERED OUT:");
+                    error_log(" Trip $tripId FILTERED OUT:");
                     error_log("   - Requested destination: $destinationOutlet");
                     error_log("   - Trip destination_outlet_id: " . ($tripDestId ?? 'NULL'));
                     error_log("   - Trip destination name: $tripDestName");
@@ -383,11 +383,11 @@ try {
                     continue;
                 }
                 
-                error_log("✅ Trip $tripId INCLUDED: $filterReason");
+                error_log(" Trip $tripId INCLUDED: $filterReason");
             } else {
                 
                 $shouldInclude = true;
-                error_log("✅ Trip $tripId INCLUDED: Filtering disabled");
+                error_log(" Trip $tripId INCLUDED: Filtering disabled");
             }
             
             $tripIds[] = $tripId;
@@ -503,7 +503,7 @@ try {
         
         
         if (!empty($tripIds)) {
-            // Credentials loaded from env (already initialized above)
+           
             $supabaseUrl = getenv('SUPABASE_URL');
             $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
             
@@ -596,7 +596,7 @@ try {
             }
         }
         if ($hasNullDest) {
-            $message = "⚠️ TEMPORARY MODE: Showing trips without destinations. Please set destination_outlet_id for all trips!";
+            $message = " TEMPORARY MODE: Showing trips without destinations. Please set destination_outlet_id for all trips!";
         }
     }
 

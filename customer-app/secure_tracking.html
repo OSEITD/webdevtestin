@@ -117,14 +117,16 @@
         const alertsContainer = document.getElementById('alerts');
         const useCompanyAccess = document.getElementById('useCompanyAccess');
         const companySection = document.getElementById('companySection');
-        useCompanyAccess.addEventListener('change', function() {
-            if (this.checked) {
-                companySection.classList.add('active');
-            } else {
-                companySection.classList.remove('active');
-                document.getElementById('companyCode').value = '';
-            }
-        });
+        if (useCompanyAccess) {
+            useCompanyAccess.addEventListener('change', function() {
+                if (this.checked) {
+                    companySection.classList.add('active');
+                } else {
+                    companySection.classList.remove('active');
+                    document.getElementById('companyCode').value = '';
+                }
+            });
+        }
         function checkUrlParameters() {
             const urlParams = new URLSearchParams(window.location.search);
             const reason = urlParams.get('reason');
@@ -169,7 +171,7 @@
                 showAlert('Please fill in all required fields', 'error');
                 return;
             }
-            if (useCompanyAccess.checked && !companyCode) {
+            if (useCompanyAccess && useCompanyAccess.checked && !companyCode) {
                 showAlert('Please enter company code or uncheck company access', 'error');
                 return;
             }
@@ -179,7 +181,7 @@
                 track_number: trackNumber,
                 phone_number: phoneNumber,
                 nrc: nrc,
-                company_subdomain: useCompanyAccess.checked ? companyCode : null
+                company_subdomain: (useCompanyAccess && useCompanyAccess.checked) ? companyCode : null
             });
             try {
                 const requestData = {
@@ -188,7 +190,7 @@
                     phone_number: phoneNumber,
                     nrc: nrc
                 };
-                if (useCompanyAccess.checked && companyCode) {
+                if (useCompanyAccess && useCompanyAccess.checked && companyCode) {
                     requestData.company_subdomain = companyCode;
                 }
                 console.log('Making API request to:', 'api/secure_track.php');

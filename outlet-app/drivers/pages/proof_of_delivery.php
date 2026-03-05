@@ -1,11 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'driver') {
-    header('Location: ../login.php');
-    exit();
-}
-$driverName = $_SESSION['full_name'] ?? 'Driver';
-$pageTitle = "Proof of Delivery - $driverName";
 $parcelId = $_GET['parcel_id'] ?? '';
 ?>
 <!DOCTYPE html>

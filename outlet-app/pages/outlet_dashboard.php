@@ -9,14 +9,11 @@ ini_set('error_log', __DIR__ . '/../../error.log');
 
 require_once __DIR__ . '/../includes/env.php';
 require_once __DIR__ . '/../includes/security_headers.php';
+require_once __DIR__ . '/../includes/session_manager.php';
 
 EnvLoader::load();
 
 SecurityHeaders::apply();
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 require_once '../includes/auth_guard.php';
 require_once '../includes/company_helper.php';

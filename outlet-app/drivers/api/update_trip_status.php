@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../config/supabase_config.php';
 require_once __DIR__ . '/../../includes/OutletAwareSupabaseHelper.php';
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
 
 ob_end_clean();
 header('Content-Type: application/json');

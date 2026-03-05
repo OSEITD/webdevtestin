@@ -72,8 +72,7 @@ try {
     if ($page_size > 200) $page_size = 200;
     $offset = ($page - 1) * $page_size;
 
-    // ── Collect relevant trip IDs from ALL three sources ────────────────────
-    // 1. Trips passing through this outlet as an intermediate stop
+
     $stopTripIds = [];
     $tripStops = $supabase->get(
         'trip_stops',
@@ -85,7 +84,7 @@ try {
         $stopTripIds = array_column($tripStops, 'trip_id');
     }
 
-    // 2. Trips that originate from OR are destined for this outlet
+    
     $directTrips = $supabase->get(
         'trips',
         "company_id=eq." . urlencode($companyId) .
@@ -95,7 +94,7 @@ try {
     );
     $directTripIds = !empty($directTrips) ? array_column($directTrips, 'id') : [];
 
-    // 3. Merge and deduplicate
+
     $relevantTripIds = array_values(array_unique(array_merge($stopTripIds, $directTripIds)));
 
     if (empty($relevantTripIds)) {
@@ -107,7 +106,7 @@ try {
         exit;
     }
 
-    // Fetch full trip records with pagination
+   
     $allMatchedTrips = $supabase->get(
         'trips',
         "id=in.(" . implode(',', array_map('urlencode', $relevantTripIds)) . ")" .
@@ -143,7 +142,7 @@ try {
         $allOutletIds[] = $stop['outlet_id'];
     }
     
-    // Also include origin and destination outlets from trips (in case they don't have trip_stops)
+ 
     foreach ($trips as $trip) {
         if (!empty($trip['origin_outlet_id'])) {
             $allOutletIds[] = $trip['origin_outlet_id'];
@@ -226,19 +225,18 @@ try {
         $enrichedStops = [];
         $stopsForTrip = $stopsByTrip[$tripId] ?? [];
         
-        // If no stops exist in trip_stops table, create default stops from origin/destination
+        
         if (empty($stopsForTrip)) {
             $stopOrder = 1;
-            
-            // Add origin outlet as first stop
+        
             if (!empty($trip['origin_outlet_id'])) {
                 $originOutlet = $outletsMap[$trip['origin_outlet_id']] ?? null;
                 if ($originOutlet) {
                     $enrichedStops[] = [
-                        'id' => null, // No actual trip_stop record exists
+                        'id' => null, 
                         'stop_order' => $stopOrder++,
-                        'arrival_time' => $trip['created_at'] ?? null, // Mark as "arrived" since trip starts here
-                        'departure_time' => $trip['departure_time'] ?? null, // From trips table
+                        'arrival_time' => $trip['created_at'] ?? null, 
+                        'departure_time' => $trip['departure_time'] ?? null, 
                         'outlet' => [
                             'id' => $originOutlet['id'],
                             'outlet_name' => $originOutlet['outlet_name'] ?? 'Unknown Outlet',
@@ -249,15 +247,14 @@ try {
                 }
             }
             
-            // Add destination outlet as final stop (if different from origin)
             if (!empty($trip['destination_outlet_id']) && $trip['destination_outlet_id'] !== $trip['origin_outlet_id']) {
                 $destOutlet = $outletsMap[$trip['destination_outlet_id']] ?? null;
                 if ($destOutlet) {
                     $enrichedStops[] = [
-                        'id' => null, // No actual trip_stop record exists
+                        'id' => null,
                         'stop_order' => $stopOrder++,
-                        'arrival_time' => $trip['arrival_time'] ?? null, // From trips table
-                        'departure_time' => null, // Trip ends here, no departure
+                        'arrival_time' => $trip['arrival_time'] ?? null,
+                        'departure_time' => null, 
                         'outlet' => [
                             'id' => $destOutlet['id'],
                             'outlet_name' => $destOutlet['outlet_name'] ?? 'Unknown Outlet',
@@ -268,7 +265,7 @@ try {
                 }
             }
         } else {
-            // Process existing stops from trip_stops table
+
             foreach ($stopsForTrip as $stop) {
                 $outlet = $outletsMap[$stop['outlet_id']] ?? null;
                 $enrichedStops[] = [
@@ -331,7 +328,7 @@ try {
                 
                 $parcels[] = [
                     'id' => $parcel['id'],
-                    'parcel_list_id' => $entry['id'] ?? null, // ID from parcel_list table for removal
+                    'parcel_list_id' => $entry['id'] ?? null,
                     'track_number' => $parcel['track_number'] ?? 'N/A',
                     'status' => $parcel['status'] ?? 'pending',
                     'sender_name' => $parcel['sender_name'] ?? 'N/A',
@@ -369,7 +366,7 @@ try {
 
         $filteredParcels = $parcels;
 
-        // Determine which stop number this outlet is on the route
+       
         $outletStopOrder = null;
         foreach ($enrichedStops as $s) {
             if (!empty($s['outlet']['id']) && $s['outlet']['id'] === $outletId) {
@@ -386,13 +383,13 @@ try {
             'trip_date' => $trip['trip_date'] ?? null,
             'created_at' => $trip['created_at'] ?? null,
             'updated_at' => $trip['updated_at'] ?? null,
-            // Verification fields
+
             'driver_completed'    => (bool)($trip['driver_completed'] ?? false),
             'driver_completed_at' => $trip['driver_completed_at'] ?? null,
             'manager_verified'    => (bool)($trip['manager_verified'] ?? false),
             'manager_verified_at' => $trip['manager_verified_at'] ?? null,
             'manager_verified_by' => $trip['manager_verified_by'] ?? null,
-            //
+            
             'outlet_manager_id' => $trip['outlet_manager_id'] ?? null,
             'driver' => $driverInfo,
             'vehicle' => $vehicleInfo,
@@ -406,13 +403,12 @@ try {
     }
 
     
-    // Sort: in_transit / at_outlet (ongoing) trips first, then the rest by created_at desc
     usort($enrichedTrips, function($a, $b) {
         $ongoingStatuses = ['in_transit', 'at_outlet'];
         $aOngoing = in_array($a['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
         $bOngoing = in_array($b['trip_status'] ?? '', $ongoingStatuses) ? 0 : 1;
         if ($aOngoing !== $bOngoing) return $aOngoing - $bOngoing;
-        // Within each group: newest created_at first
+      
         return strtotime($b['created_at'] ?? '1970-01-01') - strtotime($a['created_at'] ?? '1970-01-01');
     });
 
@@ -472,13 +468,12 @@ try {
             $et['authorized_actions']['can_complete'] = true;
         }
 
-        // Per-stop authorization: a manager can arrive/depart only at stops that
-        // belong to their own outlet (or super_admin can act on any stop).
+      
         foreach ($et['stops'] as &$s) {
             $stopOutletId = $s['outlet']['id'] ?? null;
             $stopAllowed  = $userRole === 'super_admin'
                          || ($stopOutletId && $stopOutletId === $outletId)
-                         || $tripAllowed; // trip-level authorization also grants stop access
+                         || $tripAllowed; 
 
             $s['authorized_actions'] = [
                 'stop_allowed' => $stopAllowed,

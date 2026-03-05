@@ -25,7 +25,7 @@ if (!$input) {
     exit;
 }
 
-// Build update payload — only include fields present in the `outlets` table
+
 $allowed = ['outlet_name', 'address', 'contact_person', 'contact_email', 'contact_phone', 'latitude', 'longitude', 'status'];
 $payload = [];
 foreach ($allowed as $field) {
@@ -39,7 +39,7 @@ if (empty($payload)) {
     exit;
 }
 
-$payload['updated_at'] = date('c'); // ISO 8601
+$payload['updated_at'] = date('c'); 
 
 if (!class_exists('EnvLoader')) { require_once __DIR__ . '/../includes/env.php'; }
 EnvLoader::load();

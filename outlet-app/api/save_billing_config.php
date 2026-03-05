@@ -92,7 +92,7 @@ try {
         $action = 'created';
     } else {
         
-        $result = $supabase->put('billing_configs', $configData, $query);
+        $result = $supabase->patch('billing_configs', $configData, $query);
         $action = 'updated';
     }
 

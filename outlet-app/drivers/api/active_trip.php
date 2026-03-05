@@ -1,7 +1,7 @@
 <?php
 ob_start();
 require_once '../../includes/ResponseCache.php';
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
 
 ob_end_clean();
 header('Content-Type: application/json');

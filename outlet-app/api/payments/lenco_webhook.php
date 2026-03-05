@@ -1,17 +1,5 @@
 <?php
-/**
- * Lenco Payment Webhook Handler (Secured)
- * 
- * Receives webhook notifications from Lenco when payment status changes.
- * 
- * Security measures:
- * - HMAC-SHA512 signature validation (X-Lenco-Signature header)
- * - POST-only access
- * - Rate limiting
- * - No session required (server-to-server)
- * 
- * Configure this URL in the Lenco dashboard webhook settings.
- */
+
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -94,8 +82,6 @@ function handleSuccessfulCollection($data) {
 
     error_log("Processing successful payment - Reference: {$reference}, Amount: {$amount} {$currency}");
 
-    // Updating payment transaction status
-    // carry mobile money fields up top so updatePaymentStatus can write them directly
     $extra = [];
     if (!empty($data['mobileNetwork'])) {
         $extra['mobile_network'] = strtoupper($data['mobileNetwork']);
@@ -113,7 +99,7 @@ function handleSuccessfulCollection($data) {
     ]));
 
     if ($paymentUpdated) {
-        // Updating the corresponding parcel's payment status to 'paid'
+      
         updateParcelPaymentStatus($reference);
     }
 }
@@ -162,19 +148,19 @@ function updatePaymentStatus($reference, $status, $additionalData = []) {
     $supabaseKey = $config['supabase']['service_role_key'];
     
     try {
-        //  updating payload
+       
         $updateData = [
             'status' => $status,
             'updated_at' => date('c'),
             'metadata' => json_encode($additionalData)
         ];
         
-        // if the webhook payload includes mobile money details, copy them to the record
+       
         if (!empty($additionalData['payment_data']['mobileNetwork'])) {
             $updateData['mobile_network'] = strtoupper($additionalData['payment_data']['mobileNetwork']);
         }
         if (!empty($additionalData['payment_data']['mobileNumber'])) {
-            // do not mask here – earlier code masks when creating the transaction
+           
             $updateData['mobile_number'] = $additionalData['payment_data']['mobileNumber'];
         }
 
@@ -241,7 +227,7 @@ function updateParcelPaymentStatus($reference) {
     $supabaseKey = $config['supabase']['service_role_key'];
 
     try {
-        //getting the parcel_id from the payment transaction
+ 
         $getParcelUrl = $supabaseUrl . '/rest/v1/payment_transactions?select=parcel_id&tx_ref=eq.' . urlencode($reference);
 
         $ch = curl_init();

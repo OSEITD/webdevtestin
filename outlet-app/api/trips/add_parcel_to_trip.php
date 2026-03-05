@@ -155,8 +155,7 @@ try {
     $routeOutlets = array_unique($routeOutlets);
     $validDestinations = $routeOutlets; 
 
-    // Fetch parcels - only require destination to be in route (not origin)
-    // This allows parcels from any origin to be added as long as they're going to a route outlet
+
     $parcelsFilter = "id=in.(" . implode(',', array_map('urlencode', $parcelIds)) . ")" .
                      "&destination_outlet_id=in.(" . implode(',', array_map('urlencode', $routeOutlets)) . ")" .
                      "&status=in.(pending,scheduled)";

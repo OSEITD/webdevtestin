@@ -1,25 +1,22 @@
 <?php
-/**
- * Lenco Payment Gateway Configuration — apiWDLenco1
- * 
- * SECURITY NOTES:
- * - Secret key is NEVER exposed to frontend; only used server-side (verify / webhook).
- * - Public key is safe for client-side widget initialization.
- * - Set LENCO_ENV to 'sandbox' to fall back to sandbox keys for testing.
- * - This file should be excluded from public version control (.gitignore).
- */
 
-// ─── Environment Toggle ──────────────────────────────────────────────────────
-// 'live' = production (real money), 'sandbox' = test mode
-define('LENCO_ENV', 'live');
+// ───  environment variables ──────────────────────────────────────────────
+if (!class_exists('EnvLoader')) {
+    require_once __DIR__ . '/../../includes/env.php';
+}
+EnvLoader::load();
 
-// ─── Live / Production Credentials (apiWDLenco1) ────────────────────────────
-define('LENCO_PUBLIC_KEY_LIVE', 'pub-345dbaaf4e6865deb9f3beab0718afe457762dab73afd0a0');
-define('LENCO_SECRET_KEY_LIVE', 'ec3d5d3db51765c794f9f70ba7fb12131be4844939e3837966aacae47693db5e');
+
+$_lencoEnv = getenv('LENCO_ENV') ?: 'live';
+define('LENCO_ENV', $_lencoEnv);
+
+// ─── Live / Production Credentials ───────────────────────────────────────────
+define('LENCO_PUBLIC_KEY_LIVE',  getenv('LENCO_PUBLIC_KEY_LIVE')  ?: '');
+define('LENCO_SECRET_KEY_LIVE',  getenv('LENCO_SECRET_KEY_LIVE')  ?: '');
 
 // ─── Sandbox / Test Credentials ──────────────────────────────────────────────
-define('LENCO_PUBLIC_KEY_SANDBOX', 'pub-88dd921c0ecd73590459a1dd5a9343c77db0f3c344f222b9');
-define('LENCO_SECRET_KEY_SANDBOX', '993bed87f9d592566a6cce2cefd79363d1b7e95af3e1e6642b294ce5fc8c59f6');
+define('LENCO_PUBLIC_KEY_SANDBOX', getenv('LENCO_PUBLIC_KEY_SANDBOX') ?: '');
+define('LENCO_SECRET_KEY_SANDBOX', getenv('LENCO_SECRET_KEY_SANDBOX') ?: '');
 
 // ─── API Base URLs ───────────────────────────────────────────────────────────
 define('LENCO_LIVE_BASE_URL', 'https://api.lenco.co/access/v2');
@@ -46,16 +43,11 @@ define('LENCO_STATUS_FAILED', 'failed');
 define('LENCO_RATE_LIMIT_WINDOW', 60);
 define('LENCO_RATE_LIMIT_MAX', 10);
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Helper functions
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/** Public key (safe for client-side) */
 function getLencoPublicKey() {
     return LENCO_ENV === 'live' ? LENCO_PUBLIC_KEY_LIVE : LENCO_PUBLIC_KEY_SANDBOX;
 }
 
-/** Secret key (server-side only — never echo to frontend) */
+
 function getLencoSecretKey() {
     return LENCO_ENV === 'live' ? LENCO_SECRET_KEY_LIVE : LENCO_SECRET_KEY_SANDBOX;
 }
@@ -70,9 +62,8 @@ function getLencoWidgetUrl() {
     return LENCO_ENV === 'live' ? LENCO_WIDGET_LIVE_URL : LENCO_WIDGET_SANDBOX_URL;
 }
 
-/**
- * Calculate transaction fee
- */
+// Calculating transaction fee
+ 
 function calculateLencoTransactionFee($amount, $method = 'mobile-money') {
     if ($method === 'mobile-money') {
         return ($amount * LENCO_MOBILE_MONEY_FEE_PERCENTAGE) / 100;
@@ -82,9 +73,8 @@ function calculateLencoTransactionFee($amount, $method = 'mobile-money') {
     return 0;
 }
 
-/**
- * Generatting a unique, unpredictable payment reference
- */
+//Generatting a unique, unpredictable payment reference
+ 
 function generateLencoReference($prefix = 'WDP') {
     return $prefix . '-' . date('Ymd') . '-' . bin2hex(random_bytes(8));
 }
@@ -119,7 +109,6 @@ function getLencoMobileOperator($phoneNumber) {
     return null;
 }
 
-// file-based rate limiter (per IP).
  
 function lencoRateLimitCheck($action = 'payment') {
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
@@ -161,7 +150,7 @@ function lencoRateLimitCheck($action = 'payment') {
 function validateLencoWebhookSignature($rawBody) {
     $signature = $_SERVER['HTTP_X_LENCO_SIGNATURE'] ?? '';
     if (empty($signature)) {
-        // If no signature header, log warning but allow in dev
+       
         error_log('Lenco Webhook: No X-Lenco-Signature header present');
         return LENCO_ENV !== 'live'; 
     }

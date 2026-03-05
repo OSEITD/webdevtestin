@@ -5,7 +5,7 @@ ini_set('log_errors', 1);
 error_reporting(E_ALL);
 require_once '../../includes/OutletAwareSupabaseHelper.php';
 require_once '../../includes/push_notification_service.php';
-session_start();
+require_once __DIR__ . '/../../includes/session_manager.php';
 
 ob_end_clean();
 header('Content-Type: application/json');

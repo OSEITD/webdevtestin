@@ -188,7 +188,7 @@ class SecureParcelTracker {
                 'order' => 'created_at.desc'
             ];
             
-            $response = $this->callSupabase('payments', 'GET', $params);
+            $response = $this->callSupabase('payment_transactions', 'GET', $params);
             
             return $response[0] ?? null;
             

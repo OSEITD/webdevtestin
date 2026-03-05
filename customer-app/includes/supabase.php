@@ -7,7 +7,8 @@ use Supabase\CreateClient;
 
 function getSupabaseClient() {
     
-    $envPath = __DIR__ . '/../../.env';
+    // Look for .env in customer-app/ first, then fall back to workspace root
+    $envPath = file_exists(__DIR__ . '/../.env') ? __DIR__ . '/../.env' : __DIR__ . '/../../.env';
     if (file_exists($envPath)) {
         try {
             $envContent = file_get_contents($envPath);

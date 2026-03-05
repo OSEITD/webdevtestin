@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once __DIR__ . '/../../includes/supabase.php';
+require_once __DIR__ . '/../../includes/supabase-helper.php';
 
 try {
     $userId = $_SESSION['user_id'];
@@ -22,12 +22,12 @@ try {
     
     if ($markAllRead) {
         
-        $updateData = json_encode([
+        $updateData = [
             'status' => 'read',
             'read_at' => date('c')
-        ]);
+        ];
         
-        $result = $supabase->update('notifications', "recipient_id=eq.$userId&status=eq.unread", $updateData);
+        $result = $supabase->patch('notifications', $updateData, "recipient_id=eq.$userId&status=eq.unread");
         
         echo json_encode([
             'success' => true,
@@ -35,12 +35,12 @@ try {
         ]);
     } else if ($notificationId) {
         
-        $updateData = json_encode([
+        $updateData = [
             'status' => 'read',
             'read_at' => date('c')
-        ]);
+        ];
         
-        $result = $supabase->update('notifications', "id=eq.$notificationId&recipient_id=eq.$userId", $updateData);
+        $result = $supabase->patch('notifications', $updateData, "id=eq.$notificationId&recipient_id=eq.$userId");
         
         echo json_encode([
             'success' => true,

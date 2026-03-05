@@ -130,7 +130,6 @@ try {
         }
         // admin / company_admin / super_admin: no extra scope, search all company trips
 
-        // Query filter: UUID prefix -> match by ID, otherwise match by status keyword
         $isUuidLike = (bool) preg_match('/^[0-9a-f\-]{2,}$/i', $query);
         if ($isUuidLike) {
             $tripFilter .= '&id=ilike.' . urlencode($query) . '*';

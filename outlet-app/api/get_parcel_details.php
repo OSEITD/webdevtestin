@@ -29,7 +29,7 @@ require_once '../includes/MultiTenantSupabaseHelper.php';
 try {
     $supabase = new MultiTenantSupabaseHelper($companyId);
 
-    // Fetch parcel details
+    //  parcel details
     $parcelFilter = "id=eq." . urlencode($parcelId) . "&company_id=eq." . urlencode($companyId);
     $parcelData = $supabase->get('parcels', $parcelFilter);
 
@@ -40,7 +40,7 @@ try {
 
     $parcel = $parcelData[0];
 
-    // Fetch outlet information
+    //  outlet information
     $outletIds = [];
     if (!empty($parcel['origin_outlet_id'])) {
         $outletIds[] = $parcel['origin_outlet_id'];
@@ -58,7 +58,7 @@ try {
         }
     }
 
-    // Add outlet names to parcel
+    // Adding outlet names to parcel
     $parcel['origin_outlet_name'] = isset($outletsMap[$parcel['origin_outlet_id']]) ?
         $outletsMap[$parcel['origin_outlet_id']]['outlet_name'] : 'Unknown';
     $parcel['destination_outlet_name'] = isset($outletsMap[$parcel['destination_outlet_id']]) ?

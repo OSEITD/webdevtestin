@@ -1,22 +1,11 @@
 <?php
-/**
- * Lenco Payment Verification API (Secured)
- * 
- * Verifies payment status with Lenco API server-side.
- * - Requires active session (authenticated user).
- * - Rate-limited per IP.
- * - Reference is sanitised before use.
- * 
- * Documentation: https://lenco-api.readme.io/v2.0/reference/accept-payments
- */
 
-// ─── Security Headers ────────────────────────────────────────────────────────
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
-// Allow same-origin only (adjust if your frontend is on a different domain)
+
 $allowedOrigin = ($_SERVER['HTTP_ORIGIN'] ?? '');
 if (!empty($allowedOrigin) && (
     str_contains($allowedOrigin, $_SERVER['HTTP_HOST'] ?? '') ||
@@ -38,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once 'lenco_config.php';
 require_once __DIR__ . '/../../config.php';
 
-// ─── Session Authentication ──────────────────────────────────────────────────
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -56,7 +45,7 @@ if (!lencoRateLimitCheck('verify')) {
     exit();
 }
 
-// ─── Get & Sanitise Reference ────────────────────────────────────────────────
+
 $reference = '';
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $reference = $_GET['reference'] ?? '';
@@ -65,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $reference = $input['reference'] ?? '';
 }
 
-// Strip anything that isn't alphanumeric, dash, or underscore
+// Stripping anything that isn't alphanumeric, dash, or underscore
 $reference = preg_replace('/[^a-zA-Z0-9\-_]/', '', trim($reference));
 
 if (empty($reference) || strlen($reference) > 100) {
@@ -75,7 +64,7 @@ if (empty($reference) || strlen($reference) > 100) {
 }
 
 try {
-    // ─── Verify with Lenco API ───────────────────────────────────────────────
+    // ─── Verifying with Lenco API ───────────────────────────────────────────────
     $apiUrl = getLencoBaseUrl() . '/collections/status/' . urlencode($reference);
     $secretKey = getLencoSecretKey();
     
@@ -111,7 +100,7 @@ try {
         throw new Exception('Payment verification failed. Please try again.');
     }
     
-    // ─── Process Response ────────────────────────────────────────────────────
+
     if (isset($responseData['status']) && $responseData['status'] === true && isset($responseData['data'])) {
         $paymentData = $responseData['data'];
         $paymentStatus = $paymentData['status'] ?? 'unknown';

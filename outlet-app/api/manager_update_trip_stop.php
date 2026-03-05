@@ -42,7 +42,7 @@ try {
     }
 
     $stop_id = $input['stop_id'] ?? null;
-    $outlet_id = $input['outlet_id'] ?? null; // For origin/destination outlets
+    $outlet_id = $input['outlet_id'] ?? null; 
     $trip_id = $input['trip_id'] ?? null;
     $action = $input['action'] ?? null; 
     $timestamp = $input['timestamp'] ?? date('Y-m-d H:i:s');
@@ -54,15 +54,15 @@ try {
         exit;
     }
 
-    // Handle two different modes: trip_stops (intermediate) vs direct outlet (origin/destination)
+   
     if ($stop_id) {
-        // Traditional trip_stops mode
+ 
         if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $stop_id)) {
             echo json_encode(['success' => false, 'error' => 'Invalid stop ID format']);
             exit;
         }
     } else {
-        // Direct outlet mode (for origin/destination only)
+        
         if (!$outlet_id || !$trip_id) {
             echo json_encode(['success' => false, 'error' => 'outlet_id and trip_id required for origin/destination tracking']);
             exit;
@@ -76,10 +76,9 @@ try {
 
     $supabase = new OutletAwareSupabaseHelper();
 
-    
-    // Handle different modes
+   
     if ($stop_id) {
-        // Traditional trip_stops mode
+       
         $stopQuery = $supabase->get('trip_stops', 'id=eq.' . urlencode($stop_id) . '&select=id,trip_id,outlet_id,stop_order,arrival_time,departure_time');
         if (empty($stopQuery)) {
             echo json_encode(['success' => false, 'error' => 'Trip stop not found']);
@@ -90,7 +89,7 @@ try {
         $trip_id = $stop['trip_id'];
         $mode = 'stop';
     } else {
-        // Direct outlet mode
+      
         $tripQuery = $supabase->get('trips', 'id=eq.' . urlencode($trip_id) . '&select=id,origin_outlet_id,destination_outlet_id,trip_status,driver_id,arrival_time,departure_time');
         if (empty($tripQuery)) {
             echo json_encode(['success' => false, 'error' => 'Trip not found']);
@@ -100,7 +99,7 @@ try {
         
         error_log("Outlet mode - trip data: " . json_encode($trip));
         
-        // Verify outlet is origin or destination
+        // Verifying outlet is origin or destination
         if ($outlet_id !== $trip['origin_outlet_id'] && $outlet_id !== $trip['destination_outlet_id']) {
             echo json_encode(['success' => false, 'error' => 'Outlet is not origin or destination of this trip']);
             exit;
@@ -109,7 +108,7 @@ try {
     }
 
     
-    // Authorization check
+
     $outletInfo = $supabase->get('outlets', 'id=eq.' . urlencode($outlet_id) . '&select=id,manager_id');
     if (!empty($outletInfo) && isset($outletInfo[0]['manager_id']) && $outletInfo[0]['manager_id'] == $managerId) {
         $allowed = true;
@@ -148,8 +147,7 @@ try {
         exit;
     }
 
-    
-    // Get trip info (if not already loaded)
+  
     if (!isset($trip)) {
         $tripQuery = $supabase->get('trips', 'id=eq.' . urlencode($trip_id) . '&select=id,trip_status,driver_id');
         if (empty($tripQuery)) {
@@ -159,9 +157,8 @@ try {
         $trip = $tripQuery[0];
     }
 
-    // Handle different update modes
     if ($mode === 'stop') {
-        // Traditional trip_stops update
+   
         $updateData = [];
         if ($action === 'arrive') {
             if (!empty($stop['arrival_time'])) {
@@ -188,7 +185,6 @@ try {
             exit;
         }
 
-        // ── Auto-complete trip when all stops are fully departed ──────────────
         $allStopsDone = false;
         if ($action === 'depart') {
             try {
@@ -209,7 +205,7 @@ try {
             }
         }
 
-        // Log the update
+
         $logData = [
             'trip_id' => $trip['id'],
             'stop_id' => $stop_id,
@@ -219,7 +215,7 @@ try {
         ];
         $responseExtra = $allStopsDone ? ['all_stops_completed' => true] : [];
     } else {
-        // Direct outlet mode - update trip table directly
+        
         $isOrigin = ($outlet_id === $trip['origin_outlet_id']);
         $isDestination = ($outlet_id === $trip['destination_outlet_id']);
         
@@ -228,7 +224,7 @@ try {
         $tripUpdateData = [];
         if ($action === 'arrive') {
             if ($isDestination) {
-                // Arriving at destination
+               
                 error_log("Arriving at destination");
                 if (!empty($trip['arrival_time'])) {
                     echo json_encode(['success' => false, 'error' => 'Already marked as arrived at destination']);
@@ -237,7 +233,7 @@ try {
                 $tripUpdateData['arrival_time'] = $timestamp;
                 $tripUpdateData['trip_status'] = 'completed';
             } elseif ($isOrigin) {
-                // Arriving back at origin (for round trips or returns)
+               
                 error_log("Arriving at origin");
                 if (!empty($trip['arrival_time'])) {
                     echo json_encode(['success' => false, 'error' => 'Already marked as arrived']);
@@ -251,7 +247,7 @@ try {
             }
         } elseif ($action === 'depart') {
             if ($isOrigin) {
-                // Departing from origin
+            
                 error_log("Departing from origin");
                 if (!empty($trip['departure_time'])) {
                     echo json_encode(['success' => false, 'error' => 'Already marked as departed from origin']);
@@ -260,13 +256,12 @@ try {
                 $tripUpdateData['departure_time'] = $timestamp;
                 $tripUpdateData['trip_status'] = 'in_transit';
             } elseif ($isDestination) {
-                // Departing from destination (for return trips)
                 error_log("Departing from destination");
                 if (empty($trip['arrival_time'])) {
                     echo json_encode(['success' => false, 'error' => 'Must arrive before departing']);
                     exit;
                 }
-                // This could set a return_departure_time if needed, or just update status
+                
                 $tripUpdateData['trip_status'] = 'in_transit';
             } else {
                 echo json_encode(['success' => false, 'error' => 'Outlet is not origin or destination']);
@@ -285,7 +280,7 @@ try {
             exit;
         }
 
-        // Log the tracking update
+       
         $logData = [
             'trip_id' => $trip_id,
             'outlet_id' => $outlet_id,
@@ -296,10 +291,9 @@ try {
     }
 
     try {
-        // Try to insert into trip_logs table for tracking
         $supabase->insert('trip_logs', $logData);
     } catch (Exception $e) {
-        // Log error but don't fail the main operation
+     
         error_log("Trip log error: " . $e->getMessage());
     }
 

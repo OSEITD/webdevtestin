@@ -119,10 +119,9 @@ try {
             $supabaseHelper = new SupabaseHelper();
             $pushService = new PushNotificationService($supabaseHelper);
             
-            // Notify driver
             $pushService->sendToDriver(
                 $trip['driver_id'],
-                '✅ Trip Accepted by Manager',
+                ' Trip Accepted by Manager',
                 'Your assigned trip has been accepted and is ready to start.',
                 [
                     'trip_id' => $tripId,
@@ -130,9 +129,9 @@ try {
                 ]
             );
             
-            // Notify all outlets in the route
+          
             error_log("Sending trip accepted notifications to all outlets in route for trip: $tripId");
-            $pushService->sendToAllOutletsInRoute($tripId, '✅ Trip Accepted', 'Trip has been accepted by outlet manager and is ready to start.', [
+            $pushService->sendToAllOutletsInRoute($tripId, 'Trip Accepted', 'Trip has been accepted by outlet manager and is ready to start.', [
                 'trip_id' => $tripId,
                 'action' => 'trip_accepted',
                 'url' => '/outlet-app/pages/manager_trips.php',

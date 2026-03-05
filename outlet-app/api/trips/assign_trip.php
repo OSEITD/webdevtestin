@@ -60,7 +60,6 @@ try {
 
     $supabase = new OutletAwareSupabaseHelper();
 
-    // Verify trip exists and is still scheduled
     $trips = $supabase->get('trips', 'id=eq.' . urlencode($tripId), 'id,trip_status,departure_time,origin_outlet_id,destination_outlet_id');
     if (!$trips || count($trips) === 0) {
         throw new Exception("Trip not found");
@@ -85,7 +84,7 @@ try {
         throw new Exception("Failed to update trip: " . json_encode($result));
     }
 
-    // ── Update driver status and current_trip_id ──────────────────────────
+
     if ($driverId) {
         try {
             $supabase->update('drivers', [

@@ -3,14 +3,16 @@ class SessionManager {
     
     public static function init() {
         if (session_status() === PHP_SESSION_NONE) {
-            
+            $lifetime = defined('SESSION_LIFETIME') ? SESSION_LIFETIME : 86400;
+
             $isLocalhost = isset($_SERVER['HTTP_HOST']) && 
                           (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || 
                            strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false);
             
-            
+            ini_set('session.gc_maxlifetime', $lifetime);
+            ini_set('session.cookie_lifetime', $lifetime);
             session_set_cookie_params([
-                'lifetime' => 1296000,
+                'lifetime' => $lifetime,
                 'path' => '/',
                 'domain' => $isLocalhost ? '' : '.localhost', 
                 'secure' => !$isLocalhost, 

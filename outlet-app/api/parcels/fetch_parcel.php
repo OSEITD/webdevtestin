@@ -26,7 +26,7 @@ EnvLoader::load();
 $SUPABASE_URL     = getenv('SUPABASE_URL');
 $SUPABASE_API_KEY = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 
-// Build query filter: prefer UUID id lookup, fall back to track_number barcode
+
 if ($parcelId) {
     $queryFilter = "id=eq." . urlencode($parcelId) . "&company_id=eq." . urlencode($company_id) . "&select=*";
 } else {

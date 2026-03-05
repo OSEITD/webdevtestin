@@ -50,7 +50,7 @@ try {
         exit;
     }
 
-    // Parse input
+
     $input = json_decode(file_get_contents('php://input'), true);
 
     if (!isset($input['parcel_list_id']) || empty($input['parcel_list_id'])) {
@@ -147,7 +147,6 @@ try {
 
     $parcel = $parcels[0];
 
-    // Deleting the parcel_list entry using direct HTTP DELETE
     $deleteUrl = $supabase->getUrl() . "/rest/v1/parcel_list?id=eq." . urlencode($parcelListId) . "&company_id=eq." . urlencode($companyId);
     
     $context = stream_context_create([

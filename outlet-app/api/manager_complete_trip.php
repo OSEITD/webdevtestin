@@ -56,7 +56,7 @@ try {
     
     $now = date('Y-m-d H:i:s');
 
-    // Fix: correct arg order — update($table, $data_array, $filter_string)
+ 
     $updateResult = $supabase->update('trips', [
         'trip_status' => 'completed',
         'arrival_time' => $now,
@@ -67,10 +67,10 @@ try {
         throw new Exception('Failed to complete trip');
     }
 
-    // Update parcel_list → completed
+
     $supabase->update('parcel_list', ['status' => 'completed', 'updated_at' => $now], "trip_id=eq.$tripId");
 
-    // Update parcels → delivered
+   
     $parcelListItems = $supabase->get('parcel_list', "trip_id=eq.$tripId", 'parcel_id');
     $completedParcelIds = array_values(array_filter(array_column($parcelListItems ?? [], 'parcel_id')));
     if (!empty($completedParcelIds)) {
@@ -92,7 +92,6 @@ try {
         ], 'id=eq.' . urlencode($tripData['driver_id']));
     }
 
-    // Update vehicle → available
     if (!empty($tripData['vehicle_id'])) {
         $supabase->update('vehicle', [
             'status'     => 'available',
@@ -100,7 +99,6 @@ try {
         ], 'id=eq.' . urlencode($tripData['vehicle_id']));
     }
 
-    // Update driver_qps
     if (!empty($tripData['driver_id'])) {
         $today = date('Y-m-d');
         $parcelsHandledCount = count($completedParcelIds);
@@ -181,13 +179,13 @@ try {
                 mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
             );
             
-            $notificationData = json_encode([
+            $notificationData = [
                 'id' => $notificationId,
                 'company_id' => $companyId,
                 'outlet_id' => $tripData['destination_outlet_id'],
                 'recipient_id' => $tripData['driver_id'],
                 'sender_id' => $managerId,
-                'title' => '✅ Trip Completed',
+                'title' => ' Trip Completed',
                 'message' => sprintf(
                     'Your trip from %s to %s has been completed',
                     $originOutletName,
@@ -202,15 +200,15 @@ try {
                     'url' => '/drivers/dashboard.php'
                 ]),
                 'created_at' => date('c')
-            ]);
+            ];
             
-            $supabase->post('notifications', $notificationData);
+            $supabase->insert('notifications', $notificationData);
             
             
             $pushService = new PushNotificationService($supabase);
             
-            // Notify driver
-            $title = '✅ Trip Completed';
+            
+            $title = ' Trip Completed';
             $body = sprintf(
                 'Trip from %s to %s has been completed',
                 $originOutletName,
@@ -223,16 +221,15 @@ try {
                 'url' => 'http://acme.localhost/drivers/dashboard.php',
                 'timestamp' => time(),
                 'actions' => [
-                    ['action' => 'view_dashboard', 'title' => '📊 View Dashboard'],
-                    ['action' => 'dismiss', 'title' => '❌ Dismiss']
+                    ['action' => 'view_dashboard', 'title' => ' View Dashboard'],
+                    ['action' => 'dismiss', 'title' => ' Dismiss']
                 ]
             ];
             
             $pushService->sendToDriver($tripData['driver_id'], $title, $body, $pushData);
             
-            // Notify ALL outlets in the route (origin, destination, and stops)
             error_log("Sending trip completed notifications to all outlets in route for trip: $tripId");
-            $pushService->sendToAllOutletsInRoute($tripId, '✅ Trip Completed', sprintf(
+            $pushService->sendToAllOutletsInRoute($tripId, ' Trip Completed', sprintf(
                 'Trip from %s to %s has been completed',
                 $originOutletName,
                 $destinationOutletName
