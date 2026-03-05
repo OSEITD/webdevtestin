@@ -72,43 +72,47 @@ try {
     $isLastStop = ($completedStops === $totalStops);
     
     if ($isLastStop) {
-        
+        // Mark driver's part done — await manager verification
         $supabase->update('trips', [
-            'trip_status' => 'completed',
-            'arrival_time' => $completionTime,
-            'updated_at' => $completionTime
+            'driver_completed'    => true,
+            'driver_completed_at' => $completionTime,
+            'arrival_time'        => $completionTime,
+            'updated_at'          => $completionTime
         ], 'id=eq.' . urlencode($tripId));
-        
-    
-        $supabase->update('drivers', [
-            'status' => 'available',
-            'current_trip_id' => null
-        ], 'id=eq.' . urlencode($userId));
-        
-       
-        $parcelList = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($tripId));
-        foreach ($parcelList as $parcel) {
-            $supabase->update('parcel_list', [
-                'status' => 'completed'
-            ], 'id=eq.' . urlencode($parcel['id']));
-        }
-        error_log('Trip completed successfully - delivery_events logging skipped');
+        error_log('Trip marked as driver_completed - awaiting manager verification');
     }
     
+    // Update parcel statuses — origin/destination-aware
+    // Complete stop = arrive + depart, so:
+    //  - Delivery parcels (destination = this outlet) → at_outlet
+    //  - Pickup parcels (origin = this outlet) → in_transit
     try {
-     
-        $stopParcels = $supabase->get('parcel_list', 'trip_stop_id=eq.' . urlencode($stopId));
-        
-        foreach ($stopParcels as $parcel) {
-            if (!empty($parcel['parcel_id'])) {
-                $supabase->update('parcels', [
-                    'status' => 'at_outlet'
-                ], 'id=eq.' . urlencode($parcel['parcel_id']));
+        $allTripParcels = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($tripId), 'id,parcel_id,status');
+        if (!empty($allTripParcels)) {
+            $pIds = array_values(array_unique(array_filter(array_column($allTripParcels, 'parcel_id'))));
+            if (!empty($pIds)) {
+                $pIdsStr = implode(',', array_map('urlencode', $pIds));
+                $pData = $supabase->get('parcels', 'id=in.(' . $pIdsStr . ')&select=id,origin_outlet_id,destination_outlet_id');
+                $pLookup = [];
+                foreach ($pData as $pd) { $pLookup[$pd['id']] = $pd; }
+
+                $stopOutlet = $stopData['outlet_id'];
+                foreach ($allTripParcels as $pl) {
+                    if (empty($pl['parcel_id']) || !isset($pLookup[$pl['parcel_id']])) continue;
+                    $pc = $pLookup[$pl['parcel_id']];
+
+                    if ($pc['destination_outlet_id'] === $stopOutlet) {
+                        $supabase->update('parcel_list', ['status' => 'at_outlet', 'updated_at' => $completionTime], 'id=eq.' . urlencode($pl['id']));
+                        $supabase->update('parcels', ['status' => 'at_outlet', 'updated_at' => $completionTime], 'id=eq.' . urlencode($pl['parcel_id']));
+                    } elseif ($pc['origin_outlet_id'] === $stopOutlet) {
+                        $supabase->update('parcel_list', ['status' => 'in_transit', 'updated_at' => $completionTime], 'id=eq.' . urlencode($pl['id']));
+                        $supabase->update('parcels', ['status' => 'in_transit', 'updated_at' => $completionTime], 'id=eq.' . urlencode($pl['parcel_id']));
+                    }
+                }
             }
         }
     } catch (Exception $e) {
-        error_log('Failed to update parcel status to at_outlet: ' . $e->getMessage());
-    
+        error_log('Failed to update parcel statuses: ' . $e->getMessage());
     }
     
     error_log('Stop completed successfully - delivery_events logging skipped');

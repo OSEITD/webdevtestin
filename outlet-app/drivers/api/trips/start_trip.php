@@ -73,21 +73,45 @@ try {
         $bgSupabase = new MultiTenantSupabaseHelper($bgCompanyId);
 
         // --- Parcel status updates ---
-        // Fetch parcel_list entries for this trip
+        // Only set parcels to in_transit if they originate from the trip's origin outlet.
+        // Mid-route pickup parcels stay assigned until driver departs from their pickup stop.
         $bgNow = date('Y-m-d H:i:s');
+        $originOutletId = $bgTripData['origin_outlet_id'] ?? null;
+
         $parcelList = $bgSupabase->get('parcel_list', 'trip_id=eq.' . urlencode($bgTripId), 'id,parcel_id');
         $parcelIds  = array_values(array_filter(array_column($parcelList ?? [], 'parcel_id')));
 
-        // Update all parcel_list entries to in_transit (at_outlet not valid in parcel_list constraint)
-        if (!empty($parcelList)) {
-            $bgSupabase->put('parcel_list?trip_id=eq.' . urlencode($bgTripId), ['status' => 'in_transit', 'updated_at' => $bgNow]);
-        }
-
-        if (!empty($parcelIds)) {
-            // All parcels start as in_transit when trip begins.
-            // at_outlet is set by arrive_at_stop.php when driver physically arrives.
+        if (!empty($parcelIds) && $originOutletId) {
             $idsStr = implode(',', array_map('urlencode', $parcelIds));
-            $bgSupabase->put('parcels?id=in.(' . $idsStr . ')', ['status' => 'in_transit', 'updated_at' => $bgNow]);
+            $parcelsData = $bgSupabase->get('parcels',
+                'id=in.(' . $idsStr . ')&select=id,origin_outlet_id'
+            );
+
+            // Find parcels originating from the trip's origin outlet
+            $originParcelIds = [];
+            foreach ($parcelsData as $p) {
+                if (($p['origin_outlet_id'] ?? null) === $originOutletId) {
+                    $originParcelIds[] = $p['id'];
+                }
+            }
+
+            // Build lookup of parcel_id → parcel_list.id
+            $plLookup = [];
+            foreach ($parcelList as $pl) {
+                if (!empty($pl['parcel_id'])) {
+                    $plLookup[$pl['parcel_id']] = $pl['id'];
+                }
+            }
+
+            // Update only origin parcels to in_transit
+            if (!empty($originParcelIds)) {
+                foreach ($originParcelIds as $opId) {
+                    if (isset($plLookup[$opId])) {
+                        $bgSupabase->put('parcel_list?id=eq.' . urlencode($plLookup[$opId]), ['status' => 'in_transit', 'updated_at' => $bgNow]);
+                    }
+                    $bgSupabase->put('parcels?id=eq.' . urlencode($opId), ['status' => 'in_transit', 'updated_at' => $bgNow]);
+                }
+            }
         }
         // --- End parcel status updates ---
 

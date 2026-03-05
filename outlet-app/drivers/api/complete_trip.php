@@ -53,11 +53,13 @@ try {
     }
     $current_time = date('Y-m-d\TH:i:s.u\Z');
     
-    // CRITICAL PATH - Only update trip status, respond immediately
+    // CRITICAL PATH - Mark driver's part as done, await manager verification
     $result = $supabase->update('trips', 
         [
-            'trip_status' => 'completed',
-            'arrival_time' => $current_time
+            'driver_completed'    => true,
+            'driver_completed_at' => $current_time,
+            'arrival_time'        => $current_time,
+            'updated_at'          => $current_time,
         ],
         "id=eq.$trip_id"
     );
@@ -69,9 +71,10 @@ try {
     // IMMEDIATE RESPONSE - User sees instant feedback
     $response = [
         'success' => true,
-        'message' => 'Trip completed successfully',
+        'message' => 'Trip marked as completed — awaiting manager verification',
         'trip_id' => $trip_id,
-        'completion_time' => $current_time
+        'completion_time' => $current_time,
+        'awaiting_verification' => true,
     ];
     
     // Store for background
@@ -103,32 +106,11 @@ try {
     try {
         $bgSupabase = new OutletAwareSupabaseHelper();
         
-        // Background Task 1: Update driver → available
-        try {
-            $bgSupabase->update('drivers', 
-                ['status' => 'available', 'current_trip_id' => null, 'updated_at' => $bgCurrentTime],
-                "id=eq.$bgDriverId"
-            );
-        } catch (Exception $e) {
-            error_log("BG: Failed to update driver: " . $e->getMessage());
-        }
-
-        // Background Task 1b: Update vehicle → available
-        if (!empty($bgTrip['vehicle_id'])) {
-            try {
-                $bgSupabase->update('vehicle',
-                    ['status' => 'available', 'updated_at' => $bgCurrentTime],
-                    'id=eq.' . urlencode($bgTrip['vehicle_id'])
-                );
-            } catch (Exception $e) {
-                error_log("BG: Failed to update vehicle: " . $e->getMessage());
-            }
-        }
-
-        // Background Task 1c: Update parcel_list → completed, parcels → delivered
+        // Background Task 1: Update parcel_list → at_outlet, parcels → at_outlet
+        // (completed status on parcel_list is set only by manager verification)
         try {
             $bgSupabase->update('parcel_list',
-                ['status' => 'completed', 'updated_at' => $bgCurrentTime],
+                ['status' => 'at_outlet', 'updated_at' => $bgCurrentTime],
                 "trip_id=eq.$bgTripId"
             );
             $bgParcelListItems = $bgSupabase->get('parcel_list', "trip_id=eq.$bgTripId", 'parcel_id');
@@ -136,10 +118,8 @@ try {
             if (!empty($bgParcelIds)) {
                 $pIdsStr = implode(',', array_map('urlencode', $bgParcelIds));
                 $bgSupabase->update('parcels', [
-                    'status'        => 'delivered',
-                    'updated_at'    => $bgCurrentTime,
-                    'delivered_at'  => $bgCurrentTime,
-                    'delivery_date' => date('Y-m-d')
+                    'status'     => 'at_outlet',
+                    'updated_at' => $bgCurrentTime,
                 ], 'id=in.(' . $pIdsStr . ')');
             }
         } catch (Exception $e) {
@@ -191,9 +171,9 @@ try {
                     'company_id' => $bgCompanyId,
                     'recipient_id' => $bgTrip['outlet_manager_id'],
                     'sender_id' => $bgDriverId,
-                    'title' => 'Trip Completed',
-                    'message' => "Trip {$shortTripId} is completed",
-                    'notification_type' => 'trip_completed',
+                    'title' => 'Trip Awaiting Verification',
+                    'message' => "Driver has completed trip {$shortTripId} — please review and verify",
+                    'notification_type' => 'delivery_completed',
                     'priority' => 'high',
                     'status' => 'unread',
                     'data' => $notificationData

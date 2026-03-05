@@ -186,6 +186,42 @@ try {
             exit;
         }
 
+        // Update parcel statuses — differentiate pickup vs delivery parcels
+        try {
+            $stopOutlet = $stop['outlet_id'];
+            $allTripParcels = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($trip_id), 'id,parcel_id,status');
+            if (!empty($allTripParcels)) {
+                $pIds = array_values(array_unique(array_filter(array_column($allTripParcels, 'parcel_id'))));
+                if (!empty($pIds)) {
+                    $pIdsStr = implode(',', array_map('urlencode', $pIds));
+                    $pData = $supabase->get('parcels', 'id=in.(' . $pIdsStr . ')&select=id,origin_outlet_id,destination_outlet_id');
+                    $pLookup = [];
+                    foreach ($pData as $pd) { $pLookup[$pd['id']] = $pd; }
+
+                    $cnt = 0;
+                    foreach ($allTripParcels as $pl) {
+                        if (empty($pl['parcel_id']) || !isset($pLookup[$pl['parcel_id']])) continue;
+                        $pc = $pLookup[$pl['parcel_id']];
+                        $isDest = ($pc['destination_outlet_id'] === $stopOutlet);
+                        $isOrig = ($pc['origin_outlet_id'] === $stopOutlet);
+
+                        if ($action === 'arrive' && $isDest) {
+                            $supabase->update('parcel_list', ['status' => 'at_outlet', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['id']));
+                            $supabase->update('parcels', ['status' => 'at_outlet', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['parcel_id']));
+                            $cnt++;
+                        } elseif ($action === 'depart' && $isOrig) {
+                            $supabase->update('parcel_list', ['status' => 'in_transit', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['id']));
+                            $supabase->update('parcels', ['status' => 'in_transit', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['parcel_id']));
+                            $cnt++;
+                        }
+                    }
+                    error_log("Manager stop mode: updated $cnt parcels at outlet $stopOutlet on $action");
+                }
+            }
+        } catch (Exception $e) {
+            error_log('Manager stop mode: parcel status update failed: ' . $e->getMessage());
+        }
+
         $allStopsDone = false;
         if ($action === 'depart') {
             try {
@@ -232,7 +268,9 @@ try {
                     exit;
                 }
                 $tripUpdateData['arrival_time'] = $timestamp;
-                $tripUpdateData['trip_status'] = 'completed';
+                $tripUpdateData['trip_status'] = 'at_outlet';
+                $tripUpdateData['driver_completed'] = true;
+                $tripUpdateData['driver_completed_at'] = $timestamp;
             } elseif ($isOrigin) {
                
                 error_log("Arriving at origin");
@@ -241,7 +279,7 @@ try {
                     exit;
                 }
                 $tripUpdateData['arrival_time'] = $timestamp;
-                $tripUpdateData['trip_status'] = 'completed';
+                $tripUpdateData['trip_status'] = 'at_outlet';
             } else {
                 echo json_encode(['success' => false, 'error' => 'Outlet is not origin or destination']);
                 exit;
@@ -275,6 +313,41 @@ try {
         $updateResult = $supabase->update('trips', $tripUpdateData, 'id=eq.' . urlencode($trip_id));
         
         error_log("Update result: " . json_encode($updateResult));
+
+        // Update parcel statuses — differentiate pickup vs delivery parcels
+        try {
+            $allTripParcels = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($trip_id), 'id,parcel_id,status');
+            if (!empty($allTripParcels)) {
+                $pIds = array_values(array_unique(array_filter(array_column($allTripParcels, 'parcel_id'))));
+                if (!empty($pIds)) {
+                    $pIdsStr = implode(',', array_map('urlencode', $pIds));
+                    $pData = $supabase->get('parcels', 'id=in.(' . $pIdsStr . ')&select=id,origin_outlet_id,destination_outlet_id');
+                    $pLookup = [];
+                    foreach ($pData as $pd) { $pLookup[$pd['id']] = $pd; }
+
+                    $cnt = 0;
+                    foreach ($allTripParcels as $pl) {
+                        if (empty($pl['parcel_id']) || !isset($pLookup[$pl['parcel_id']])) continue;
+                        $pc = $pLookup[$pl['parcel_id']];
+                        $isDest = ($pc['destination_outlet_id'] === $outlet_id);
+                        $isOrig = ($pc['origin_outlet_id'] === $outlet_id);
+
+                        if ($action === 'arrive' && $isDest) {
+                            $supabase->update('parcel_list', ['status' => 'at_outlet', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['id']));
+                            $supabase->update('parcels', ['status' => 'at_outlet', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['parcel_id']));
+                            $cnt++;
+                        } elseif ($action === 'depart' && $isOrig) {
+                            $supabase->update('parcel_list', ['status' => 'in_transit', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['id']));
+                            $supabase->update('parcels', ['status' => 'in_transit', 'updated_at' => $timestamp], 'id=eq.' . urlencode($pl['parcel_id']));
+                            $cnt++;
+                        }
+                    }
+                    error_log("Manager outlet mode: updated $cnt parcels at outlet $outlet_id on $action");
+                }
+            }
+        } catch (Exception $e) {
+            error_log('Manager outlet mode: parcel status update failed: ' . $e->getMessage());
+        }
         
         if (empty($updateResult)) {
             echo json_encode(['success' => false, 'error' => 'Failed to update trip']);

@@ -2178,7 +2178,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                     const s = trip.stops.find(st => st.outlet_id === outletId);
                     if (s) s.arrival_time = now;
                 }
-                // If this was arrival at destination, the API sets trip_status = 'completed'
+                // If this was arrival at destination, the API sets trip_status = 'at_outlet' + driver_completed
                 // reflect that in memory
                 if (trip && (outletId === trip.destination_outlet_id || outletId === trip.origin_outlet_id)) {
                     trip.trip_status = data.trip_status || trip.trip_status;

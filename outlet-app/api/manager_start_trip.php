@@ -87,18 +87,42 @@ try {
 
   
     try {
-        
+        // Only set parcels to in_transit if they originate from the trip's origin outlet.
+        // Mid-route pickup parcels stay assigned until driver departs from their pickup stop.
+        $originOutletId = $tripData['origin_outlet_id'] ?? null;
+
         $parcelList = $supabase->get('parcel_list', 'trip_id=eq.' . urlencode($tripId), 'id,parcel_id');
         $parcelIds = array_values(array_filter(array_column($parcelList ?? [], 'parcel_id')));
 
-        if (!empty($parcelList)) {
-            $supabase->update('parcel_list', ['status' => 'in_transit', 'updated_at' => $now], 'trip_id=eq.' . urlencode($tripId));
-        }
-
-        if (!empty($parcelIds)) {
-            
+        if (!empty($parcelIds) && $originOutletId) {
             $idsStr = implode(',', array_map('urlencode', $parcelIds));
-            $supabase->update('parcels', ['status' => 'in_transit', 'updated_at' => $now], 'id=in.(' . $idsStr . ')');
+            $parcelsData = $supabase->get('parcels',
+                'id=in.(' . $idsStr . ')&select=id,origin_outlet_id'
+            );
+
+            // Find parcels originating from the trip's origin outlet
+            $originParcelIds = [];
+            foreach ($parcelsData as $p) {
+                if (($p['origin_outlet_id'] ?? null) === $originOutletId) {
+                    $originParcelIds[] = $p['id'];
+                }
+            }
+
+            // Build lookup of parcel_id → parcel_list.id
+            $plLookup = [];
+            foreach ($parcelList as $pl) {
+                if (!empty($pl['parcel_id'])) {
+                    $plLookup[$pl['parcel_id']] = $pl['id'];
+                }
+            }
+
+            // Update only origin parcels to in_transit
+            foreach ($originParcelIds as $opId) {
+                if (isset($plLookup[$opId])) {
+                    $supabase->update('parcel_list', ['status' => 'in_transit', 'updated_at' => $now], 'id=eq.' . urlencode($plLookup[$opId]));
+                }
+                $supabase->update('parcels', ['status' => 'in_transit', 'updated_at' => $now], 'id=eq.' . urlencode($opId));
+            }
         }
     } catch (Exception $e) {
         error_log('Manager start trip parcel update failed: ' . $e->getMessage());
