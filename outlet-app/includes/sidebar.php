@@ -36,10 +36,11 @@
         <li><a href="help.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'help.php' ? 'active' : ''; ?>"><i class="fas fa-question-circle"></i> Help</a></li>
         <?php
             // always point to the root logout script so no matter where
-        // we are in the directory tree the link will work.  an extra
-        // driver-specific file also exists as a fallback in case some
-        // code still generates a relative path by mistake.
-        $logoutUrl = '/logout.php';
+        // we are in the directory tree the link will work. build full
+        // URL from current host to avoid cross‑domain redirects.
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+        $logoutUrl = "$scheme://$host/logout.php";
         ?>
         
         <li><a href="<?php echo $logoutUrl; ?>" onclick="return confirmLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>

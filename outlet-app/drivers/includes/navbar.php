@@ -62,14 +62,10 @@ $notificationCount = 0;
         </a>
         <div class="menu-divider"></div>
         <?php
-            // compute logout path relative to current script location
-            if (strpos($_SERVER['SCRIPT_NAME'], '/drivers/pages/') !== false) {
-                $logoutUrl = '../../logout.php';
-            } elseif (strpos($_SERVER['SCRIPT_NAME'], '/pages/') !== false) {
-                $logoutUrl = '../logout.php';
-            } else {
-                $logoutUrl = 'logout.php';
-            }
+            // build absolute logout URL so redirection stays on same origin
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+            $logoutUrl = "$scheme://$host/drivers/logout.php";
         ?>
         <a href="<?php echo $logoutUrl; ?>" class="menu-item logout">
             <i class="fas fa-sign-out-alt"></i>

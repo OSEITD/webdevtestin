@@ -78,8 +78,11 @@ function logout() {
 
     session_destroy();
 
-    // always redirect to the global login page regardless of script location
-    $loginPath = '/login.php';
+    // build a fully qualified login URL using the current request host
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+    $loginPath = "$scheme://$host/login.php";
+
     header("Location: $loginPath?message=logged_out");
     exit();
 }
