@@ -1,11 +1,34 @@
 <?php
 require_once __DIR__ . '/../includes/session_manager.php';
 
+/**
+ * Returns the URL base for the outlet app.
+ * On a subdomain vhost (DocumentRoot = outlet-app/) SCRIPT_NAME starts with
+ * /pages/, /drivers/, etc.  On the main domain (path-based access) it starts
+ * with /outlet-app/.  We use that to build correct absolute redirect URLs
+ * that work on both local vhosts and Render's single-service deployment.
+ */
+function getOutletAppBase() {
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    if (strpos($scriptName, '/outlet-app/') === 0) {
+        return '/outlet-app';
+    }
+    return '';
+}
+
+function getOutletLoginUrl($extra = '') {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+    $url    = "$scheme://$host" . getOutletAppBase() . '/login.php';
+    if ($extra) {
+        $url .= (strpos($extra, '?') === 0 ? '' : '?') . ltrim($extra, '?');
+    }
+    return $url;
+}
+
 function requireAuth() {
     if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
-        $loginPath = dirname($_SERVER['SCRIPT_NAME']) === '/pages' ? '../login.php' : 
-                     (dirname($_SERVER['SCRIPT_NAME']) === '/drivers/pages' ? '../../login.php' : 'login.php');
-        header("Location: $loginPath");
+        header('Location: ' . getOutletLoginUrl());
         exit();
     }
 
@@ -19,9 +42,7 @@ function requireRole($allowedRoles = ['outlet_manager', 'outlet_admin', 'driver'
 
     if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowedRoles)) {
         session_destroy();
-        $loginPath = dirname($_SERVER['SCRIPT_NAME']) === '/pages' ? '../login.php' : 
-                     (dirname($_SERVER['SCRIPT_NAME']) === '/drivers/pages' ? '../../login.php' : 'login.php');
-        header("Location: $loginPath?error=insufficient_permissions");
+        header('Location: ' . getOutletLoginUrl('?error=insufficient_permissions'));
         exit();
     }
 }
@@ -30,9 +51,7 @@ function requireOutletAccess() {
     requireRole();
 
     if (!isset($_SESSION['outlet_id']) || empty($_SESSION['outlet_id'])) {
-        $loginPath = dirname($_SERVER['SCRIPT_NAME']) === '/pages' ? '../login.php' : 
-                     (dirname($_SERVER['SCRIPT_NAME']) === '/drivers/pages' ? '../../login.php' : 'login.php');
-        header("Location: $loginPath?error=no_outlet_access");
+        header('Location: ' . getOutletLoginUrl('?error=no_outlet_access'));
         exit();
     }
 }
@@ -78,12 +97,7 @@ function logout() {
 
     session_destroy();
 
-    // build a fully qualified login URL using the current request host
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
-    $loginPath = "$scheme://$host/login.php";
-
-    header("Location: $loginPath?message=logged_out");
+    header('Location: ' . getOutletLoginUrl('?message=logged_out'));
     exit();
 }
 

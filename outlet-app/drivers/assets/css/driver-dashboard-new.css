@@ -1945,6 +1945,13 @@ body {
     border-color: #dc2626;
 }
 
+.trip-status-awaiting_verification {
+    background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
+    color: white;
+    border-color: #d97706;
+    animation: pulse-at-outlet 2s infinite;
+}
+
 /* Driver Status Indicators */
 .driver-status-badge {
     display: inline-flex;

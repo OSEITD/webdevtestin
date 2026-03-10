@@ -33,15 +33,22 @@ if (!$noCache) {
 $supabase = new OutletAwareSupabaseHelper();
 try {
     // OPTIMIZATION: Fetch active trips (accepted,in_transit) and scheduled trips separately
-    $baseSelect = 'id,trip_status,departure_time,arrival_time,trip_date,vehicle_id,outlet_manager_id,origin_outlet_id,destination_outlet_id,created_at,updated_at';
+    $baseSelect = 'id,trip_status,departure_time,arrival_time,trip_date,vehicle_id,outlet_manager_id,origin_outlet_id,destination_outlet_id,driver_completed,driver_completed_at,manager_verified,manager_verified_at,created_at,updated_at';
 
     $companyCond = !empty($company_id) ? '&company_id=eq.' . urlencode($company_id) : '';
 
     $activeFilter = 'driver_id=eq.' . urlencode($driver_id) .
                     $companyCond .
-                    '&trip_status=in.(accepted,in_transit)' .
+                    '&trip_status=in.(accepted,in_transit,at_outlet)' .
                     '&select=' . $baseSelect;
     $activeTrips = $supabase->get('trips', $activeFilter);
+
+    // Also fetch trips the driver completed but manager hasn't verified yet
+    $pendingVerifyFilter = 'driver_id=eq.' . urlencode($driver_id) .
+                           $companyCond .
+                           '&driver_completed=is.true&manager_verified=is.false' .
+                           '&select=' . $baseSelect;
+    $pendingVerifyTrips = $supabase->get('trips', $pendingVerifyFilter);
 
     $scheduledFilter = 'driver_id=eq.' . urlencode($driver_id) .
                        $companyCond .
@@ -51,7 +58,16 @@ try {
 
     // Normalize to arrays
     if (!is_array($activeTrips)) $activeTrips = [];
+    if (!is_array($pendingVerifyTrips)) $pendingVerifyTrips = [];
     if (!is_array($scheduledTrips)) $scheduledTrips = [];
+
+    // Merge pending-verify trips into active (deduplicate by id)
+    $activeIds = array_column($activeTrips, 'id');
+    foreach ($pendingVerifyTrips as $pv) {
+        if (!in_array($pv['id'], $activeIds)) {
+            $activeTrips[] = $pv;
+        }
+    }
 
     error_log("Driver dashboard - found active trips: " . count($activeTrips) . ", scheduled trips: " . count($scheduledTrips));
 
@@ -273,9 +289,20 @@ try {
             null;
         switch ($trip['trip_status']) {
             case 'accepted':
-            case 'in_transit': $active[] = $trip; break;
+            case 'in_transit':
+            case 'at_outlet':
+                $active[] = $trip;
+                break;
             case 'scheduled': $upcoming[] = $trip; break;
-            case 'completed': $completed[] = $trip; break;
+            case 'completed':
+                // If driver completed but manager not verified, keep in active
+                if (!empty($trip['driver_completed']) && empty($trip['manager_verified'])) {
+                    $trip['status'] = 'awaiting_verification';
+                    $active[] = $trip;
+                } else {
+                    $completed[] = $trip;
+                }
+                break;
         }
     }
     $today = date('Y-m-d');

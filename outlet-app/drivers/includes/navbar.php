@@ -62,10 +62,12 @@ $notificationCount = 0;
         </a>
         <div class="menu-divider"></div>
         <?php
-            // build absolute logout URL so redirection stays on same origin
+            // Build absolute logout URL that works both on subdomain vhosts and
+            // path-based deployments (e.g. Render where everything is under /outlet-app/).
             $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
-            $logoutUrl = "$scheme://$host/drivers/logout.php";
+            $appBase = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/outlet-app/') === 0) ? '/outlet-app' : '';
+            $logoutUrl = "$scheme://$host{$appBase}/drivers/logout.php";
         ?>
         <a href="<?php echo $logoutUrl; ?>" class="menu-item logout">
             <i class="fas fa-sign-out-alt"></i>

@@ -125,23 +125,21 @@ try {
         error_log("Non-fatal: could not update parcel_list for trip $tripId: " . $e->getMessage());
     }
 
-    // ──  parcels → delivered ────────────────────────────────────────
+    // ──  parcels → at_outlet (awaiting customer pickup) ──────────────────
     try {
-       
         $parcelListRows = $supabase->get('parcel_list', "trip_id=eq.$tripId", 'parcel_id');
         if (!empty($parcelListRows)) {
             $parcelIds = array_filter(array_unique(array_column($parcelListRows, 'parcel_id')));
             if (!empty($parcelIds)) {
                 $idsList = implode(',', array_map('urlencode', $parcelIds));
                 $supabase->put("parcels?id=in.($idsList)", [
-                    'status'       => 'delivered',
-                    'delivered_at' => $now,
-                    'updated_at'   => $now,
+                    'status'     => 'at_outlet',
+                    'updated_at' => $now,
                 ]);
             }
         }
     } catch (Exception $e) {
-        error_log("Non-fatal: could not mark parcels as delivered for trip $tripId: " . $e->getMessage());
+        error_log("Non-fatal: could not mark parcels as at_outlet for trip $tripId: " . $e->getMessage());
     }
 
     // ── driver → available ─────────────────────────────────────────

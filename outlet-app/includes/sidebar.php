@@ -35,12 +35,12 @@
         <li><a href="outlet_settings.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'outlet_settings.php' ? 'active' : ''; ?>"><i class="fas fa-cog"></i> Outlet Settings</a></li>
         <li><a href="help.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'help.php' ? 'active' : ''; ?>"><i class="fas fa-question-circle"></i> Help</a></li>
         <?php
-            // always point to the root logout script so no matter where
-        // we are in the directory tree the link will work. build full
-        // URL from current host to avoid cross‑domain redirects.
+            // Build absolute logout URL that works both on subdomain vhosts and
+        // path-based deployments (e.g. Render where everything is under /outlet-app/).
         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
-        $logoutUrl = "$scheme://$host/logout.php";
+        $appBase = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/outlet-app/') === 0) ? '/outlet-app' : '';
+        $logoutUrl = "$scheme://$host{$appBase}/logout.php";
         ?>
         
         <li><a href="<?php echo $logoutUrl; ?>" onclick="return confirmLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>

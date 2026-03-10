@@ -59,9 +59,12 @@ try {
 
  
     $updateResult = $supabase->update('trips', [
-        'trip_status' => 'completed',
-        'arrival_time' => $now,
-        'updated_at'   => $now
+        'trip_status'         => 'completed',
+        'manager_verified'    => true,
+        'manager_verified_at' => $now,
+        'manager_verified_by' => $_SESSION['user_id'] ?? null,
+        'arrival_time'        => $now,
+        'updated_at'          => $now
     ], "id=eq.$tripId");
 
     if (!$updateResult) {
@@ -77,10 +80,8 @@ try {
     if (!empty($completedParcelIds)) {
         $pIdsStr = implode(',', array_map('urlencode', $completedParcelIds));
         $supabase->update('parcels', [
-            'status'        => 'delivered',
-            'updated_at'    => $now,
-            'delivered_at'  => $now,
-            'delivery_date' => date('Y-m-d')
+            'status'     => 'at_outlet',
+            'updated_at' => $now,
         ], 'id=in.(' . $pIdsStr . ')');
     }
 

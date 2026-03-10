@@ -886,7 +886,7 @@ class DriverDashboard {
             // Stop auto-refresh immediately if trip is already active/in-transit on load
             if (data.active_trips && data.active_trips.length > 0) {
                 const activeStatus = data.active_trips[0].trip_status || data.active_trips[0].status;
-                if (['in_transit', 'accepted', 'at_outlet'].includes(activeStatus)) {
+                if (['in_transit', 'accepted', 'at_outlet', 'awaiting_verification'].includes(activeStatus)) {
                     this.stopDashboardRefresh();
                 }
             }
@@ -959,6 +959,11 @@ class DriverDashboard {
                 label: 'Cancelled',
                 icon: 'fas fa-times-circle',
                 class: 'trip-status-cancelled'
+            },
+            'awaiting_verification': {
+                label: 'Awaiting Verification',
+                icon: 'fas fa-hourglass-half',
+                class: 'trip-status-awaiting_verification'
             }
         };
 
@@ -1056,6 +1061,7 @@ class DriverDashboard {
             { key: 'accepted', label: 'Accepted', icon: 'fas fa-clipboard-check' },
             { key: 'in_transit', label: 'In Transit', icon: 'fas fa-truck' },
             { key: 'at_outlet', label: 'At Outlet', icon: 'fas fa-building' },
+            { key: 'awaiting_verification', label: 'Awaiting Verification', icon: 'fas fa-hourglass-half' },
             { key: 'completed', label: 'Completed', icon: 'fas fa-check-circle' }
         ];
 
@@ -1097,6 +1103,7 @@ class DriverDashboard {
             
             // Check trip status - only proceed with full rendering for accepted trips
             const tripStatus = trip.status || 'scheduled';
+            const isAwaitingVerification = tripStatus === 'awaiting_verification' || (trip.driver_completed && !trip.manager_verified);
             const isAccepted = tripStatus === 'accepted' || tripStatus === 'in_transit' || tripStatus === 'at_outlet';
             
             // Check if this is the same trip as currently displayed to avoid map destruction
@@ -1122,8 +1129,8 @@ class DriverDashboard {
                 }
             }
             
-            // Start location tracking only for accepted trips
-            if (isAccepted && !this.locationPermissionChecked) {
+            // Start location tracking only for accepted trips (not awaiting verification)
+            if (isAccepted && !isAwaitingVerification && !this.locationPermissionChecked) {
                 console.log('[DEBUG] Trip is accepted, initializing location tracking...');
                 this.initializeLocationTracking();
             }
@@ -1136,18 +1143,28 @@ class DriverDashboard {
                 destinationName = trip.route_stops[trip.route_stops.length - 1];
             }
 
+            const displayStatus = isAwaitingVerification ? 'awaiting_verification' : (trip.status || 'scheduled');
+
             activeTripDetails.innerHTML = `
                 <div class="trip-card active-trip-professional" data-trip-id="${trip.id}">
                     <div class="active-trip-header">
                         <div class="trip-badge">
                             <i class="fas fa-route"></i>
-                            <span>Active Trip</span>
+                            <span>${isAwaitingVerification ? 'Completed Trip' : 'Active Trip'}</span>
                         </div>
                         <div class="trip-id">Trip #${trip.id.slice(0, 8)}</div>
                     </div>
                     
-                    ${this.formatTripStatus(trip.status || 'scheduled')}
-                    ${this.renderStatusTimeline(trip.status || 'scheduled')}
+                    ${isAwaitingVerification ? `
+                    <div class="verification-pending-banner" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #f59e0b;border-radius:12px;padding:1rem;margin:.75rem 0;display:flex;align-items:center;gap:.75rem;">
+                        <i class="fas fa-hourglass-half" style="font-size:1.5rem;color:#d97706;"></i>
+                        <div>
+                            <strong style="color:#92400e;">Awaiting Manager Verification</strong>
+                            <p style="margin:0;font-size:.85rem;color:#78350f;">You have completed all stops. The destination outlet manager will verify this trip.</p>
+                        </div>
+                    </div>` : ''}
+                    ${this.formatTripStatus(displayStatus)}
+                    ${this.renderStatusTimeline(displayStatus)}
                     
                     <div class="trip-info-grid">
                         <div class="trip-info-item">
@@ -1174,13 +1191,13 @@ class DriverDashboard {
                     </div>
                     
                     <div class="trip-controls-professional">
-                        <button id="saveLocationBtn" class="trip-action-btn primary">
+                        ${!isAwaitingVerification ? `<button id="saveLocationBtn" class="trip-action-btn primary">
                             <i class="fas fa-map-pin"></i> Save Location
-                        </button>
+                        </button>` : ''}
                     </div>
                     
                     <!-- Professional Map Container - Only shown for accepted trips -->
-                    <div class="trip-map-container-professional" style="display: ${isAccepted ? 'block' : 'none'}">
+                    <div class="trip-map-container-professional" style="display: ${isAccepted && !isAwaitingVerification ? 'block' : 'none'}">>
                         <div class="map-header">
                             <h4 class="map-title">
                                 <i class="fas fa-map-marked-alt"></i> 
@@ -1297,7 +1314,7 @@ class DriverDashboard {
                 this.setupMapControlEventListeners();
                 
                 // Initialize the professional trip map only for accepted trips
-                if (isAccepted) {
+                if (isAccepted && !isAwaitingVerification) {
                     console.log('[DEBUG] Trip accepted, initializing map...');
                     this.initializeTripMap();
                 } else {
@@ -1999,7 +2016,7 @@ class DriverDashboard {
                         const result = await this.safeJsonParse(completeResponse);
                         
                         if (result.success) {
-                            this.showNotification('🎉 Trip completed successfully!', 'success');
+                            this.showNotification('✅ Trip marked as completed — awaiting manager verification at the destination outlet.', 'success');
                             this.loadDashboardData(true); // Refresh dashboard with cache bypass
                         } else {
                             throw new Error(result.error || 'Failed to complete trip');
@@ -2594,7 +2611,7 @@ class DriverDashboard {
 
             if (result.success) {
                 if (result.trip_completed) {
-                    this.showNotification(`🎉 Trip completed! All ${result.total_stops} stops finished. Well done!`, 'success');
+                    this.showNotification(`✅ All ${result.total_stops} stops finished — awaiting manager verification at the destination outlet.`, 'success');
                     
                     // Stop GPS tracking if running
                     if (this.gpsInterval) {
@@ -2684,7 +2701,7 @@ class DriverDashboard {
             if (result.success) {
                 let message = '🚚 Departed from ' + result.outlet_name + ' successfully!';
                 if (result.trip_completed) {
-                    message += ' Trip completed! 🎉';
+                    message = '✅ All stops finished — awaiting manager verification at the destination outlet.';
                 }
                 this.showNotification(message, 'success');
                 
