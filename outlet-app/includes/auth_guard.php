@@ -21,7 +21,12 @@ function getOutletLoginUrl($extra = '') {
     $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
     $url    = "$scheme://$host" . getOutletAppBase() . '/login.php';
     if ($extra) {
-        $url .= (strpos($extra, '?') === 0 ? '' : '?') . ltrim($extra, '?');
+        // make sure there is exactly one leading question mark
+        if ($extra[0] !== '?') {
+            $url .= '?' . ltrim($extra, '?');
+        } else {
+            $url .= $extra;
+        }
     }
     return $url;
 }
