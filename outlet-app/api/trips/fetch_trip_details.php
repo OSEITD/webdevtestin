@@ -1,8 +1,11 @@
-
 <?php
+ini_set('display_errors', 0);
+error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
+
 require_once __DIR__ . '/../../includes/session_manager.php';
 initSession();
-require_once '../../includes/OutletAwareSupabaseHelper.php';
+
+require_once __DIR__ . '/../../includes/OutletAwareSupabaseHelper.php';
 header('Content-Type: application/json');
 
 $trip_id = $_GET['trip_id'] ?? '';
