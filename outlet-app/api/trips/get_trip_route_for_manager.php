@@ -22,8 +22,34 @@ try {
     
     $stops = $supabase->get('trip_stops', 'trip_id=eq.' . urlencode($trip_id) . '&order=stop_order.asc&select=id,trip_id,outlet_id,stop_order,arrival_time,departure_time');
     if (empty($stops)) {
-        echo json_encode(['success' => true, 'stops' => []]);
-        exit;
+        $tripData = $supabase->get('trips', 'id=eq.' . urlencode($trip_id), 'origin_outlet_id,destination_outlet_id,company_id');
+        if (!empty($tripData[0])) {
+            $t = $tripData[0];
+            $originId = $t['origin_outlet_id'] ?? null;
+            $destId = $t['destination_outlet_id'] ?? null;
+            $compId = $t['company_id'] ?? $company_id;
+            if ($originId) {
+                $supabase->insert('trip_stops', [
+                    'trip_id' => $trip_id,
+                    'outlet_id' => $originId,
+                    'stop_order' => 1,
+                    'company_id' => $compId
+                ]);
+            }
+            if ($destId && $destId !== $originId) {
+                $supabase->insert('trip_stops', [
+                    'trip_id' => $trip_id,
+                    'outlet_id' => $destId,
+                    'stop_order' => 2,
+                    'company_id' => $compId
+                ]);
+            }
+            $stops = $supabase->get('trip_stops', 'trip_id=eq.' . urlencode($trip_id) . '&order=stop_order.asc&select=id,trip_id,outlet_id,stop_order,arrival_time,departure_time');
+        }
+        if (empty($stops)) {
+            echo json_encode(['success' => true, 'stops' => []]);
+            exit;
+        }
     }
 
     

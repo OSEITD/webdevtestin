@@ -147,8 +147,16 @@ class OutletAwareSupabaseHelper {
 
         if ($response === false) {
             error_log("Supabase update failed for $table with filters: $finalFilters");
-            error_log("HTTP status: $statusLine");
             return false;
+        }
+
+        // Detect Supabase/PostgREST error responses
+        if (!empty($response)) {
+            $decoded = @json_decode($response, true);
+            if (is_array($decoded) && isset($decoded['code']) && isset($decoded['message'])) {
+                error_log("Supabase update error for $table: code={$decoded['code']}, message={$decoded['message']}");
+                return false;
+            }
         }
 
         return true;

@@ -341,6 +341,12 @@ class MultiTenantSupabaseHelper {
         $decoded = json_decode($response, true);
         error_log("PUT response for endpoint $endpoint: " . $response);
 
+        // Detect Supabase/PostgREST error responses
+        if (is_array($decoded) && isset($decoded['code']) && isset($decoded['message'])) {
+            error_log("Supabase PUT error for $endpoint: code={$decoded['code']}, message={$decoded['message']}");
+            return false;
+        }
+
         return $decoded;
     }
 

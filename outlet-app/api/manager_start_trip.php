@@ -54,11 +54,6 @@ try {
     }
 
     
-    if (!$authorized && isset($tripData['outlet_manager_id']) && $tripData['outlet_manager_id'] == $managerId) {
-        $authorized = true;
-    }
-
-    
     if (!$authorized && $userRole === 'super_admin') {
         $authorized = true;
     }
@@ -81,7 +76,38 @@ try {
 
     $ok = $supabase->update('trips', $update, 'id=eq.' . urlencode($tripId));
     if (!$ok) {
-        throw new Exception('Failed to update trip status');
+        throw new Exception('Failed to update trip status. A database trigger may be blocking the update — check Supabase logs.');
+    }
+
+    // Verify the update actually took effect
+    $verifyTrip = $supabase->get('trips', 'id=eq.' . urlencode($tripId), 'trip_status');
+    if (empty($verifyTrip) || $verifyTrip[0]['trip_status'] !== 'in_transit') {
+        throw new Exception('Trip status update was rejected by the database. Current status: ' . ($verifyTrip[0]['trip_status'] ?? 'unknown'));
+    }
+
+    $existingStops = $supabase->get('trip_stops', 'trip_id=eq.' . urlencode($tripId) . '&select=id');
+    if (empty($existingStops)) {
+        $originId = $tripData['origin_outlet_id'] ?? null;
+        $destId = $tripData['destination_outlet_id'] ?? null;
+        $compId = $tripData['company_id'] ?? null;
+        if ($originId) {
+            $supabase->insert('trip_stops', [
+                'trip_id' => $tripId,
+                'outlet_id' => $originId,
+                'stop_order' => 1,
+                'company_id' => $compId,
+                'arrival_time' => $now,
+                'departure_time' => $now
+            ]);
+        }
+        if ($destId && $destId !== $originId) {
+            $supabase->insert('trip_stops', [
+                'trip_id' => $tripId,
+                'outlet_id' => $destId,
+                'stop_order' => 2,
+                'company_id' => $compId
+            ]);
+        }
     }
 
 

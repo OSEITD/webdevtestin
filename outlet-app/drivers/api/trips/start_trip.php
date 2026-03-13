@@ -34,12 +34,20 @@ try {
     
     $tripData = $trip[0];
     
-    
-    $supabase->put("trips?id=eq.$tripId", [
+    $putResult = $supabase->put("trips?id=eq." . urlencode($tripId), [
         'trip_status' => 'in_transit',
         'departure_time' => date('Y-m-d H:i:s')
     ]);
     
+    if ($putResult === false) {
+        throw new Exception('Failed to update trip status. A database trigger may be blocking the update.');
+    }
+
+    // Verify the update actually took effect
+    $verifyTrip = $supabase->get('trips', "id=eq." . urlencode($tripId), 'trip_status');
+    if (empty($verifyTrip) || $verifyTrip[0]['trip_status'] !== 'in_transit') {
+        throw new Exception('Trip status update was rejected by the database. Current status: ' . ($verifyTrip[0]['trip_status'] ?? 'unknown'));
+    }
     
     $bgCompanyId = $_SESSION['company_id'];
     $bgTripId = $tripId;

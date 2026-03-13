@@ -17,10 +17,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'driver') {
 }
 $driver_id = $_SESSION['user_id'];
 $company_id = $_SESSION['company_id'];
-$cache = new ResponseCache(null, 15); // Reduced cache time for faster updates
+$cache = new ResponseCache(null, 15); 
 $cacheKey = "driver_dashboard_{$driver_id}_{$company_id}";
 
-// Allow cache bypass with ?nocache=1 (used after trip start for fresh data)
+
 $noCache = isset($_GET['nocache']) && $_GET['nocache'] == '1';
 
 if (!$noCache) {
@@ -32,7 +32,7 @@ if (!$noCache) {
 }
 $supabase = new OutletAwareSupabaseHelper();
 try {
-    // OPTIMIZATION: Fetch active trips (accepted,in_transit) and scheduled trips separately
+   
     $baseSelect = 'id,trip_status,departure_time,arrival_time,trip_date,vehicle_id,outlet_manager_id,origin_outlet_id,destination_outlet_id,driver_completed,driver_completed_at,manager_verified,manager_verified_at,created_at,updated_at';
 
     $companyCond = !empty($company_id) ? '&company_id=eq.' . urlencode($company_id) : '';
@@ -43,7 +43,7 @@ try {
                     '&select=' . $baseSelect;
     $activeTrips = $supabase->get('trips', $activeFilter);
 
-    // Also fetch trips the driver completed but manager hasn't verified yet
+    
     $pendingVerifyFilter = 'driver_id=eq.' . urlencode($driver_id) .
                            $companyCond .
                            '&driver_completed=is.true&manager_verified=is.false' .
@@ -56,12 +56,12 @@ try {
                        '&select=' . $baseSelect;
     $scheduledTrips = $supabase->get('trips', $scheduledFilter);
 
-    // Normalize to arrays
+ 
     if (!is_array($activeTrips)) $activeTrips = [];
     if (!is_array($pendingVerifyTrips)) $pendingVerifyTrips = [];
     if (!is_array($scheduledTrips)) $scheduledTrips = [];
 
-    // Merge pending-verify trips into active (deduplicate by id)
+    // Merging pending-verify trips into active 
     $activeIds = array_column($activeTrips, 'id');
     foreach ($pendingVerifyTrips as $pv) {
         if (!in_array($pv['id'], $activeIds)) {
@@ -71,7 +71,7 @@ try {
 
     error_log("Driver dashboard - found active trips: " . count($activeTrips) . ", scheduled trips: " . count($scheduledTrips));
 
-    // Combine for enrichment processing
+
     $trips = array_values(array_merge($activeTrips, $scheduledTrips));
 
     if (empty($trips)) {
@@ -92,12 +92,11 @@ try {
 
     $tripIds = array_column($trips, 'id');
     
-    // OPTIMIZATION: Batch fetch all related data in parallel
+   
     $vehicleIds = array_unique(array_filter(array_column($trips, 'vehicle_id')));
     $managerIds = array_unique(array_filter(array_column($trips, 'outlet_manager_id')));
     $outletIds = [];
-    
-    // Collect origin and destination outlet IDs
+   
     foreach ($trips as $trip) {
         if (!empty($trip['origin_outlet_id'])) {
             $outletIds[] = $trip['origin_outlet_id'];
@@ -107,7 +106,6 @@ try {
         }
     }
     
-    // OPTIMIZATION: Batch fetch trip_stops for all trips in ONE query
     $allTripStops = [];
     $tripStopsMap = [];
     $stopParcelCounts = [];
@@ -120,8 +118,7 @@ try {
         if (!is_array($allTripStops)) {
             $allTripStops = [];
         }
-        
-        // Build trip stops map and collect outlet IDs from stops
+    
         foreach ($allTripStops as $stop) {
             $tripStopsMap[$stop['trip_id']][] = $stop;
             if (!empty($stop['outlet_id'])) {
@@ -130,7 +127,6 @@ try {
         }
     }
     
-    // OPTIMIZATION: Fetch all outlets in one query
     $outletMap = [];
     if (!empty($outletIds)) {
         $outletIdsStr = implode(',', array_map('urlencode', array_unique($outletIds)));
@@ -142,7 +138,6 @@ try {
         }
     }
     
-    // OPTIMIZATION: Fetch vehicles in one query
     $vehicleMap = [];
     if (!empty($vehicleIds)) {
         $vehicleIdsStr = implode(',', array_map('urlencode', $vehicleIds));
@@ -154,7 +149,6 @@ try {
         }
     }
     
-    // OPTIMIZATION: Fetch profiles in one query
     $profileMap = [];
     if (!empty($managerIds)) {
         $managerIdsStr = implode(',', array_map('urlencode', $managerIds));
@@ -169,7 +163,6 @@ try {
         }
     }
     
-    // Fetch any additional outlets from profiles
     if (!empty($outletIds)) {
         $additionalOutletIds = array_diff(array_unique($outletIds), array_keys($outletMap));
         if (!empty($additionalOutletIds)) {
@@ -182,8 +175,7 @@ try {
             }
         }
     }
-    
-    // OPTIMIZATION: Fetch parcel counts in one query
+
     $parcelCounts = [];
     $deliveredCounts = [];
     if (!empty($tripIds)) {
@@ -208,7 +200,7 @@ try {
         }
     }
     
-    // Build enriched trips
+
     $active = [];
     $upcoming = [];
     $completed = [];
@@ -230,8 +222,7 @@ try {
         $trip['priority'] = $parcelCount >= 20 ? 'urgent' :
                            ($parcelCount >= 10 ? 'high' :
                            ($parcelCount >= 5 ? 'medium' : 'normal'));
-        
-        // Add origin and destination outlet information
+ 
         if (!empty($trip['origin_outlet_id']) && isset($outletMap[$trip['origin_outlet_id']])) {
             $originOutlet = $outletMap[$trip['origin_outlet_id']];
             $trip['origin_outlet_name'] = $originOutlet['outlet_name'];
@@ -253,8 +244,11 @@ try {
         $routeInfo = [];
         $routeStopsWithCoords = [];
         $tripStopData = $tripStopsMap[$trip['id']] ?? [];
-        if (empty($tripStopData) && $trip['trip_status'] === 'in_transit') {
-            $tripStopData = createTripStopsFromParcels($trip['id'], $parcelListData, $supabase);
+        if (empty($tripStopData)) {
+            $tripStopData = createTripStopsFromParcels($trip['id'], $parcelListData ?? [], $supabase);
+            if (empty($tripStopData)) {
+                $tripStopData = ensureTripStopsFromOriginDestination($trip, $supabase);
+            }
             $tripStopsMap[$trip['id']] = $tripStopData;
         }
         foreach ($tripStopData as $stop) {
@@ -295,7 +289,7 @@ try {
                 break;
             case 'scheduled': $upcoming[] = $trip; break;
             case 'completed':
-                // If driver completed but manager not verified, keep in active
+                
                 if (!empty($trip['driver_completed']) && empty($trip['manager_verified'])) {
                     $trip['status'] = 'awaiting_verification';
                     $active[] = $trip;
@@ -320,7 +314,7 @@ try {
             $parcels_delivered += intval($row['parcels_handled'] ?? 0);
         }
     } else {
-        // Fallback: compute using detailed queries when driver_qps is empty or unavailable
+        
         try {
             $tripsToday = $supabase->get('trips',
                 'driver_id=eq.' . urlencode($driver_id) . '&company_id=eq.' . urlencode($company_id) . '&trip_status=eq.completed&updated_at=gte.' . urlencode($today . "T00:00:00") . '&updated_at=lte.' . urlencode($today . "T23:59:59"),
@@ -347,9 +341,9 @@ try {
             $parcels_returned = is_array($parcelsReturned) ? count($parcelsReturned) : 0;
         } catch (Exception $e) {
             error_log('Driver dashboard performance fallback error: ' . $e->getMessage());
-            // leave as zeros on failure
+            
         }
-    }
+    }            
     $response = [
         'success' => true,
         'active_trips' => $active,
@@ -367,6 +361,55 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
+function ensureTripStopsFromOriginDestination($trip, $supabase) {
+    $tripId = $trip['id'];
+    $companyId = $trip['company_id'] ?? null;
+    $originId = $trip['origin_outlet_id'] ?? null;
+    $destinationId = $trip['destination_outlet_id'] ?? null;
+
+    if (!$originId && !$destinationId) {
+        return [];
+    }
+
+    $createdStops = [];
+    $stopOrder = 1;
+
+    if ($originId) {
+        try {
+            $result = $supabase->insert('trip_stops', [
+                'trip_id' => $tripId,
+                'outlet_id' => $originId,
+                'stop_order' => $stopOrder,
+                'company_id' => $companyId
+            ]);
+            if (!empty($result[0])) {
+                $createdStops[] = $result[0];
+                $stopOrder++;
+            }
+        } catch (Exception $e) {
+            error_log("Failed to create origin trip stop: " . $e->getMessage());
+        }
+    }
+
+    if ($destinationId && $destinationId !== $originId) {
+        try {
+            $result = $supabase->insert('trip_stops', [
+                'trip_id' => $tripId,
+                'outlet_id' => $destinationId,
+                'stop_order' => $stopOrder,
+                'company_id' => $companyId
+            ]);
+            if (!empty($result[0])) {
+                $createdStops[] = $result[0];
+            }
+        } catch (Exception $e) {
+            error_log("Failed to create destination trip stop: " . $e->getMessage());
+        }
+    }
+
+    return $createdStops;
+}
+
 function createTripStopsFromParcels($tripId, $parcelListData, $supabase) {
     $tripParcels = array_filter($parcelListData, function($parcel) use ($tripId) {
         return $parcel['trip_id'] === $tripId;

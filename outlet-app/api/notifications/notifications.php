@@ -112,45 +112,132 @@ function makeSupabaseRequest($url, $method = 'GET', $data = null, $supabaseKey =
 try {
     switch ($method) {
         case 'GET':
-            
-            $companyId = $_SESSION['company_id'];
-            $outletId = $_SESSION['outlet_id'];
+
+            $companyId   = $_SESSION['company_id'];
+            $outletId    = $_SESSION['outlet_id'];
+            $userId      = $current_user_id;
             $supabaseUrl = getenv('SUPABASE_URL');
             $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
-            $filterType = $_GET['type'] ?? 'all';
+
+            // Pagination
+            $limit  = max(1, min((int)($_GET['limit'] ?? 20), 100));
+            $page   = max(1, (int)($_GET['page'] ?? 1));
+            $offset = ($page - 1) * $limit;
+
+            // Scope: outlet-wide notifications for this outlet OR personal
+            // notifications addressed directly to this user.
+            // PostgREST OR syntax: or=(outlet_id.eq.X,recipient_id.eq.Y)
+            $scopeFilter = 'company_id=eq.' . urlencode($companyId)
+                . '&or=(outlet_id.eq.' . urlencode($outletId)
+                . ',recipient_id.eq.' . urlencode($userId) . ')';
+
+            // Optional additional filters
+            $extraFilters = [];
+
             $filterStatus = $_GET['status'] ?? 'all';
-            $searchTrack = $_GET['parcel_id'] ?? '';
-            $filters = [];
-            if ($filterType !== 'all') {
-                $filters[] = "notification_type=eq.$filterType";
-            }
             if ($filterStatus !== 'all') {
-                $filters[] = "status=eq.$filterStatus";
+                $extraFilters[] = 'status=eq.' . urlencode($filterStatus);
             }
+
+            // type filter: frontend sends 'parcel', 'delivery', 'payment', 'system'
+            // notification_type values are like 'parcel_created', 'delivery_assigned', etc.
+            $filterType = $_GET['type'] ?? '';
+            if ($filterType !== '' && $filterType !== 'all') {
+                $extraFilters[] = 'notification_type=like.' . urlencode($filterType) . '*';
+            }
+
+            // priority filter
+            $filterPriority = $_GET['priority'] ?? '';
+            if ($filterPriority !== '' && $filterPriority !== 'all') {
+                $extraFilters[] = 'priority=eq.' . urlencode($filterPriority);
+            }
+
+            // date filter
+            $filterDate = $_GET['date'] ?? '';
+            if ($filterDate !== '') {
+                switch ($filterDate) {
+                    case 'today':
+                        $extraFilters[] = 'created_at=gte.' . urlencode(date('Y-m-d') . 'T00:00:00Z');
+                        break;
+                    case 'week':
+                        $extraFilters[] = 'created_at=gte.' . urlencode(date('Y-m-d', strtotime('-7 days')) . 'T00:00:00Z');
+                        break;
+                    case 'month':
+                        $extraFilters[] = 'created_at=gte.' . urlencode(date('Y-m-d', strtotime('-30 days')) . 'T00:00:00Z');
+                        break;
+                }
+            }
+
+            $searchTrack = $_GET['parcel_id'] ?? '';
             if ($searchTrack !== '') {
-                $filters[] = "parcel_id=eq.$searchTrack";
+                $extraFilters[] = 'parcel_id=eq.' . urlencode($searchTrack);
             }
-            $filterString = implode('&', $filters);
-            $queryUrl = "$supabaseUrl/rest/v1/notifications?company_id=eq.$companyId&outlet_id=eq.$outletId";
-            if ($filterString) {
-                $queryUrl .= "&$filterString";
+
+            $queryUrl = "$supabaseUrl/rest/v1/notifications?$scopeFilter";
+            foreach ($extraFilters as $f) {
+                $queryUrl .= "&$f";
             }
-            $queryUrl .= "&order=created_at.desc&limit=10";
+            $queryUrl .= '&order=created_at.desc&limit=' . $limit . '&offset=' . $offset;
+
+            // Also get unread count for this scope
+            $unreadUrl = "$supabaseUrl/rest/v1/notifications?$scopeFilter"
+                . '&status=eq.unread&select=id';
+
+            $headers = [
+                "apikey: $supabaseKey",
+                "Authorization: Bearer $supabaseKey",
+                "Content-Type: application/json",
+                "Prefer: count=exact"
+            ];
+
             $context = stream_context_create([
                 'http' => [
                     'method' => 'GET',
-                    'header' => [
-                        "apikey: $supabaseKey",
-                        "Authorization: Bearer $supabaseKey",
-                        "Content-Type: application/json"
-                    ]
+                    'header' => implode("\r\n", $headers)
                 ]
             ]);
+
             $response = file_get_contents($queryUrl, false, $context);
-            $notifications = json_decode($response, true);
+            $notifications = json_decode($response, true) ?? [];
+
+            // Parse Content-Range header for total count
+            $totalCount = count($notifications);
+            $responseHeaders = $http_response_header ?? [];
+            foreach ($responseHeaders as $h) {
+                if (stripos($h, 'Content-Range:') === 0) {
+                    // Content-Range: 0-19/47
+                    if (preg_match('/\/(\d+)/', $h, $m)) {
+                        $totalCount = (int)$m[1];
+                    }
+                }
+            }
+
+            // Fetch unread count separately (no limit)
+            $unreadContext = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'header' => implode("\r\n", $headers)
+                ]
+            ]);
+            $unreadResponse  = file_get_contents($unreadUrl, false, $unreadContext);
+            $unreadItems     = json_decode($unreadResponse, true) ?? [];
+            $unreadCount     = count($unreadItems);
+
+            $totalPages = $limit > 0 ? (int)ceil($totalCount / $limit) : 1;
+
             echo json_encode([
-                'success' => true,
-                'notifications' => $notifications
+                'success'      => true,
+                'notifications' => $notifications,
+                'count'        => count($notifications),
+                'unread_count' => $unreadCount,
+                'pagination'   => [
+                    'page'        => $page,
+                    'limit'       => $limit,
+                    'total'       => $totalCount,
+                    'total_pages' => $totalPages,
+                    'has_next'    => $page < $totalPages,
+                    'has_prev'    => $page > 1,
+                ],
             ]);
             ob_end_flush();
             break;
@@ -209,19 +296,19 @@ try {
             $action = $input['action'] ?? 'mark_all_read';
             
             if ($action === 'mark_all_read') {
-                
+
                 $updateData = [
                     'status' => 'read',
                     'read_at' => date('c')
                 ];
-                
-                $filters = "company_id=eq.$company_id&status=eq.unread";
-                if ($outlet_id) {
-                    $filters .= "&outlet_id=eq.$outlet_id";
-                } else {
-                    $filters .= "&outlet_id=is.null";
-                }
-                
+
+                // Only mark notifications visible to this user as read.
+                // Same scope rule as GET: outlet-wide OR personally addressed.
+                $filters = 'company_id=eq.' . urlencode($company_id)
+                    . '&or=(outlet_id.eq.' . urlencode($outlet_id)
+                    . ',recipient_id.eq.' . urlencode($current_user_id) . ')'
+                    . '&status=eq.unread';
+
                 $url = "$supabaseUrl/rest/v1/notifications?$filters";
                 $response = makeSupabaseRequest($url, 'PATCH', $updateData, $supabaseKey);
                     

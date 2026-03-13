@@ -68,14 +68,14 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     
     <style>
         
-        /* Make company header align with dashboard grid width */
+       
         .company-header {
             background: linear-gradient(135deg, <?php echo $brandingColors['primary']; ?> 0%, <?php echo $brandingColors['secondary']; ?> 100%);
             color: white;
             padding: 1.5rem 2rem;
-            margin: 0 auto 2rem; /* center and keep bottom spacing */
-            max-width: 1400px; /* match .dashboard-grid */
-            width: 95%; /* same responsive width */
+            margin: 0 auto 2rem; 
+            max-width: 1400px; 
+            width: 95%; 
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             position: relative;
             overflow: hidden;
@@ -642,12 +642,11 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     <script src="assets/js/push-manager.js"></script>
     
     <!-- Professional JavaScript for Driver Dashboard -->
-    <script src="assets/js/driver-dashboard.js"></script>
+    <script src="assets/js/driver-dashboard.js?v=<?php echo time(); ?>"></script>
     
-    <!-- Load Performance Statistics -->
     <script>
     async function loadPerformanceStats() {
-        // Check if cached stats exist and render immediately to prevent blank cards
+        
         const stored = localStorage.getItem('driverPerformanceSnapshot');
         if (stored) {
             try {
@@ -665,11 +664,11 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         try {
             console.log('[Performance Stats] Fetching fresh data from API...');
 
-            // Include credentials to ensure session cookie is sent and handle non-2xx responses
+            
             const response = await fetch('api/performance_stats.php', { credentials: 'same-origin' });
             if (!response.ok) {
                 console.warn('[Performance Stats] HTTP Error:', response.status, response.statusText);
-                // Try stored snapshot as fallback
+            
                 const stored = localStorage.getItem('driverPerformanceSnapshot');
                 if (stored) {
                     const stats = JSON.parse(stored);
@@ -690,13 +689,12 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 document.getElementById('parcelsDelivered').textContent = result.stats.parcels_delivered || 0;
                 document.getElementById('parcelsReturned').textContent = result.stats.parcels_returned || 0;
 
-                // Persist successful snapshot for fallback
                 try { localStorage.setItem('driverPerformanceSnapshot', JSON.stringify(result.stats)); } catch(e) {}
 
                 console.log('[Performance Stats] UI updated and snapshot saved');
             } else {
                 console.warn('[Performance Stats] Failed to load:', result.error || 'Unknown error');
-                // Try stored snapshot as fallback
+              
                 const stored = localStorage.getItem('driverPerformanceSnapshot');
                 if (stored) {
                     const stats = JSON.parse(stored);
@@ -708,7 +706,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             }
         } catch (error) {
             console.error('[Performance Stats] Error loading statistics:', error);
-            // On error, try last stored snapshot
+  
             const stored = localStorage.getItem('driverPerformanceSnapshot');
             if (stored) {
                 const stats = JSON.parse(stored);
@@ -720,11 +718,10 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         }
     }
 
-    // Load performance stats on page load
     loadPerformanceStats();
     </script>
     
-    <!-- Push Notification Subscription System -->
+ 
     <script>
     (async function() {
         console.log('[Driver Push] Initializing push notification system...');
@@ -798,7 +795,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 
                 const result = await response.json();
                 if (result.success) {
-                    console.log('✅ Push notifications enabled for driver');
+                    console.log(' Push notifications enabled for driver');
                     localStorage.setItem('driver_push_last_check', Date.now().toString());
                     return true;
                 } else {

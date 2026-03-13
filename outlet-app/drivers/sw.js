@@ -3,7 +3,7 @@
  * Provides offline functionality and caching for the professional courier app
  */
 
-const CACHE_NAME = 'driver-app-v1.0.1';
+const CACHE_NAME = 'driver-app-v1.1.0';
 const LOCAL_CACHE_URLS = [
     './dashboard.php',
     './assets/css/driver-dashboard.css',
@@ -149,13 +149,6 @@ async function handleApiRequest(request) {
 }
 
 async function handleStaticAsset(request) {
-    // Cache first for static assets
-    const cachedResponse = await getCachedResponse(request);
-    if (cachedResponse) {
-        return cachedResponse;
-    }
-    
-    // If not in cache, fetch and cache
     try {
         const networkResponse = await fetch(request);
         if (networkResponse.ok) {
@@ -164,7 +157,10 @@ async function handleStaticAsset(request) {
         }
         return networkResponse;
     } catch (error) {
-        console.log('Driver App SW: Static asset unavailable:', request.url);
+        const cachedResponse = await getCachedResponse(request);
+        if (cachedResponse) {
+            return cachedResponse;
+        }
         return new Response('', { status: 404 });
     }
 }

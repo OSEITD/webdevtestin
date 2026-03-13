@@ -1938,25 +1938,24 @@ class DriverDashboard {
         console.log('[DEBUG] Scrolled to live map container');
     }
     
-    /**
-     * Show route stops panel (for active trips)
-     */
     showRouteStopsPanel() {
-        // Scroll to route stops panel and expand it
         const stopsContainer = document.getElementById('tripStopsContainer');
         if (stopsContainer) {
             stopsContainer.classList.remove('collapsed');
             stopsContainer.scrollIntoView({ behavior: 'smooth' });
             this.loadAndDisplayTripStops();
-            // this.showNotification('📍 Route stops panel opened', 'info');
         } else {
-            this.showNotification('⚠️ Route stops not available - start GPS tracking first', 'warning');
+            this.loadDashboardData(true).then(() => {
+                const retryContainer = document.getElementById('tripStopsContainer');
+                if (retryContainer) {
+                    retryContainer.classList.remove('collapsed');
+                    retryContainer.scrollIntoView({ behavior: 'smooth' });
+                    this.loadAndDisplayTripStops();
+                }
+            });
         }
     }
     
-    /**
-     * Show trip details (fallback)
-     */
     showTripDetails(tripId) {
         this.showNotification('📋 Trip details view - feature coming soon', 'info');
     }

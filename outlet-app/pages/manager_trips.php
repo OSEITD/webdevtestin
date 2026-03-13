@@ -1215,9 +1215,16 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                             <button class="filter-btn filter-btn-reset" onclick="resetFilters()">
                                 <i class="fas fa-times"></i> Reset
                             </button>
-                            <button class="filter-btn filter-btn-reset" onclick="loadActiveTrips()" style="margin-left: auto;">
-                                <i class="fas fa-sync-alt"></i> Refresh
-                            </button>
+                            <div style="margin-left: auto; display: flex; align-items: center; gap: 1.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; color: #374151; cursor: pointer;">
+                                    <input type="checkbox" id="autoRefreshToggle" checked onchange="toggleAutoRefresh()" style="cursor: pointer; width: 16px; height: 16px; accent-color: #2E0D2A;">
+                                    Auto Refresh
+                                    <span id="refreshIndicator" style="font-size: 0.75rem; color: #10b981; display: none;"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Active</span>
+                                </label>
+                                <button class="filter-btn filter-btn-reset" onclick="loadActiveTrips()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1460,7 +1467,8 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             const actionsDiv = card.querySelector('.trip-actions');
             if (actionsDiv) {
                 actionsDiv.innerHTML = `
-                    ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) ? `<button class="action-btn btn-accept" onclick="managerStartTrip('${trip.id}')"><i class="fas fa-play"></i> Start Trip</button>` : ''}
+                    ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) && trip.origin_outlet_id === managerOutletId ? `<button class="action-btn btn-accept" onclick="managerStartTrip('${trip.id}')"><i class="fas fa-play"></i> Start Trip</button>` : ''}
+                    ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) && trip.origin_outlet_id !== managerOutletId ? `<span style="font-size:.8rem;color:#1e3a8a;padding:.5rem .75rem;background:#dbeafe;border-radius:8px;display:inline-flex;align-items:center;gap:.35rem;"><i class="fas fa-info-circle"></i> Awaiting origin to start trip</span>` : ''}
                     ${!isPending && trip.trip_status === 'scheduled' && (!trip.vehicle_id || !trip.driver_id) ? `<button class="action-btn btn-assign" onclick="openAssignModal('${trip.id}')"><i class="fas fa-user-plus"></i> Assign</button>` : ''}
                     ${!isPending && ['accepted','in_transit'].includes(trip.trip_status) ? `<button class="action-btn btn-track" onclick="trackTrip('${trip.id}')"><i class="fas fa-map-marker-alt"></i> Live Track</button>` : ''}
                     ${!isPending && trip.trip_status === 'at_outlet' ? `<button class="action-btn btn-complete" onclick="completeTrip('${trip.id}')"><i class="fas fa-flag-checkered"></i> Mark Complete</button>` : ''}
@@ -1648,10 +1656,14 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                     </div>
 
                     <div class="trip-actions">
-                        ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) ? `
+                        ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) && trip.origin_outlet_id === managerOutletId ? `
                             <button class="action-btn btn-accept" onclick="managerStartTrip('${trip.id}')">
                                 <i class="fas fa-play"></i> Start Trip
                             </button>` : ''}
+                        ${!isPending && ['scheduled','accepted'].includes(trip.trip_status) && trip.origin_outlet_id !== managerOutletId ? `
+                            <span style="font-size:.8rem;color:#1e3a8a;padding:.5rem .75rem;background:#dbeafe;border-radius:8px;display:inline-flex;align-items:center;gap:.35rem;">
+                                <i class="fas fa-info-circle"></i> Awaiting origin outlet to start trip
+                            </span>` : ''}
 
                         ${!isPending && trip.trip_status === 'scheduled' && (!trip.vehicle_id || !trip.driver_id) ? `
                             <button class="action-btn btn-assign" onclick="openAssignModal('${trip.id}')">
@@ -2488,9 +2500,10 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 if (!data.success) return;
 
                 const fresh = data.trips || [];
+                let newTripsFound = false;
 
-                // Remove cards for trips that have disappeared (completed/cancelled)
-                activeTrips.forEach(old => {
+                // Remove cards that have disappeared entirely (e.g. completed/cancelled elsewhere)
+                allTrips.forEach(old => {
                     if (!fresh.find(f => f.id === old.id)) {
                         const el = document.querySelector(`.manager-trip-card[data-trip-id="${old.id}"]`);
                         if (el) { el.classList.add('fade-out'); setTimeout(() => el.remove(), 350); }
@@ -2498,38 +2511,47 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 });
 
                 fresh.forEach(f => {
-                    const existing = activeTrips.find(t => t.id === f.id);
+                    const existing = allTrips.find(t => t.id === f.id);
                     if (!existing) {
-                        // New trip appeared — full redraw is safest
-                        activeTrips = fresh;
-                        allTrips    = [...fresh];
-                        displayTrips(activeTrips);
+                        newTripsFound = true;
                         return;
                     }
 
                     // Merge fresh fields but preserve cached stops (avoid re-render flicker)
                     const cachedStops = existing.stops;
+                    
+                    const oldStatus = existing.trip_status;
+                    const oldDriverCompleted = existing.driver_completed;
+                    const oldManagerVerified = existing.manager_verified;
+
                     Object.assign(existing, f);
                     if (cachedStops && cachedStops.length) existing.stops = cachedStops;
 
                     // If status changed, refresh the card header silently
-                    if (existing.trip_status !== f.trip_status ||
-                        existing.driver_completed !== f.driver_completed ||
-                        existing.manager_verified !== f.manager_verified) {
+                    if (oldStatus !== f.trip_status ||
+                        oldDriverCompleted !== f.driver_completed ||
+                        oldManagerVerified !== f.manager_verified) {
                         refreshTripCard(existing.id);
                     }
                 });
 
-                activeTrips = fresh.map(f => {
-                    const cached = activeTrips.find(t => t.id === f.id);
+                // Reconstruct allTrips merging with the fresh data
+                allTrips = fresh.map(f => {
+                    const cached = allTrips.find(t => t.id === f.id);
                     return cached || f;
                 });
-                allTrips = [...activeTrips];
 
-                updateSummary(activeTrips);
-                if (data.awaiting_verification_count !== undefined) {
-                    document.getElementById('pendingVerificationTrips').textContent = data.awaiting_verification_count;
+                if (newTripsFound) {
+                    // New trip appeared — apply the current filters to re-render
+                    filterTrips(); 
+                } else {
+                    // Just update our summary counts dynamically
+                    updateSummary(allTrips);
+                    if (data.awaiting_verification_count !== undefined) {
+                        document.getElementById('pendingVerificationTrips').textContent = data.awaiting_verification_count;
+                    }
                 }
+
             } catch (e) { /* silent — don't disturb the user */ }
         }
 
@@ -2541,7 +2563,39 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
 
             // Auto-refresh every 30 seconds without a full page reload
             autoRefreshHandle = setInterval(silentRefresh, 30000);
+            updateRefreshIndicator(true);
         });
+
+        function toggleAutoRefresh() {
+            const toggle = document.getElementById('autoRefreshToggle');
+            if (toggle.checked) {
+                if (!autoRefreshHandle) {
+                    autoRefreshHandle = setInterval(silentRefresh, 30000);
+                    // trigger an immediate fetch on re-enable
+                    silentRefresh();
+                }
+                updateRefreshIndicator(true);
+            } else {
+                if (autoRefreshHandle) {
+                    clearInterval(autoRefreshHandle);
+                    autoRefreshHandle = null;
+                }
+                updateRefreshIndicator(false);
+            }
+        }
+
+        function updateRefreshIndicator(isActive) {
+            const indicator = document.getElementById('refreshIndicator');
+            if (isActive) {
+                indicator.style.display = 'inline-block';
+                indicator.style.color = '#10b981'; // green
+                indicator.innerHTML = '<i class="fas fa-circle" style="font-size: 0.5rem; animation: pulse 2s infinite;"></i> Active';
+            } else {
+                indicator.style.display = 'inline-block';
+                indicator.style.color = '#9ca3af'; // gray
+                indicator.innerHTML = '<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Paused';
+            }
+        }
     </script>
 
     <!-- Loading Overlay Control Script -->

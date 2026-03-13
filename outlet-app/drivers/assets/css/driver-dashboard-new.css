@@ -1946,10 +1946,16 @@ body {
 }
 
 .trip-status-awaiting_verification {
-    background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
+    /* changed to blue theme per request */
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
-    border-color: #d97706;
+    border-color: #2563eb;
     animation: pulse-at-outlet 2s infinite;
+}
+
+/* ensure route icon appears blue where used as part of trip actions */
+.fas.fa-route:before {
+    color: #3b82f6;
 }
 
 /* Driver Status Indicators */

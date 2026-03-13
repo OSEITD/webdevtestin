@@ -56,16 +56,67 @@ try {
 		
 		$currentTimestamp = date('Y-m-d H:i:s');
 		
-		// CRITICAL PATH - Only update trip status, send response immediately
-		// This single update is all the user needs to see the trip as started
-		$supabase->update('trips', [
+		$updateOk = $supabase->update('trips', [
 			'trip_status' => 'in_transit',
 			'departure_time' => $currentTimestamp,
 			'driver_id' => $driver_id,
 			'updated_at' => $currentTimestamp
 		], 'id=eq.' . urlencode($trip_id));
-		
-		// IMMEDIATE RESPONSE - Don't wait for secondary operations
+
+		if (!$updateOk) {
+			echo json_encode(['success' => false, 'error' => 'Failed to update trip status in database']);
+			exit;
+		}
+
+		// Verify the update actually took effect
+		$verifyTrip = $supabase->get('trips', 'id=eq.' . urlencode($trip_id), 'trip_status');
+		if (empty($verifyTrip) || $verifyTrip[0]['trip_status'] !== 'in_transit') {
+			error_log("Trip status verification failed for trip $trip_id. Expected in_transit, got: " . ($verifyTrip[0]['trip_status'] ?? 'unknown'));
+			echo json_encode(['success' => false, 'error' => 'Trip status update was rejected by the database. Check Supabase triggers.']);
+			exit;
+		}
+
+		$tripDetails = $supabase->get('trips', 'id=eq.' . urlencode($trip_id), 'origin_outlet_id,destination_outlet_id,company_id');
+		if (!empty($tripDetails) && !empty($tripDetails[0]['origin_outlet_id'])) {
+			$originOutletId = $tripDetails[0]['origin_outlet_id'];
+			$destinationOutletId = $tripDetails[0]['destination_outlet_id'] ?? null;
+			$tripCompanyId = $tripDetails[0]['company_id'] ?? $company_id;
+
+			$existingStops = $supabase->get('trip_stops',
+				'trip_id=eq.' . urlencode($trip_id) . '&select=id,outlet_id'
+			);
+
+			if (empty($existingStops)) {
+				$supabase->insert('trip_stops', [
+					'trip_id' => $trip_id,
+					'outlet_id' => $originOutletId,
+					'stop_order' => 1,
+					'company_id' => $tripCompanyId,
+					'arrival_time' => $currentTimestamp,
+					'departure_time' => $currentTimestamp
+				]);
+				if ($destinationOutletId && $destinationOutletId !== $originOutletId) {
+					$supabase->insert('trip_stops', [
+						'trip_id' => $trip_id,
+						'outlet_id' => $destinationOutletId,
+						'stop_order' => 2,
+						'company_id' => $tripCompanyId
+					]);
+				}
+			} else {
+				$originStops = array_filter($existingStops, function($s) use ($originOutletId) {
+					return $s['outlet_id'] === $originOutletId;
+				});
+				if (!empty($originStops)) {
+					$originStop = array_values($originStops)[0];
+					$supabase->update('trip_stops', [
+						'arrival_time' => $currentTimestamp,
+						'departure_time' => $currentTimestamp
+					], 'id=eq.' . urlencode($originStop['id']));
+				}
+			}
+		}
+
 		$response = [
 			'success' => true, 
 			'message' => 'Trip started successfully',
@@ -73,19 +124,16 @@ try {
 			'trip_id' => $trip_id
 		];
 		
-		// Store variables for background processing
 		$bgCompanyId = $company_id;
 		$bgDriverId = $driver_id;
 		$bgTripId = $trip_id;
 		$bgTimestamp = $currentTimestamp;
 		
-		// Send response NOW - user sees instant feedback
 		ob_end_clean();
 		header('Content-Type: application/json');
 		http_response_code(200);
 		echo json_encode($response);
 		
-		// Flush response to client
 		if (function_exists('fastcgi_finish_request')) {
 			fastcgi_finish_request();
 		} else {
@@ -93,10 +141,7 @@ try {
 			flush();
 		}
 		
-		// ==========================================
-		// BACKGROUND PROCESSING - After response sent
-		// ==========================================
-		ob_start(); // Suppress any output
+		ob_start();
 		
 		try {
 			$bgSupabase = new OutletAwareSupabaseHelper();
@@ -112,26 +157,7 @@ try {
 				error_log("BG: Failed to update driver: " . $e->getMessage());
 			}
 			
-			// Background Task 2: Auto-depart from origin outlet
-			try {
-				$tripDetails = $bgSupabase->get('trips', 'id=eq.' . urlencode($bgTripId), 'origin_outlet_id');
-				if (!empty($tripDetails) && !empty($tripDetails[0]['origin_outlet_id'])) {
-					$originOutletId = $tripDetails[0]['origin_outlet_id'];
-					$originStops = $bgSupabase->get('trip_stops', 
-						'trip_id=eq.' . urlencode($bgTripId) . 
-						'&outlet_id=eq.' . urlencode($originOutletId) . 
-						'&select=id'
-					);
-					if (!empty($originStops)) {
-						$bgSupabase->update('trip_stops', [
-							'arrival_time' => $bgTimestamp,
-							'departure_time' => $bgTimestamp
-						], 'id=eq.' . urlencode($originStops[0]['id']));
-					}
-				}
-			} catch (Exception $e) {
-				error_log("BG: Failed to update origin stop: " . $e->getMessage());
-			}
+			// Trip stops already created in critical path above
 			
 			// Background Task 3: Update parcels to in_transit
 			$parcelIds = [];

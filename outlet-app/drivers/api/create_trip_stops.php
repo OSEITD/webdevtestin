@@ -41,7 +41,7 @@ try {
     $supabase = new OutletAwareSupabaseHelper();
     $companyId = $_SESSION['company_id'];
     
-    // Validate and add company_id to each stop
+
     $stopsToCreate = [];
     foreach ($input['stops'] as $stop) {
         if (!isset($stop['trip_id']) || !isset($stop['outlet_id']) || !isset($stop['stop_order'])) {
@@ -58,8 +58,8 @@ try {
         ];
     }
     
-    // Create stops in database
-    $createdStops = $supabase->post('trip_stops', $stopsToCreate);
+    // Creating stops in database
+    $createdStops = $supabase->insert('trip_stops', $stopsToCreate);
     
     if (!is_array($createdStops)) {
         $createdStops = [$createdStops];
