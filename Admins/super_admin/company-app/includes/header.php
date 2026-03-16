@@ -124,7 +124,7 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
         <!-- Top Header Bar -->
         <header class="top-header">
             <div class="header-content">
-                <img src="../assets/images/Logo.png" alt="WebDev" class="app-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x40?text=Logo+Not+Found';">
+                <img src="../assets/images/logo.png" alt="WebDev" class="app-logo" onerror="this.onerror=null;this.src='https://placehold.co/100x40?text=Logo+Not+Found';">
 
                 <!-- Search Bar (visible on all devices) -->
                 <div class="search-container">
