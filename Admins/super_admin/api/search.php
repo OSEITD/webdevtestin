@@ -13,8 +13,8 @@ if ($_SESSION['role'] !== 'super_admin') {
     exit;
 }
 
-require_once 'supabase-client.php';
-require_once 'pages-data.php';
+require_once __DIR__ . '/supabase-client.php';
+require_once __DIR__ . '/pages-data.php';
 
 // Get search query from request
 $query = $_GET['q'] ?? '';

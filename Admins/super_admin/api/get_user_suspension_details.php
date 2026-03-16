@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 // Check if user is logged in and has super_admin role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {

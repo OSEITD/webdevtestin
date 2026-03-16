@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once '../api/supabase-client.php';
-require_once '../includes/currency-helper.php';
+require_once __DIR__ . '/../api/supabase-client.php';
+require_once __DIR__ . '/../includes/currency-helper.php';
 
 // Check if user is logged in and has super_admin role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
@@ -10,7 +10,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
 }
 
 $pageTitle = 'Admin - Add Company';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
     <div class="mobile-dashboard">

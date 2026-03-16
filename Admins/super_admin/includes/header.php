@@ -175,4 +175,4 @@ $adminBaseUrl = '..';
     <!-- Admin Push Notification Manager -->
     <script src="<?php echo $adminBaseUrl; ?>/assets/js/admin-push-manager.js"></script>
     
-    <?php include 'sidebar.php'; ?>
+    <?php include __DIR__ . '/sidebar.php'; ?>

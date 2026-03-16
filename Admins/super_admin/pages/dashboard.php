@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once '../api/supabase-client.php';
-require_once '../includes/currency-helper.php';
+require_once __DIR__ . '/../api/supabase-client.php';
+require_once __DIR__ . '/../includes/currency-helper.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
     header('Location: login.php');
@@ -80,7 +80,7 @@ if (!empty($companiesData)) {
     $topCompanies = array_slice($companyEarnings, 0, 5);
 }
 $pageTitle = 'Admin - Dashboard';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
     <div class="mobile-dashboard">

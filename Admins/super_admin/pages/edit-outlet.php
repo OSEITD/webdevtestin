@@ -26,7 +26,7 @@ $outlet = $outlet[0];
 $companies = callSupabaseWithServiceKey('companies', 'GET');
 
 $pageTitle = 'Admin - Edit-Outlet';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
     <div class="mobile-dashboard">

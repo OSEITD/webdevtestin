@@ -1,6 +1,6 @@
 <?php
-require 'api/supabase-client.php';
-require 'api/session-helper.php';
+require __DIR__ . '/api/supabase-client.php';
+require __DIR__ . '/api/session-helper.php';
 SessionHelper::initializeSecureSession();
 $supabase = new SupabaseClient();
 

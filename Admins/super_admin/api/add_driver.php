@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 try {
     error_log("Received POST data: " . print_r($_POST, true));

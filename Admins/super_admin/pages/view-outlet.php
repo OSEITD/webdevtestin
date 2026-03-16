@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../api/supabase-client.php';
+require_once __DIR__ . '/../api/supabase-client.php';
 
 // Check if user is logged in and has super_admin role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
@@ -77,11 +77,11 @@ if (!empty($_GET['return'])) {
     }
 }
 
-require_once '../includes/csrf-helper.php';
+require_once __DIR__ . '/../includes/csrf-helper.php';
 $csrfToken = CSRFHelper::getToken();
 
 $pageTitle = 'Admin - View Outlet';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 
 // Prepare display values
 $outletName = $outlet['name'] ?? $outlet['outlet_name'] ?? 'Unknown Outlet';

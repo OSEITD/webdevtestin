@@ -8,7 +8,7 @@ ErrorHandler::requireAuth('get_dashboard_stats.php');
 // Verify GET method
 ErrorHandler::requireMethod('GET', 'get_dashboard_stats.php');
 
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 try {
     error_log("Starting dashboard stats collection...");

@@ -6,7 +6,7 @@ require_once __DIR__ . '/init.php';
 ErrorHandler::requireAuth('get_report_history.php');
 ErrorHandler::requireMethod('GET', 'get_report_history.php');
 
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 try {
     $reportType = $_GET['type'] ?? '';

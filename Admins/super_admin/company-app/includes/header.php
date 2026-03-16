@@ -180,4 +180,4 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
         <script src="../assets/js/company-search-notifications.js"></script>
 
         <!-- Include Sidebar -->
-        <?php include 'sidebar.php'; ?>
+        <?php include __DIR__ . '/sidebar.php'; ?>

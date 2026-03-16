@@ -1,7 +1,7 @@
 <?php
 // ../api/fetch_companies.php
 
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 global $supabaseUrl, $supabaseKey;
 

@@ -4,8 +4,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
-require_once '../api/supabase-client.php';
-require_once '../includes/currency-helper.php';
+require_once __DIR__ . '/../api/supabase-client.php';
+require_once __DIR__ . '/../includes/currency-helper.php';
 
 $globalCurrency = getEffectiveCurrency();
 
@@ -46,7 +46,7 @@ try {
 
 
 $pageTitle = 'Admin - Reports';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
     <div class="mobile-dashboard">

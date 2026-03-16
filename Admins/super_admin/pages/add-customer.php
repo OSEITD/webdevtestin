@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../api/supabase-client.php';
 
 $pageTitle = 'Admin - [Page Name]';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
     <div class="mobile-dashboard">

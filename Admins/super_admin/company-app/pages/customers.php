@@ -82,7 +82,7 @@
         </header>
 
         <!-- Sidebar -->
-        <?php include '../includes/sidebar.php'; ?>
+        <?php include __DIR__ . '/../includes/sidebar.php'; ?>
 
         <!-- Overlay for sidebar -->
 

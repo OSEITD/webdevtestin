@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 header('Content-Type: application/json');
 

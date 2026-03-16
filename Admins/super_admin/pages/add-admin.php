@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../api/supabase-client.php';
 
 $pageTitle = 'Admin - Add Admin ';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
     <style>
         .form-container {

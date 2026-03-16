@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../auth/session-check.php';
 $page_title = 'Settings';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 <body class="bg-gray-100 min-h-screen">
 

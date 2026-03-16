@@ -22,7 +22,7 @@ try {
 }
 
 $pageTitle = 'Admin - Add Outlet';
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
     <div class="mobile-dashboard">

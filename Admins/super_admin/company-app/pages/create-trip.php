@@ -21,7 +21,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // Include session check without redirect loop
 require_once __DIR__ . '/../../auth/session-check.php';
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">

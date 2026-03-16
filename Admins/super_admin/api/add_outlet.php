@@ -6,7 +6,7 @@ require_once __DIR__ . '/init.php';
 ErrorHandler::requireAuth('add_outlet.php');
 ErrorHandler::requireMethod('POST', 'add_outlet.php');
 
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 try {
     // Check if we're receiving JSON

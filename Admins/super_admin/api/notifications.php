@@ -15,7 +15,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
 $isSuperAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin';
 $companyId = $_SESSION['id'] ?? null;
 
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 $userId = $_SESSION['user_id'] ?? null;
 $action = $_GET['action'] ?? 'list';

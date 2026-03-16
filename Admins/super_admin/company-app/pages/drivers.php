@@ -1,6 +1,6 @@
 <?php
 // Include the header (which also handles session and authentication)
-require_once '../includes/header.php';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 <body class="bg-gray-100 min-h-screen">
 

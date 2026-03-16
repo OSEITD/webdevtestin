@@ -6,7 +6,7 @@ require_once __DIR__ . '/init.php';
 ErrorHandler::requireAuth('add_company.php');
 ErrorHandler::requireMethod('POST', 'add_company.php');
 
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 try {
     // Check if we're receiving JSON (support both CONTENT_TYPE and HTTP_CONTENT_TYPE for reverse proxies like ngrok)

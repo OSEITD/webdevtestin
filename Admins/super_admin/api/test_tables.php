@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'supabase-client.php';
+require_once __DIR__ . '/supabase-client.php';
 
 // Set up error handling to return JSON
 error_reporting(E_ALL);
