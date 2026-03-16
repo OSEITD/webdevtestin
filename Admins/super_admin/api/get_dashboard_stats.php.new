@@ -1,0 +1,117 @@
+<?php
+// Prevent any output before headers
+ob_start();
+session_start();
+
+// Ensure we only output JSON
+header('Content-Type: application/json');
+
+require_once 'supabase-client.php';
+
+try {
+    // Initialize response array
+    $response = [
+        'success' => true,
+        'stats' => [
+            'total_companies' => 0,
+            'active_users' => 0,
+            'total_deliveries' => 0,
+            'ongoing_deliveries' => 0
+        ],
+        'revenue' => [
+            'total' => 0,
+            'monthly_growth' => 0
+        ],
+        'topCompanies' => []
+    ];
+
+    // Fetch system settings for currency
+    $settings = callSupabase('system_settings?id=eq.1');
+    $defaultCurrency = 'USD';
+    if (is_array($settings) && !empty($settings[0]) && !empty($settings[0]['default_currency'])) {
+        $defaultCurrency = strtoupper(substr($settings[0]['default_currency'], 0, 3));
+    }
+
+    // Set currency information
+    $currencySymbol = '$';
+    if ($defaultCurrency === 'EUR') {
+        $currencySymbol = '€';
+    } elseif ($defaultCurrency === 'GBP') {
+        $currencySymbol = '£';
+    } elseif ($defaultCurrency === 'ZMW') {
+        $currencySymbol = 'ZK';
+    }
+
+    $response['currency'] = [
+        'code' => $defaultCurrency,
+        'symbol' => $currencySymbol
+    ];
+
+    // Get companies with revenue data
+    $companiesData = callSupabase('companies?select=id,company_name,revenue,status&order=revenue.desc');
+    if (is_array($companiesData)) {
+        $response['stats']['total_companies'] = count($companiesData);
+        
+        // Calculate revenue metrics
+        $totalRevenue = 0;
+        $companyEarnings = [];
+        
+        foreach ($companiesData as $company) {
+            if ($company['status'] === 'active') {
+                $revenue = $company['revenue'] ?? 0;
+                // Convert to selected currency (assume all stored in USD for this example)
+                $convertedRevenue = $revenue;
+                if ($defaultCurrency !== 'USD' && isset($exchangeRates[$defaultCurrency])) {
+                    $convertedRevenue = $revenue * $exchangeRates[$defaultCurrency];
+                }
+                $totalRevenue += $convertedRevenue;
+                $companyEarnings[] = [
+                    'name' => $company['company_name'],
+                    'earnings' => $convertedRevenue
+                ];
+            }
+        }
+        
+        $response['revenue']['total'] = $totalRevenue;
+        $lastMonthRevenue = 0; // This needs to be calculated properly in the future
+        $response['revenue']['monthly_growth'] = $lastMonthRevenue > 0 
+            ? (($totalRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100 
+            : 0;
+            
+        // Sort companies by earnings and get top 5
+        usort($companyEarnings, fn($a, $b) => $b['earnings'] - $a['earnings']);
+        $response['topCompanies'] = array_slice($companyEarnings, 0, 5);
+    }
+
+    // Get active users count
+    $activeUsersQuery = callSupabase('all_users?select=count&status=eq.active');
+    if (is_array($activeUsersQuery) && isset($activeUsersQuery[0]['count'])) {
+        $response['stats']['active_users'] = $activeUsersQuery[0]['count'];
+    }
+
+    // Get delivery counts
+    $deliveredParcelsQuery = callSupabase('delivered_parcels_mv?select=count');
+    if (is_array($deliveredParcelsQuery) && isset($deliveredParcelsQuery[0]['count'])) {
+        $response['stats']['total_deliveries'] = $deliveredParcelsQuery[0]['count'];
+    }
+
+    // Get ongoing deliveries
+    $inProgressQuery = callSupabase('parcels?select=count&status=neq.delivered');
+    if (is_array($inProgressQuery) && isset($inProgressQuery[0]['count'])) {
+        $response['stats']['ongoing_deliveries'] = $inProgressQuery[0]['count'];
+    }
+
+    echo json_encode($response);
+
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage(),
+        'stats' => [
+            'total_companies' => 0,
+            'active_users' => 0,
+            'total_deliveries' => 0,
+            'ongoing_deliveries' => 0
+        ]
+    ]);
+}
