@@ -1,0 +1,499 @@
+/* ===== FORM VALIDATION STYLES ===== */
+
+/* --- Error & Success States --- */
+.form-group.has-error .form-input-field,
+.form-group.has-error .form-select-field,
+.form-group.has-error .form-textarea-field {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
+    background-color: #fff5f5;
+}
+
+.form-group.has-success .form-input-field,
+.form-group.has-success .form-select-field,
+.form-group.has-success .form-textarea-field {
+    border-color: #27ae60;
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+/* --- Inline Error Message --- */
+.field-error {
+    display: none;
+    color: #e74c3c;
+    font-size: 12.5px;
+    margin-top: 6px;
+    padding: 0 2px;
+    font-weight: 500;
+    line-height: 1.3;
+    align-items: center;
+    gap: 5px;
+}
+
+.field-error i {
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.form-group.has-error .field-error {
+    display: flex;
+    animation: slideDown 0.25s ease-out;
+}
+
+/* --- Shake Animation for Invalid Fields --- */
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-6px);
+    }
+
+    40% {
+        transform: translateX(6px);
+    }
+
+    60% {
+        transform: translateX(-4px);
+    }
+
+    80% {
+        transform: translateX(4px);
+    }
+}
+
+.form-group.shake {
+    animation: shake 0.4s ease-in-out;
+}
+
+/* --- Slide-Down Animation for Error Messages --- */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Success Check Icon (::after pseudo) --- */
+.form-group.has-success {
+    position: relative;
+}
+
+.form-group.has-success::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 12px;
+    top: 42px;
+    color: #27ae60;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+/* Adjust check position for textarea fields */
+.form-group.has-success:has(.form-textarea-field)::after {
+    top: 46px;
+}
+
+/* --- Password Strength Meter --- */
+.password-strength {
+    margin-top: 8px;
+}
+
+.password-strength-bar {
+    height: 4px;
+    border-radius: 4px;
+    background-color: #e0e0e0;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.password-strength-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    width: 0%;
+}
+
+.password-strength-fill.strength-weak {
+    width: 25%;
+    background-color: #e74c3c;
+}
+
+.password-strength-fill.strength-fair {
+    width: 50%;
+    background-color: #f39c12;
+}
+
+.password-strength-fill.strength-good {
+    width: 75%;
+    background-color: #3498db;
+}
+
+.password-strength-fill.strength-strong {
+    width: 100%;
+    background-color: #27ae60;
+}
+
+.password-strength-text {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #888;
+}
+
+.password-strength-text.strength-weak {
+    color: #e74c3c;
+}
+
+.password-strength-text.strength-fair {
+    color: #f39c12;
+}
+
+.password-strength-text.strength-good {
+    color: #3498db;
+}
+
+.password-strength-text.strength-strong {
+    color: #27ae60;
+}
+
+/* --- Password Visibility Toggle --- */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.password-wrapper .form-input-field {
+    flex: 1;
+    padding-right: 44px;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 12px;
+    color: #999;
+    font-size: 15px;
+    transition: color 0.15s;
+    z-index: 2;
+    line-height: 1;
+}
+
+.password-toggle-btn:hover {
+    color: #555;
+}
+
+.form-group.has-error .password-toggle-btn {
+    color: #cba5a5;
+}
+
+.form-group.has-error .password-toggle-btn:hover {
+    color: #e74c3c;
+}
+
+/* --- Format Hint Text --- */
+.format-hint {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.format-hint i {
+    font-size: 11px;
+}
+
+/* --- Required Field Asterisk --- */
+.form-group label .required {
+    color: #e74c3c;
+    margin-left: 2px;
+    font-weight: 700;
+}
+
+/* --- Character Count --- */
+.char-count {
+    font-size: 11.5px;
+    color: #999;
+    text-align: right;
+    margin-top: 4px;
+}
+
+.char-count.over-limit {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+/* --- Disabled Submit Button --- */
+.btn.save-btn:disabled,
+.btn.save-btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* --- Loading Spinner on Submit --- */
+.btn.save-btn.is-loading {
+    position: relative;
+    pointer-events: none;
+    color: transparent;
+}
+
+.btn.save-btn.is-loading::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    top: 50%;
+    left: 50%;
+    margin-top: -9px;
+    margin-left: -9px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== PHONE COUNTRY CODE SELECTOR ===== */
+
+/* --- Phone Input Group --- */
+.phone-input-group {
+    display: flex;
+    align-items: stretch;
+    position: relative;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    overflow: visible;
+    background-color: #f9f9f9;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.phone-input-group:focus-within {
+    border-color: var(--primary-light, #4a1c40);
+    box-shadow: 0 0 0 3px rgba(74, 28, 64, 0.1);
+}
+
+.form-group.has-error .phone-input-group {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
+    background-color: #fff5f5;
+}
+
+.form-group.has-success .phone-input-group {
+    border-color: #27ae60;
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+/* Override the input border when inside phone group */
+.phone-input-group .form-input-field {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    flex: 1;
+    min-width: 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.phone-input-group .form-input-field:focus {
+    box-shadow: none;
+    border: none;
+}
+
+/* --- Country Code Button --- */
+.country-code-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 10px 10px 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-right: 1px solid var(--border-color, #e0e0e0);
+    white-space: nowrap;
+    font-size: 14px;
+    color: var(--color-text, #333);
+    transition: background-color 0.15s;
+    flex-shrink: 0;
+}
+
+.country-code-btn:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.country-flag {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.country-dial {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--color-text, #333);
+}
+
+.country-arrow {
+    font-size: 10px;
+    color: #999;
+    margin-left: 2px;
+    transition: transform 0.2s;
+}
+
+/* --- Country Dropdown --- */
+.country-code-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1000;
+    width: 300px;
+    max-height: 320px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    animation: dropdownFadeIn 0.2s ease-out;
+}
+
+.country-code-dropdown.open {
+    display: block;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Search Box inside Dropdown --- */
+.country-search-box {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.country-search-box i {
+    color: #aaa;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.country-search-input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 13.5px;
+    color: #333;
+    background: transparent;
+    padding: 0;
+}
+
+.country-search-input::placeholder {
+    color: #bbb;
+}
+
+/* --- Country List --- */
+.country-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.country-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.country-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.country-list::-webkit-scrollbar-thumb {
+    background: #d0d0d0;
+    border-radius: 4px;
+}
+
+.country-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background-color 0.12s;
+    font-size: 13.5px;
+}
+
+.country-item:hover {
+    background-color: #f5f0f5;
+}
+
+.country-item.selected {
+    background-color: #f0eaf0;
+    font-weight: 600;
+}
+
+.country-item .country-flag {
+    font-size: 18px;
+}
+
+.country-item .country-name {
+    flex: 1;
+    color: #333;
+}
+
+.country-item .country-dial {
+    color: #888;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+    .country-code-dropdown {
+        width: calc(100vw - 60px);
+        max-width: 300px;
+    }
+
+    .country-code-btn {
+        padding: 10px 8px 10px 10px;
+    }
+
+    .country-dial {
+        font-size: 12.5px;
+    }
+}
