@@ -1,10 +1,5 @@
 <?php
-/**
- * Front controller for super_admin folder
- * Routes requests to appropriate pages based on whether user is logged in
- */
 
-// Include session initialization
 require_once __DIR__ . '/company-app/includes/init.php';
 
 // Check if user is logged in
