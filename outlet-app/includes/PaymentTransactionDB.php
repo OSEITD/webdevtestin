@@ -15,6 +15,17 @@ class PaymentTransactionDB {
         $this->supabaseKey = $supabaseKey;
         $this->supabaseServiceKey = $supabaseServiceKey;
     }
+
+    /**
+     * Return the normalized Supabase REST URL (always ends with /rest/v1)
+     * regardless of whether SUPABASE_URL already includes /rest or /rest/v1.
+     */
+    private function getSupabaseRestUrl() {
+        $base = rtrim($this->supabaseUrl, '/');
+        // Remove any trailing /rest or /rest/v1 to avoid double segments
+        $base = preg_replace('#/rest(/v1)?$#', '', $base);
+        return $base . '/rest/v1';
+    }
     
     public function createTransaction($data) {
         try {
@@ -74,7 +85,7 @@ class PaymentTransactionDB {
             $transactionData = array_filter($transactionData, function($v) { return $v !== null; });
             
             // Use raw HTTP request since custom Supabase client doesn't support insert
-            $url = $this->supabaseUrl . '/rest/v1/payment_transactions';
+            $url = $this->getSupabaseRestUrl() . '/payment_transactions';
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -115,6 +126,13 @@ class PaymentTransactionDB {
     
     public function verifyTransaction($txRef, $verificationData) {
         try {
+            // Check if this transaction is already marked successful to avoid double-crediting the wallet.
+            $existingTxn = $this->getTransactionByRef($txRef);
+            $alreadySuccessful = false;
+            if ($existingTxn['success'] && !empty($existingTxn['data']['status']) && strtolower($existingTxn['data']['status']) === 'successful') {
+                $alreadySuccessful = true;
+            }
+
             $updateData = [
                 'lenco_tx_id' => $verificationData['transaction_id'],
                 'lenco_tx_ref' => $verificationData['tx_ref'] ?? null,
@@ -145,7 +163,7 @@ class PaymentTransactionDB {
             }
             
             // Use raw HTTP request for update since custom Supabase client doesn't support update
-            $url = $this->supabaseUrl . '/rest/v1/payment_transactions?tx_ref=eq.' . urlencode($txRef);
+            $url = $this->getSupabaseRestUrl() . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -165,9 +183,29 @@ class PaymentTransactionDB {
             if ($httpCode === 200) {
                 $responseData = json_decode($responseBody, true);
 
-                // If payment was successful, also update the parcel payment status
-                if ($verificationData['status'] === 'successful' && isset($responseData[0]['parcel_id'])) {
-                    $this->updateParcelPaymentStatus($responseData[0]['parcel_id']);
+                // If payment was successful, update parcel status and credit the wallet (once).
+                if ($verificationData['status'] === 'successful' && isset($responseData[0])) {
+                    if (isset($responseData[0]['parcel_id'])) {
+                        $this->updateParcelPaymentStatus($responseData[0]['parcel_id']);
+                    }
+
+                    // Update wallet ledger only once per successful payment.
+                    if (!$alreadySuccessful) {
+                        require_once __DIR__ . '/WalletManager.php';
+                        $companyId = $responseData[0]['company_id'] ?? null;
+                        $amount = isset($responseData[0]['total_amount']) ? (float)$responseData[0]['total_amount'] : null;
+                        $commissionPct = isset($responseData[0]['commission_percentage']) ? (float)$responseData[0]['commission_percentage'] : 0;
+                        $transactionId = $responseData[0]['id'] ?? null;
+
+                        if ($companyId && $amount > 0) {
+                            $walletSuccess = WalletManager::processPaymentReceived($companyId, $amount, $commissionPct, $transactionId);
+                            if ($walletSuccess) {
+                                error_log("Wallet ledger updated for transaction {$transactionId}");
+                            } else {
+                                error_log("Wallet ledger update failed for transaction {$transactionId}");
+                            }
+                        }
+                    }
                 }
 
                 return [
@@ -175,6 +213,8 @@ class PaymentTransactionDB {
                     'data' => $responseData[0] ?? null
                 ];
             } else {
+                error_log("PaymentTransactionDB verify URL: $url");
+                error_log("PaymentTransactionDB verify HTTP $httpCode response: $responseBody");
                 return [
                     'success' => false,
                     'error' => 'Failed to update transaction: HTTP ' . $httpCode . ' - ' . $responseBody
@@ -320,7 +360,7 @@ class PaymentTransactionDB {
     public function incrementRetryCount($txRef) {
         try {
             // Use raw HTTP request to get current retry count
-            $url = $this->supabaseUrl . '/rest/v1/payment_transactions?select=retry_count&tx_ref=eq.' . urlencode($txRef);
+            $url = $this->getSupabaseRestUrl() . '/payment_transactions?select=retry_count&tx_ref=eq.' . urlencode($txRef);
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -339,7 +379,7 @@ class PaymentTransactionDB {
                 $currentCount = $responseData[0]['retry_count'] ?? 0;
 
                 // Update retry count
-                $updateUrl = $this->supabaseUrl . '/rest/v1/payment_transactions?tx_ref=eq.' . urlencode($txRef);
+                $updateUrl = $this->getSupabaseRestUrl() . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
                 $ch = curl_init($updateUrl);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
@@ -382,7 +422,7 @@ class PaymentTransactionDB {
             ];
 
             // Use raw HTTP request for update
-            $url = $this->supabaseUrl . '/rest/v1/payment_transactions?tx_ref=eq.' . urlencode($txRef);
+            $url = $this->getSupabaseRestUrl() . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -610,7 +650,7 @@ class PaymentTransactionDB {
             }
 
             // Update parcel payment status
-            $url = $this->supabaseUrl . '/rest/v1/parcels?id=eq.' . urlencode($parcelId);
+            $url = $this->getSupabaseRestUrl() . '/parcels?id=eq.' . urlencode($parcelId);
 
             $updateData = [
                 'payment_status' => 'paid',

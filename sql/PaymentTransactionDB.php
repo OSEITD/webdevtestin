@@ -1,6 +1,8 @@
 <?php
 
-require_once __DIR__ . '/../../includes/supabase.php';
+// Ensure we can access the Supabase HTTP client helper.
+// In this repo the helper is in outlet-app/includes/supabase-client.php.
+require_once __DIR__ . '/../outlet-app/includes/supabase-client.php';
 
 class PaymentTransactionDB {
     private $supabase;
@@ -103,10 +105,44 @@ class PaymentTransactionDB {
      */
     public function verifyTransaction($txRef, $verificationData) {
         try {
+            // Fetch existing transaction to avoid double-processing
+            $supabaseUrl = EnvLoader::get('SUPABASE_URL');
+            $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
+
+            $restBase = rtrim($supabaseUrl, '/');
+            $restBase = preg_replace('#/rest(/v1)?$#', '', $restBase);
+            $restBase .= '/rest/v1';
+
+            $queryUrl = $restBase . '/payment_transactions?select=*&tx_ref=eq.' . urlencode($txRef);
+            $ch = curl_init($queryUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'apikey: ' . $supabaseServiceKey,
+                    'Authorization: Bearer ' . $supabaseServiceKey,
+                    'Content-Type: application/json'
+                ],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => true
+            ]);
+
+            $queryResponse = curl_exec($ch);
+            $queryCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            $previousStatus = null;
+            if ($queryCode === 200 && $queryResponse) {
+                $existingData = json_decode($queryResponse, true);
+                if (!empty($existingData) && isset($existingData[0]['status'])) {
+                    $previousStatus = $existingData[0]['status'];
+                }
+            }
+
             $updateData = [
-                'flutterwave_tx_id' => $verificationData['transaction_id'],
-                'flutterwave_tx_ref' => $verificationData['tx_ref'] ?? null,
-                'flutterwave_status' => $verificationData['status'],
+                // This table schema expects lenco_* columns (not flutterwave_*)
+                'lenco_tx_id' => $verificationData['transaction_id'],
+                'lenco_tx_ref' => $verificationData['tx_ref'] ?? null,
+                'lenco_status' => $verificationData['status'],
                 'processor_response' => $verificationData['processor_response'] ?? null,
                 'auth_model' => $verificationData['auth_model'] ?? null,
                 'payment_type' => $verificationData['payment_type'] ?? null,
@@ -115,14 +151,20 @@ class PaymentTransactionDB {
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
-            // Set status based on Flutterwave status
-            if ($verificationData['status'] === 'successful') {
+            // Normalize status to avoid case mismatches (Lenco may return 'success' or 'Successful')
+            $normalizedStatus = strtolower(trim((string)($verificationData['status'] ?? '')));
+            $successStatuses = ['successful', 'success', 'completed', 'paid'];
+
+            if (in_array($normalizedStatus, $successStatuses, true)) {
                 $updateData['status'] = 'successful';
                 $updateData['paid_at'] = date('Y-m-d H:i:s');
-            } else if ($verificationData['status'] === 'failed') {
+            } else if ($normalizedStatus === 'failed' || $normalizedStatus === 'error' || $normalizedStatus === 'declined') {
                 $updateData['status'] = 'failed';
                 $updateData['failed_at'] = date('Y-m-d H:i:s');
                 $updateData['error_message'] = $verificationData['error_message'] ?? 'Payment failed';
+            } else {
+                // Keep the status as-is for pending / processing states
+                $updateData['status'] = $normalizedStatus ?: ($updateData['status'] ?? 'pending');
             }
             
             // Add card details if available
@@ -132,23 +174,56 @@ class PaymentTransactionDB {
                 $updateData['card_bin'] = $verificationData['card']['first_6digits'] ?? null;
             }
             
-            $response = $this->supabase
-                ->from('payment_transactions')
-                ->update($updateData)
-                ->eq('tx_ref', $txRef)
-                ->select()
-                ->single()
-                ->execute();
-            
-            if ($response->status === 200) {
+            // Update transaction via direct REST call (Supabase PHP client uses /rest not /rest/v1 in this version)
+            $updateUrl = $restBase . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
+            // Debug: log which keys we're sending to Supabase (helps diagnose schema mismatch)
+            error_log('PaymentTransactionDB verify updateData keys: ' . implode(', ', array_keys($updateData)));
+            error_log('PaymentTransactionDB verify updateData JSON: ' . json_encode($updateData));
+            $ch = curl_init($updateUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($updateData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'apikey: ' . $supabaseServiceKey,
+                'Authorization: Bearer ' . $supabaseServiceKey,
+                'Content-Type: application/json',
+                'Prefer: return=representation'
+            ]);
+
+            $responseBody = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $updatedData = json_decode($responseBody, true);
+                $updated = $updatedData[0] ?? null;
+
+                
+                if (isset($updated['status']) && $updated['status'] === 'successful' && $previousStatus !== 'successful') {
+                    try {
+                        require_once __DIR__ . '/../outlet-app/includes/WalletManager.php';
+                        WalletManager::processPaymentReceived(
+                            $updated['company_id'],
+                            floatval($updated['amount']),
+                            floatval($updated['commission_percentage'] ?? 0),
+                            $updated['id']
+                        );
+                    } catch (Exception $e) {
+                        error_log('Wallet update failed after payment verification: ' . $e->getMessage());
+                    }
+                }
+
                 return [
                     'success' => true,
-                    'data' => $response->data
+                    'data' => $updated
                 ];
             } else {
+                error_log("PaymentTransactionDB verify URL: $updateUrl");
+                error_log("PaymentTransactionDB verify HTTP $httpCode response: $responseBody");
+
                 return [
                     'success' => false,
-                    'error' => 'Failed to update transaction'
+                    'error' => 'Failed to update transaction: HTTP ' . $httpCode . ' - ' . $responseBody
                 ];
             }
         } catch (Exception $e) {

@@ -378,6 +378,22 @@ class SupabaseClient {
     }
 
     /**
+     * Insert records into a table
+     */
+    public function post($path, $data, $useServiceRole = false) {
+        $url = "{$this->supabaseUrl}/rest/v1/{$path}";
+        $authKey = ($useServiceRole && $this->serviceRoleKey) ? $this->serviceRoleKey : $this->supabaseKey;
+        
+        $headers = array_merge($this->defaultHeaders, [
+            'Authorization: Bearer ' . $authKey,
+            'Prefer: return=representation'
+        ]);
+        
+        $response = $this->makeRequest('POST', $url, json_encode($data), $headers);
+        return $this->parseResponse($response);
+    }
+
+    /**
      * Get records from any table
      */
     public function get($endpoint) {
@@ -520,7 +536,7 @@ class SupabaseClient {
     /**
      * Helper method to make HTTP requests
      */
-    private function makeRequest($method, $url, $data = null, $headers = null) {
+    private function makeRequest($method, $url, $data = null, $headers = null, $retry = true): mixed {
         error_log("=== Starting HTTP Request ===");
         error_log("Method: {$method}");
         error_log("URL: {$url}");
@@ -588,6 +604,38 @@ class SupabaseClient {
             error_log("=== CURL Error ===");
             error_log($error);
             throw new Exception("cURL Error: $error");
+        }
+
+        if ($statusCode === 401 && $retry && (stripos($responseBody, 'JWT expired') !== false || stripos($responseBody, 'invalid_token') !== false)) {
+            // Attempt to refresh the access token once and retry the request.
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                session_start();
+            }
+
+            $refreshToken = $_SESSION['refresh_token'] ?? null;
+            if (!empty($refreshToken)) {
+                try {
+                    $newTokens = $this->refreshToken($refreshToken);
+                    if (!empty($newTokens['access_token'])) {
+                        $_SESSION['access_token'] = $newTokens['access_token'];
+                        if (!empty($newTokens['refresh_token'])) {
+                            $_SESSION['refresh_token'] = $newTokens['refresh_token'];
+                        }
+                        // Update request Authorization header if present
+                        foreach ($finalHeaders as &$hdr) {
+                            if (stripos($hdr, 'Authorization: Bearer ') === 0) {
+                                $hdr = 'Authorization: Bearer ' . $newTokens['access_token'];
+                                break;
+                            }
+                        }
+                        // Retry once with refreshed token
+                        curl_close($ch);
+                        return $this->makeRequest($method, $url, $data, $finalHeaders, false);
+                    }
+                } catch (Exception $refreshEx) {
+                    error_log('SupabaseClient refreshToken failed: ' . $refreshEx->getMessage());
+                }
+            }
         }
 
         if ($statusCode >= 400) {

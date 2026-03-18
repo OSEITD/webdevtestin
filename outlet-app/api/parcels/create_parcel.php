@@ -895,9 +895,15 @@ try {
 
         // Cash: Already paid at outlet -> 'successful'
         // COD: To be paid on delivery -> 'pending'
-        // Online: Awaiting payment -> 'pending'
+        // Online (mobile money/card): may already be paid (via Lenco) so allow override.
         $paymentStatus = ($paymentMethod === 'cash') ? 'successful' : 'pending';
         $paidAt = ($paymentMethod === 'cash') ? date('Y-m-d H:i:s') : null;
+
+        // If the payment processor already confirmed payment, the frontend sets this hidden field.
+        if (!empty($input['onlinePaymentStatus']) && strtolower($input['onlinePaymentStatus']) === 'paid') {
+            $paymentStatus = 'successful';
+            $paidAt = date('Y-m-d H:i:s');
+        }
 
         //  commission and net amounts
         $commissionAmount = round(($totalAmount * $companyCommissionPercent / 100), 2);
@@ -909,7 +915,7 @@ try {
         }
 
         $paymentData = [
-            'tx_ref' => 'TXN-' . $trackingNumber . '-' . time(),
+            'tx_ref' => !empty($input['lencoPaymentReference']) ? $input['lencoPaymentReference'] : 'TXN-' . $trackingNumber . '-' . time(),
             'company_id' => $input['companyId'],
             'outlet_id' => $input['originOutletId'],
             'user_id' => $_SESSION['user_id'] ?? null,
@@ -921,6 +927,7 @@ try {
             'net_amount' => $netAmount,
             'total_amount' => $totalAmount,
             'currency' => 'ZMW',
+
             'payment_method' => $paymentMethod,
             'payment_type' => $paymentProvider === 'lenco_mobile' ? 'mobile_money' : 
                             ($paymentProvider === 'lenco_card' ? 'card' : 
@@ -970,6 +977,20 @@ try {
                 'payment_method' => $paymentMethod
             ];
             error_log("Payment transaction created successfully: " . $paymentTransactionId . " with status: " . $paymentStatus);
+
+            if ($paymentStatus === 'successful') {
+                try {
+                    require_once __DIR__ . '/../../includes/WalletManager.php';
+                    WalletManager::processPaymentReceived(
+                        $input['companyId'], 
+                        $totalAmount, 
+                        $companyCommissionPercent, 
+                        $paymentTransactionId
+                    );
+                } catch (Exception $e) {
+                    error_log('Failed to update wallet ledger after payment: ' . $e->getMessage());
+                }
+            }
         } else {
             error_log("Failed to create payment transaction: " . ($paymentResult['error'] ?? 'Unknown error'));
        

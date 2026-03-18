@@ -107,10 +107,39 @@ try {
         $paymentStatus = $paymentData['status'] ?? 'unknown';
         
         error_log("Lenco Verify OK — Ref: {$reference}, Status: {$paymentStatus}, User: {$_SESSION['user_id']}");
+
+        // Update local payment record if it exists
+        try {
+            require_once __DIR__ . '/../../../sql/PaymentTransactionDB.php';
+            $paymentDB = new PaymentTransactionDB();
+
+            $verificationData = [
+                'transaction_id' => $paymentData['id'] ?? null,
+                'tx_ref' => $paymentData['reference'] ?? $reference,
+                'status' => $paymentStatus,
+                'processor_response' => $paymentData,
+                'payment_type' => $paymentData['type'] ?? null,
+                'card' => $paymentData['cardDetails'] ?? null
+            ];
+
+            $verifyResult = $paymentDB->verifyTransaction($reference, $verificationData);
+            if (isset($verifyResult['success']) && $verifyResult['success'] === true) {
+                error_log("PaymentTransactionDB: Verified transaction {$reference} successfully");
+            } else {
+                error_log("PaymentTransactionDB: Failed to verify transaction {$reference}: " . ($verifyResult['error'] ?? 'unknown'));
+            }
+        } catch (Throwable $e) {
+            error_log('PaymentTransactionDB verify error: ' . $e->getMessage());
+        }
         
+        // Normalize status to handle variations (e.g., "success", "successful", "completed")
+        $normalizedStatus = strtolower(trim((string)$paymentStatus));
+        $successStatuses = ['successful', 'success', 'completed', 'paid'];
+        $isVerified = in_array($normalizedStatus, $successStatuses, true);
+
         echo json_encode([
             'success' => true,
-            'verified' => ($paymentStatus === 'successful'),
+            'verified' => $isVerified,
             'data' => [
                 'id'                  => $paymentData['id'] ?? null,
                 'reference'           => $paymentData['reference'] ?? $reference,
@@ -126,7 +155,7 @@ try {
                 'mobile_money_details'=> $paymentData['mobileMoneyDetails'] ?? null,
                 'card_details'        => $paymentData['cardDetails'] ?? null
             ],
-            'message' => $paymentStatus === 'successful' 
+            'message' => $isVerified 
                 ? 'Payment verified successfully' 
                 : 'Payment status: ' . $paymentStatus
         ]);

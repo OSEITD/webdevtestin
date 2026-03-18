@@ -7,7 +7,7 @@
 namespace Supabase\Functions;
 
 use Psr\Http\Message\ResponseInterface;
-use Supabase\Util\Request;
+use Supabase\Functions\Util\Request;
 
 class FunctionsClient
 {
@@ -69,10 +69,8 @@ class FunctionsClient
 	 */
 	public function __construct($reference_id, $api_key, $domain = 'supabase.co', $scheme = 'https')
 	{
-		$headers = ['Authorization' => "Bearer {$api_key}"];
+		$this->headers = ['Authorization' => "Bearer {$api_key}"];
 		$this->url = "{$scheme}://{$reference_id}.functions.{$domain}";
-
-		$this->headers = $headers ?? null;
 	}
 
 	public function __request($method, $url, $headers, $body = null): ResponseInterface
@@ -82,7 +80,23 @@ class FunctionsClient
 
 	public function __prepareBody($body, $options): array
 	{
-		// @TODO - finish
+		$headers = $this->headers;
+		if (!empty($options['headers']) && is_array($options['headers'])) {
+			$headers = array_merge($headers, $options['headers']);
+		}
+
+		if (is_array($body)) {
+			$body = json_encode($body);
+			if (!isset($headers['Content-Type'])) {
+				$headers['Content-Type'] = 'application/json';
+			}
+		} elseif (is_string($body)) {
+			if (!isset($headers['Content-Type'])) {
+				$headers['Content-Type'] = 'text/plain';
+			}
+		} elseif ($body === null) {
+			// no body
+		}
 
 		return [
 			'body' => $body,
@@ -92,12 +106,22 @@ class FunctionsClient
 
 	public function __prepareResult($response): mixed
 	{
-		// @TODO - finish
-
-		return [
-			'body' => $body,
-			'headers' => $headers,
+		$data = [
+			'status_code' => $response->getStatusCode(),
+			'headers' => $response->getHeaders(),
 		];
+
+		$contents = $response->getBody()->getContents();
+		$contentType = $response->getHeaderLine('Content-Type');
+
+		if (stripos($contentType, 'application/json') !== false) {
+			$decoded = json_decode($contents, true);
+			$data['body'] = $decoded === null ? $contents : $decoded;
+		} else {
+			$data['body'] = $contents;
+		}
+
+		return $data;
 	}
 
 	/**
@@ -112,40 +136,20 @@ class FunctionsClient
 	 */
 	public function invoke($functionName, $body = [], $options = []): mixed
 	{
-		// @TODO - why do we not pass the body as param 2 and why is $options not well described
 		try {
 			$this->lastResponse = null;
-			$method = $options['method'] ?? 'POST';
+			$method = strtoupper($options['method'] ?? 'POST');
 
-			// @TODO - what in the world are we doing here!?
-			if (! is_array($body)) {
-				if (base64_decode($body, true) === false) {
-					$payload = file_get_contents($body);
-				} else {
-					$payload = base64_decode($body);
-				}
-			} elseif (is_string($body)) {
-				$this->headers['Content-Type'] = 'text/plain';
-				$payload = $body;
-			} elseif (is_array($body)) {
-				$payload = json_encode($body);
-			} else {
-				$this->headers['Content-Type'] = 'application/json';
-				$payload = json_encode($body);
-			}
+			$prepared = $this->__prepareBody($body, $options);
+			$payload = $prepared['body'];
+			$headers = $prepared['headers'];
 
 			$url = "{$this->url}/{$functionName}";
 
-			// Send the request
-			$response = $this->__request($method, $url, $this->headers, $payload);
+			$response = $this->__request($method, $url, $headers, $payload);
 			$this->lastResponse = $response;
-			$responseType = explode(';', $response->getHeader('content-type')[0] ?? 'text/plain')[0];
-			$contents = $response->getBody()->getContents();
-			if ($responseType === 'application/json') {
-				return json_decode($contents);
-			}
 
-			return $contents;
+			return $this->__prepareResult($response);
 		} catch (\Exception $e) {
 			throw $e;
 		}

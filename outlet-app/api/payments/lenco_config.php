@@ -19,12 +19,15 @@ define('LENCO_PUBLIC_KEY_SANDBOX', getenv('LENCO_PUBLIC_KEY_SANDBOX') ?: '');
 define('LENCO_SECRET_KEY_SANDBOX', getenv('LENCO_SECRET_KEY_SANDBOX') ?: '');
 
 // ─── API Base URLs ───────────────────────────────────────────────────────────
-define('LENCO_LIVE_BASE_URL', 'https://api.lenco.co/access/v2');
-define('LENCO_SANDBOX_BASE_URL', 'https://sandbox.lenco.co/access/v2');
+// Allow overriding via environment vars when needed (e.g. non-standard gateway domains)
+define('LENCO_API_BASE', getenv('LENCO_API_BASE') ?: '');
+
+define('LENCO_LIVE_BASE_URL', getenv('LENCO_LIVE_BASE_URL') ?: 'https://api.lenco.co/access/v2');
+define('LENCO_SANDBOX_BASE_URL', getenv('LENCO_SANDBOX_BASE_URL') ?: 'https://sandbox.lenco.co/access/v2');
 
 // ─── Widget Script URLs ─────────────────────────────────────────────────────
-define('LENCO_WIDGET_LIVE_URL', 'https://pay.lenco.co/js/v1/inline.js');
-define('LENCO_WIDGET_SANDBOX_URL', 'https://pay.sandbox.lenco.co/js/v1/inline.js');
+define('LENCO_WIDGET_LIVE_URL', getenv('LENCO_WIDGET_LIVE_URL') ?: 'https://pay.lenco.co/js/v1/inline.js');
+define('LENCO_WIDGET_SANDBOX_URL', getenv('LENCO_WIDGET_SANDBOX_URL') ?: 'https://pay.sandbox.lenco.co/js/v1/inline.js');
 
 // ─── Currency ────────────────────────────────────────────────────────────────
 define('LENCO_CURRENCY', 'ZMW');
@@ -49,16 +52,31 @@ function getLencoPublicKey() {
 
 
 function getLencoSecretKey() {
+    // Allow overriding entirely with a single env var for the active mode (live/sandbox)
+    $override = getenv('LENCO_API_KEY') ?: '';
+    if (!empty($override)) {
+        return $override;
+    }
+
     return LENCO_ENV === 'live' ? LENCO_SECRET_KEY_LIVE : LENCO_SECRET_KEY_SANDBOX;
 }
 
 /** API base URL */
 function getLencoBaseUrl() {
+    // Allow overriding the API base URL via env var (useful for proxying or testing)
+    if (!empty(LENCO_API_BASE)) {
+        return rtrim(LENCO_API_BASE, '/');
+    }
     return LENCO_ENV === 'live' ? LENCO_LIVE_BASE_URL : LENCO_SANDBOX_BASE_URL;
 }
 
 /** Widget JS URL */
 function getLencoWidgetUrl() {
+    // Allow overriding via env var as well
+    $override = getenv('LENCO_WIDGET_URL') ?: '';
+    if (!empty($override)) {
+        return $override;
+    }
     return LENCO_ENV === 'live' ? LENCO_WIDGET_LIVE_URL : LENCO_WIDGET_SANDBOX_URL;
 }
 

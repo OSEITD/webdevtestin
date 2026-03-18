@@ -11,8 +11,145 @@ try {
 $supabaseUrl = EnvLoader::get('SUPABASE_URL');
 // Anonymous key for public operations
 $supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
-// Service role key for admin operations
-$supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
+
+// Prefer the supremum of Supabase keys: service role key (best) -> service key -> anon key
+$supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY');
+if (empty($supabaseServiceKey)) {
+    $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
+}
+
+// If outlet-app defined a .env, use its keys as the source of truth (and also persist them back to the root .env)
+$outletEnvPath = dirname(__DIR__, 3) . '/outlet-app/.env';
+$rootEnvPath = dirname(__DIR__, 3) . '/.env';
+if (file_exists($outletEnvPath)) {
+    $outletVars = [];
+    $lines = file($outletEnvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || strpos($line, '#') === 0) {
+            continue;
+        }
+        if (strpos($line, '=') === false) {
+            continue;
+        }
+        list($key, $value) = explode('=', $line, 2);
+        $key = trim($key);
+        $value = trim($value);
+        if (preg_match('/^(["\'])(.*)\\1$/', $value, $m)) {
+            $value = $m[2];
+        }
+        $outletVars[$key] = $value;
+    }
+
+    // Use outlet-app keys if present (they should be authoritative for the running app)
+    if (!empty($outletVars['SUPABASE_URL'])) {
+        $supabaseUrl = $outletVars['SUPABASE_URL'];
+        error_log('Supabase: overriding SUPABASE_URL from outlet-app .env');
+    }
+    if (!empty($outletVars['SUPABASE_SERVICE_ROLE_KEY'])) {
+        $supabaseServiceKey = $outletVars['SUPABASE_SERVICE_ROLE_KEY'];
+        error_log('Supabase: overriding SUPABASE_SERVICE_ROLE_KEY from outlet-app .env');
+    } elseif (!empty($outletVars['SUPABASE_SERVICE_KEY'])) {
+        $supabaseServiceKey = $outletVars['SUPABASE_SERVICE_KEY'];
+        error_log('Supabase: overriding SUPABASE_SERVICE_KEY from outlet-app .env');
+    }
+    if (!empty($outletVars['SUPABASE_ANON_KEY'])) {
+        $supabaseKey = $outletVars['SUPABASE_ANON_KEY'];
+        error_log('Supabase: overriding SUPABASE_ANON_KEY from outlet-app .env');
+    }
+
+}
+
+if (empty($supabaseServiceKey)) {
+    error_log('SUPABASE_SERVICE_KEY/SERVICE_ROLE_KEY missing; falling back to SUPABASE_ANON_KEY for service operations.');
+    $supabaseServiceKey = $supabaseKey;
+}
+
+// Determine which env variable provided the key (for clearer logging)
+$serviceKeyName = 'SUPABASE_ANON_KEY';
+if (!empty(EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY'))) {
+    $serviceKeyName = 'SUPABASE_SERVICE_ROLE_KEY';
+} elseif (!empty(EnvLoader::get('SUPABASE_SERVICE_KEY'))) {
+    $serviceKeyName = 'SUPABASE_SERVICE_KEY';
+} elseif (!empty($supabaseKey)) {
+    $serviceKeyName = 'SUPABASE_ANON_KEY';
+}
+
+// Mask key for logs (keep first 4 and last 4 chars)
+function mask_key_for_log($k) {
+    if (!is_string($k) || strlen($k) <= 8) return '***';
+    return substr($k, 0, 4) . str_repeat('*', max(0, strlen($k) - 8)) . substr($k, -4);
+}
+
+// Decode a JWT without validating its signature, to inspect its payload for debugging.
+function decode_jwt_payload($jwt) {
+    $parts = explode('.', $jwt);
+    if (count($parts) < 2) {
+        return null;
+    }
+    $b64 = $parts[1];
+    $b64 = str_replace(['-', '_'], ['+', '/'], $b64);
+    $b64 = str_pad($b64, strlen($b64) + (4 - strlen($b64) % 4) % 4, '=', STR_PAD_RIGHT);
+    $decoded = base64_decode($b64);
+    if ($decoded === false) {
+        return null;
+    }
+    $json = json_decode($decoded, true);
+    return is_array($json) ? $json : null;
+}
+
+$supabaseJwtPayload = decode_jwt_payload($supabaseServiceKey);
+$expectedRef = null;
+if (preg_match('#https?://([^/.]+)\.supabase\.co#i', $supabaseUrl, $m)) {
+    $expectedRef = $m[1];
+}
+
+if (is_array($supabaseJwtPayload) && isset($supabaseJwtPayload['ref']) && $expectedRef !== null) {
+    $actualRef = $supabaseJwtPayload['ref'];
+    if ($actualRef !== $expectedRef) {
+        $msg = "Supabase service key mismatch: your SUPABASE_SERVICE_ROLE_KEY (ref={$actualRef}) " .
+            "does not match the project ref in SUPABASE_URL (ref={$expectedRef}). " .
+            "Please update SUPABASE_SERVICE_ROLE_KEY in your .env to the service role key for " .
+            "the project '{$expectedRef}' (Supabase dashboard -> Settings -> API -> Service Role Key).";
+        error_log($msg);
+
+        // Fall back to a safer key so the application can continue running and show an actionable error.
+        // The mismatch indicates the key is for a different project, so the request will almost certainly fail.
+        // We still prefer SUPABASE_SERVICE_KEY if it exists, otherwise fall back to the anon key.
+        if (!empty(EnvLoader::get('SUPABASE_SERVICE_KEY'))) {
+            $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
+            $serviceKeyName = 'SUPABASE_SERVICE_KEY';
+            error_log("Supabase: falling back to SUPABASE_SERVICE_KEY because the service_role key ref mismatched.");
+        } elseif (!empty($supabaseKey)) {
+            $supabaseServiceKey = $supabaseKey;
+            $serviceKeyName = 'SUPABASE_ANON_KEY';
+            error_log("Supabase: falling back to SUPABASE_ANON_KEY because no matching service key was found.");
+        }
+    }
+}
+
+error_log("Supabase: using key from {$serviceKeyName}: " . mask_key_for_log($supabaseServiceKey));
+
+// Prevent using placeholder values from .env.example and provide a clearer message.
+foreach (['SUPABASE_URL' => $supabaseUrl, 'SUPABASE_SERVICE_KEY' => $supabaseServiceKey] as $name => $value) {
+    if (is_string($value) && preg_match('/your[-_ ]/i', $value)) {
+        throw new Exception("Supabase configuration appears to be using placeholder values ({$name}); please set the correct values in your .env file.");
+    }
+}
+
+// Prevent using placeholder values from .env.example and provide a clearer message.
+$placeholderPatterns = [
+    '/your[-_ ]?project[-_ ]?ref/i',
+    '/your[-_ ]?supabase/i',
+    '/your[-_ ]?service[-_ ]?key/i',
+    '/your[-_ ]?anon[-_ ]?key/i',
+];
+
+foreach (['SUPABASE_URL' => $supabaseUrl, 'SUPABASE_SERVICE_KEY' => $supabaseServiceKey] as $name => $value) {
+    if (is_string($value) && preg_match('/your[-_ ]/i', $value)) {
+        throw new Exception("Supabase configuration appears to be using placeholder values ({$name}); please set the correct values in your .env file.");
+    }
+}
 
 class SupabaseClient {
     private $url;
@@ -85,8 +222,20 @@ class SupabaseClient {
                 $headers[] = $header;
             }
 
+            // Mask sensitive API keys in logs (keep first/last 4 chars) to avoid leaking them
+            $maskedHeaders = array_map(function($header) {
+                if (stripos($header, 'apikey:') === 0 || stripos($header, 'authorization:') === 0) {
+                    $parts = explode(' ', $header, 2);
+                    if (count($parts) === 2) {
+                        $key = trim($parts[1]);
+                        $masked = substr($key, 0, 4) . str_repeat('*', max(0, strlen($key) - 8)) . substr($key, -4);
+                        return $parts[0] . ' ' . $masked;
+                    }
+                }
+                return $header;
+            }, $headers);
             error_log("Making request to: " . $url);
-            error_log("Request headers: " . json_encode($headers));
+            error_log("Request headers: " . json_encode($maskedHeaders));
 
             $ch = curl_init();
             // Gate SSL verification by APP_ENV: enforce verification in production, allow bypass in development
@@ -130,7 +279,19 @@ class SupabaseClient {
 
             if ($httpCode >= 400) {
                 curl_close($ch);
-                throw new Exception("HTTP error " . $httpCode . ": " . $response);
+
+                // Provide clearer guidance for common Supabase errors.
+                $message = "HTTP error {$httpCode}: {$response}";
+                if ($httpCode === 401) {
+                    $message = "Supabase 401 Unauthorized (invalid API key). " .
+                        "Please verify SUPABASE_SERVICE_KEY is correct and has not expired. " .
+                        "Check Supabase project -> Settings -> API -> Service role key.";
+                } elseif ($httpCode === 404 && stripos($response, 'relation') !== false) {
+                    $message = "Supabase 404 (table/view missing). " .
+                        "Ensure the required table or view exists in your database schema.";
+                }
+
+                throw new Exception($message);
             }
 
             curl_close($ch);

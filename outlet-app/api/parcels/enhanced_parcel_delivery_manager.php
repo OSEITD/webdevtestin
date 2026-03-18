@@ -255,12 +255,26 @@ class EnhancedParcelDeliveryManager {
                 
                 if ($codPaymentResult['success']) {
                     $this->log("COD payment for parcel $parcelId marked as collected");
-                } else {
 
+                    // Update company wallet ledger now that cash has been collected
+                    if (!empty($codPaymentResult['data'])) {
+                        try {
+                            require_once __DIR__ . '/../../includes/WalletManager.php';
+                            $tx = $codPaymentResult['data'];
+                            WalletManager::processPaymentReceived(
+                                $tx['company_id'], 
+                                floatval($tx['amount']), 
+                                floatval($tx['commission_percentage'] ?? 0), 
+                                $tx['id']
+                            );
+                        } catch (Exception $e) {
+                            $this->log("Warning: Failed to update wallet ledger after COD collection: " . $e->getMessage());
+                        }
+                    }
+                } else {
                     $this->log("No COD payment to update for parcel $parcelId: " . ($codPaymentResult['error'] ?? 'N/A'));
                 }
             } catch (Exception $e) {
-             
                 $this->log("Warning: Failed to update COD payment status: " . $e->getMessage());
             }
             

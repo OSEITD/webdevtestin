@@ -82,17 +82,42 @@ class FunctionsClient
 
 	public function __prepareBody($body, $options): array
 	{
-		// @TODO - finish
+		// Normalize payload and headers before sending.
+		// `options` may include headers overrides or raw flag.
+		$headers = $this->headers;
+		if (isset($options['headers']) && is_array($options['headers'])) {
+			$headers = array_merge($headers, $options['headers']);
+		}
+
+		if (is_string($body)) {
+			$payload = $body;
+		} elseif (is_array($body)) {
+			$headers['Content-Type'] = $headers['Content-Type'] ?? 'application/json';
+			$payload = json_encode($body);
+		} elseif ($body === null) {
+			$payload = '';
+		} else {
+			// Fallback for scalars
+			$payload = (string) $body;
+		}
 
 		return [
-			'body' => $body,
+			'body' => $payload,
 			'headers' => $headers,
 		];
 	}
 
 	public function __prepareResult($response): mixed
 	{
-		// @TODO - finish
+		$headers = [];
+		$body = null;
+
+		if ($response instanceof ResponseInterface) {
+			$headers = $response->getHeaders();
+			$body = $response->getBody()->getContents();
+		} elseif (is_string($response)) {
+			$body = $response;
+		}
 
 		return [
 			'body' => $body,

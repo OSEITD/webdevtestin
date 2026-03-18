@@ -71,6 +71,7 @@ $avatarUrl = $avatarUrl ?? $_SESSION['company_logo'] ?? $_SESSION['avatar'] ?? '
         <li><a href="./create-trip.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'create-trip.php') echo 'active'; ?>"><i class="fas fa-route"></i> Create Trip</a></li>
         <li><a href="./trips.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'trips.php') echo 'active'; ?>"><i class="fas fa-map-marked-alt"></i> Trips</a></li>
         <li><a href="./deliveries.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'deliveries.php') echo 'active'; ?>"><i class="fas fa-box-open"></i> Deliveries</a></li>
+        <li><a href="./wallet.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'wallet.php') echo 'active'; ?>"><i class="fas fa-wallet"></i> Wallet & Payouts</a></li>
         <li><a href="./company-reports.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'company-reports.php') echo 'active'; ?>"><i class="fas fa-chart-line"></i> Reports</a></li>
         <li><a href="./settings.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'settings.php') echo 'active'; ?>"><i class="fas fa-cog"></i> Settings</a></li>
         <li><a href="./company-help.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'company-help.php') echo 'active'; ?>"><i class="fas fa-question-circle"></i> Help</a></li>

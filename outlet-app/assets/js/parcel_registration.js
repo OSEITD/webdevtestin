@@ -1157,6 +1157,17 @@ async function handleParcelSubmission(event) {
         formData.append('codAmount', document.getElementById('codAmount')?.value || '0');
         formData.append('cashAmount', document.getElementById('cashAmount')?.value || '0');
         formData.append('commissionAmount', document.getElementById('commissionAmount')?.value || '0');
+
+        // Include Lenco payment verification data when available (set by lenco_payment.js)
+        const lencoRefEl = document.getElementById('lencoPaymentReference');
+        if (lencoRefEl && lencoRefEl.value) {
+            formData.append('lencoPaymentReference', lencoRefEl.value);
+        }
+        const onlineStatusEl = document.getElementById('onlinePaymentStatus');
+        if (onlineStatusEl && onlineStatusEl.value) {
+            formData.append('onlinePaymentStatus', onlineStatusEl.value);
+        }
+
         // Validate payment method
         const paymentMethod = document.getElementById('paymentMethod')?.value || '';
             // Accept both legacy and Lenco-specific values
@@ -1490,13 +1501,13 @@ function showSuccessModal(trackingNumber, result, selectedPhotos) {
                         ${result?.trip_assignment_error ? `<div style='color:#dc3545; margin-bottom:8px;'><strong>Trip Error:</strong> ${result.trip_assignment_error}</div>` : ''}
                         ${result?.warning ? `<div style='color:#ffc107; margin-bottom:8px;'><strong>Warning:</strong> ${result.warning}</div>` : ''}
                         <div style="margin-bottom: 8px;">
-                            <strong>Status:</strong> <span style="color: #ffc107; font-weight: bold;">Pending</span>
+                            <strong>Status:</strong> <span style="color: #ffc107; font-weight: bold;">${(result?.payment_transaction?.status || result?.status || 'Pending').toString().replace(/_/g, ' ').toUpperCase()}</span>
                         </div>
                         <div style="margin-bottom: 8px;">
                             <strong>Photos:</strong> ${selectedPhotos?.length || 0} uploaded
                         </div>
                         <div>
-                            <strong>Payment:</strong> <span style="color: #17a2b8;">${result?.payment_record || 'Not required'}</span>
+                            <strong>Payment:</strong> <span style="color: #17a2b8;">${(result?.payment_transaction?.status ? `${result.payment_transaction.status} (${result.payment_transaction.payment_method || ''})` : (result?.payment_record || 'Not required'))}</span>
                         </div>
                     </div>
 

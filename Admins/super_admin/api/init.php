@@ -23,6 +23,18 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
+// Handle JSON POST requests early so $_POST is populated for CSRF checks
+$contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+if (strpos($contentType, 'application/json') !== false && $_SERVER['REQUEST_METHOD'] !== 'GET') {
+    $inputRaw = file_get_contents('php://input');
+    if (!empty($inputRaw)) {
+        $json = json_decode($inputRaw, true);
+        if (is_array($json)) {
+            $_POST = array_merge($_POST, $json);
+        }
+    }
+}
+
 // Configure session before starting it
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode', 1);

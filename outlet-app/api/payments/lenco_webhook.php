@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once 'lenco_config.php';
 require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../includes/WalletManager.php';
 
 $rawInput = file_get_contents('php://input');
 
@@ -99,8 +100,8 @@ function handleSuccessfulCollection($data) {
     ]));
 
     if ($paymentUpdated) {
-      
         updateParcelPaymentStatus($reference);
+        updateCompanyWalletFromPayment($reference);
     }
 }
 
@@ -149,6 +150,30 @@ function updatePaymentStatus($reference, $status, $additionalData = []) {
     
     try {
        
+        $getOldStatusUrl = $supabaseUrl . '/rest/v1/payment_transactions?select=status&tx_ref=eq.' . urlencode($reference);
+        $chGet = curl_init();
+        curl_setopt_array($chGet, [
+            CURLOPT_URL => $getOldStatusUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'apikey: ' . $supabaseKey,
+                'Authorization: Bearer ' . $supabaseKey,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 30
+        ]);
+        $responseGet = curl_exec($chGet);
+        $httpCodeGet = curl_getinfo($chGet, CURLINFO_HTTP_CODE);
+        curl_close($chGet);
+        
+        if ($httpCodeGet >= 200 && $httpCodeGet < 300) {
+            $existingDeets = json_decode($responseGet, true);
+            if (!empty($existingDeets) && $existingDeets[0]['status'] === 'successful') {
+                error_log("Payment already successful - Reference: {$reference}. Skipping update.");
+                return false; // Prevent returning true to stop double-crediting
+            }
+        }
+
         $updateData = [
             'status' => $status,
             'updated_at' => date('c'),
@@ -296,6 +321,66 @@ function updateParcelPaymentStatus($reference) {
     } catch (Exception $e) {
         error_log("Database error updating parcel payment status: " . $e->getMessage());
         return false;
+    }
+}
+
+/**
+ * Update the Company Wallet upon a successful Lenco payment.
+ * Requires fetching the transaction details.
+ */
+function updateCompanyWalletFromPayment($reference) {
+    $config = require __DIR__ . '/../../config.php';
+    if (!$config || !isset($config['supabase'])) return false;
+
+    $supabaseUrl = $config['supabase']['url'];
+    $supabaseKey = $config['supabase']['service_role_key'];
+
+    try {
+        $getPaymentUrl = $supabaseUrl . '/rest/v1/payment_transactions?select=id,company_id,total_amount,commission_percentage&tx_ref=eq.' . urlencode($reference);
+        $ch = curl_init($getPaymentUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'apikey: ' . $supabaseKey,
+                'Authorization: Bearer ' . $supabaseKey,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 30
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            error_log("Wallet: Failed to get payment transaction - HTTP Code: {$httpCode}");
+            return false;
+        }
+
+        $data = json_decode($response, true);
+        if (empty($data) || !isset($data[0]['company_id'])) {
+            error_log("Wallet: No payment transaction found for {$reference}");
+            return false;
+        }
+
+        $payment = $data[0];
+        $companyId = $payment['company_id'];
+        $amount = (float)($payment['total_amount'] ?? 0);
+        $commissionRate = (float)($payment['commission_percentage'] ?? 0);
+        $transactionId = $payment['id'];
+
+        $success = WalletManager::processPaymentReceived($companyId, $amount, $commissionRate, $transactionId);
+        
+        if ($success) {
+            error_log("Wallet successfully updated for company {$companyId} via payment {$reference}");
+            return true;
+        } else {
+            error_log("WalletManager failed to process payment {$transactionId} for company {$companyId}");
+            return false;
+        }
+
+    } catch (Exception $e) {
+         error_log("Exception updating company wallet: " . $e->getMessage());
+         return false;
     }
 }
 ?>

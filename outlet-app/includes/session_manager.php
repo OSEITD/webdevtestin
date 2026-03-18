@@ -9,8 +9,10 @@ define('SESSION_MANAGER_LOADED', true);
 define('SESSION_LIFETIME', 86400); // 24 hours in seconds
 
 function initSession() {
-    // Always set gc_maxlifetime regardless of session state so GC respects it.
-    ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
+    // Only update gc_maxlifetime when we are able to, to avoid PHP warnings.
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
+    }
 
     if (session_status() === PHP_SESSION_ACTIVE) {
         return true;
@@ -55,6 +57,7 @@ function refreshSupabaseTokenIfNeeded() {
     }
 
     if (empty($_SESSION['refresh_token'])) {
+        error_log('Session refresh skipped: no refresh_token in session. User may need to log in again.');
         return false;
     }
 

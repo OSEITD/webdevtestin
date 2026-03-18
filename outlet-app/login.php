@@ -127,11 +127,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = $authData['error_description'] ?? $authData['error'] ?? 'Login failed';
                 } else {
                     $accessToken = $authData['access_token'];
+                    $refreshToken = $authData['refresh_token'] ?? null;
+                    $expiresIn = isset($authData['expires_in']) ? intval($authData['expires_in']) : 3600;
+                    $tokenExpiresAt = time() + $expiresIn;
                     $userId = $authData['user']['id'] ?? null;
 
                     if (!$userId) {
                         $error = "Login succeeded, but user ID was not returned.";
                     } else {
+                        // Store auth tokens for later API calls and refresh handling
+                        $_SESSION['access_token'] = $accessToken;
+                        if ($refreshToken) {
+                            $_SESSION['refresh_token'] = $refreshToken;
+                        }
+                        $_SESSION['token_expires_at'] = $tokenExpiresAt;
                     
                     $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id,full_name,role,company_id,outlet_id,phone,email,password_last_updated&id=eq.$userId";
 
