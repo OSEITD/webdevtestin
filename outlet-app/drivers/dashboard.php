@@ -999,12 +999,12 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 const currentPath = window.location.pathname;
                 console.log('[Driver Push] Current path:', currentPath);
                 
-                // Calculate the base path to outlet-app root
+               
                 let basePath = '';
                 if (currentPath.includes('/outlet-app/')) {
                     basePath = currentPath.substring(0, currentPath.indexOf('/outlet-app/') + '/outlet-app/'.length - 1);
                 } else {
-                    // For outlet.localhost setup where outlet-app is at root
+                
                     basePath = '';
                 }
                 
@@ -1023,7 +1023,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 console.log('[Driver Push] Existing subscription:', existingSubscription ? 'YES' : 'NO');
                 
                 if (existingSubscription) {
-                    console.log('[Driver Push] ✅ Already subscribed to push notifications');
+                    console.log('[Driver Push]  Already subscribed to push notifications');
                     
                     
                     const lastCheck = localStorage.getItem('driver_push_last_check');

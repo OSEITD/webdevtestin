@@ -1,29 +1,14 @@
 <?php
 
-/**
- * Lenco Payout Service
- *
- * This class encapsulates communication with the Lenco v2 payout API.
- *
- * Supported environment variables (set in your .env):
- * - LENCO_API_BASE (default: https://api.lenco.co/access/v2)
- * - LENCO_API_KEY (preferred) OR LENCO_SECRET_KEY_LIVE / LENCO_SECRET_KEY_SANDBOX
- * - LENCO_ENV (live|sandbox) used to select secret key when LENCO_API_KEY is missing
- * - LENCO_ACCOUNT_ID (required) - the 36-char Lenco account UUID that will be debited
- * - LENCO_PAYOUT_PATH (optional) - override the transfer endpoint path (e.g. "/transfers/mobile-money")
- * - LENCO_MOBILE_OPERATOR (optional) - e.g. "mtn", "airtel", "zamtel", "tnm"
- * - LENCO_MOBILE_COUNTRY (optional) - e.g. "zm" or "mw"
- * - LENCO_BANK_ID (optional) - Lenco bank id (used when sending bank transfers)
- * - LENCO_BANK_COUNTRY (optional) - e.g. "zm"
- */
+
 class LencoPayoutService {
 
     /**
-     * Build the Lenco payout payload without sending it.
+     * 
      *
-     * @param array $payout  Company payout row from the DB (company_payouts)
-     * @param array $company Company record (companies)
-     * @param string $adminId Admin user performing the payout
+     * @param array $payout  
+     * @param array $company
+     * @param string $adminId 
      * @return array
      */
     public static function buildPayload(array $payout, array $company, string $adminId): array {
@@ -34,7 +19,6 @@ class LencoPayoutService {
             'narration' => 'Company payout for ' . ($company['company_name'] ?? $payout['company_id']),
         ];
 
-        // Override narration if a description is provided
         if (!empty($payout['description'])) {
             $payload['narration'] = $payout['description'];
         }
@@ -46,6 +30,15 @@ class LencoPayoutService {
             $operator = getenv('LENCO_MOBILE_OPERATOR') ?: ($payout['operator'] ?? null);
             $country = getenv('LENCO_MOBILE_COUNTRY') ?: ($payout['country'] ?? null);
 
+          
+            $operator = is_string($operator) ? strtolower(trim($operator)) : null;
+            $country = is_string($country) ? strtolower(trim($country)) : null;
+            $phone = self::normalizePhoneForCountry(is_string($phone) ? trim($phone) : null, $country);
+
+            if (empty($operator) && $phone) {
+                $operator = self::guessMobileOperator($phone);
+            }
+
             if ($phone) {
                 $payload['phone'] = $phone;
             }
@@ -56,7 +49,6 @@ class LencoPayoutService {
                 $payload['country'] = $country;
             }
 
-            // If we already have a transfer recipient id stored, use it
             if (!empty($payout['lenco_transfer_recipient_id'])) {
                 $payload['transferRecipientId'] = $payout['lenco_transfer_recipient_id'];
             }
@@ -86,12 +78,12 @@ class LencoPayoutService {
     }
 
     /**
-     * Send a payout request to Lenco.
+     * Sending a payout request to Lenco.
      *
-     * @param array $payout  Company payout row from the DB (company_payouts)
-     * @param array $company Company record (companies)
-     * @param string $adminId Admin user performing the payout
-     * @return array ['success' => bool, 'message' => string, 'raw' => mixed]
+     * @param array $payout  
+     * @param array $company 
+     * @param string $adminId 
+     * @return array 
      */
     public static function executePayout(array $payout, array $company, string $adminId): array {
         $baseUrl = getenv('LENCO_API_BASE') ?: 'https://api.lenco.co/access/v2';
@@ -112,15 +104,13 @@ class LencoPayoutService {
 
         $payload = self::buildPayload($payout, $company, $adminId);
 
-        // Validate minimal fields
+        // Validating minimal fields
         if (empty($payload['accountId'])) {
             return ['success' => false, 'message' => 'Missing LENCO_ACCOUNT_ID (source account) for Lenco transfer.'];
         }
         if (empty($payload['amount']) || $payload['amount'] <= 0) {
             return ['success' => false, 'message' => 'Invalid transfer amount.'];
         }
-
-        // Lenco requires a minimum amount (currently 5 ZMW for mobile money transfers)
         $minAmount = floatval(getenv('LENCO_MIN_AMOUNT') ?: 5);
         if ($payload['amount'] < $minAmount) {
             return ['success' => false, 'message' => "Lenco requires a minimum transfer amount of K{$minAmount}."];
@@ -130,7 +120,7 @@ class LencoPayoutService {
             return ['success' => false, 'message' => 'Missing reference for transfer.'];
         }
 
-        // Validate destination details per transfer type
+        // Validating destination details per transfer type
         if ($method === 'mobile_money') {
             if (empty($payload['phone'])) {
                 return ['success' => false, 'message' => 'Mobile money transfer requires phone number (set in payout or company record).'];
@@ -138,8 +128,59 @@ class LencoPayoutService {
             if (empty($payload['operator'])) {
                 return ['success' => false, 'message' => 'Mobile money transfer requires LENCO_MOBILE_OPERATOR (e.g., mtn, airtel, zamtel, tnm).'];
             }
+
+           
+            if (empty($payload['transferRecipientId'])) {
+          
+                $operatorsToTry = [];
+
+                if (!empty($payload['operator'])) {
+                    $operatorsToTry[] = strtolower($payload['operator']);
+                }
+
+                $guessed = self::guessMobileOperator($payload['phone']);
+                if ($guessed && !in_array($guessed, $operatorsToTry, true)) {
+                    $operatorsToTry[] = $guessed;
+                }
+
+                
+                foreach (['mtn', 'airtel', 'zamtel'] as $op) {
+                    if (!in_array($op, $operatorsToTry, true)) {
+                        $operatorsToTry[] = $op;
+                    }
+                }
+
+                $resolveResult = null;
+                $lastResolve = null;
+
+                foreach ($operatorsToTry as $op) {
+                    $payload['operator'] = $op;
+                    $lastResolve = self::resolveMobileMoneyRecipient($payload['phone'], $payload['operator'], $payload['country'] ?? 'zm');
+
+                    if (!empty($lastResolve['success'])) {
+                        $resolveResult = $lastResolve;
+                        break;
+                    }
+
+                    
+                    $errorCode = $lastResolve['raw']['errorCode'] ?? null;
+                    $msg = strtolower($lastResolve['message'] ?? '');
+                    if ($errorCode !== '05' && strpos($msg, 'account details') === false) {
+                        return $lastResolve;
+                    }
+                }
+
+                if (empty($resolveResult)) {
+                    
+                    return $lastResolve ?: ['success' => false, 'message' => 'Failed to resolve mobile money recipient'];
+                }
+
+                if (!empty($resolveResult['transferRecipientId'])) {
+                    $payload['transferRecipientId'] = $resolveResult['transferRecipientId'];
+                }
+            }
         } else {
-            // bank transfer
+           
             if (empty($payload['transferRecipientId']) && (empty($payload['bankId']) || empty($payload['accountNumber']))) {
                 return ['success' => false, 'message' => 'Bank transfer requires either transferRecipientId or both bankId and accountNumber.'];
             }
@@ -162,11 +203,158 @@ class LencoPayoutService {
         return getenv('LENCO_SECRET_KEY_LIVE') ?: null;
     }
 
+    private static function resolveMobileMoneyRecipient(string $phone, string $operator, string $country = 'zm'): array {
+        $baseUrl = getenv('LENCO_API_BASE') ?: 'https://api.lenco.co/access/v2';
+        $apiKey = getenv('LENCO_API_KEY') ?: self::getApiKeyFromEnv();
+        if (empty($apiKey)) {
+            return ['success' => false, 'message' => 'Lenco payout is not configured (missing LENCO_API_KEY or secret key).'];
+        }
+
+        $endpoint = rtrim($baseUrl, '/') . '/resolve/mobile-money';
+        $headers = [
+            'Accept: application/json',
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $apiKey,
+        ];
+
+        $payload = [
+            'phone' => $phone,
+            'operator' => strtolower($operator),
+            'country' => strtolower($country),
+        ];
+
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => 30,
+        ]);
+
+        $response = curl_exec($ch);
+        $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['success' => false, 'message' => 'Failed to contact Lenco: ' . $error, 'http_code' => null];
+        }
+
+        $decoded = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return ['success' => false, 'message' => 'Invalid response from Lenco', 'raw' => $response, 'http_code' => $http];
+        }
+
+        $success = isset($decoded['status']) && filter_var($decoded['status'], FILTER_VALIDATE_BOOLEAN);
+        $message = $decoded['message'] ?? null;
+
+        if (!$success) {
+            return ['success' => false, 'message' => $message ?? 'Failed to resolve mobile money recipient', 'raw' => $decoded, 'http_code' => $http];
+        }
+
+       
+        $transferRecipientId = null;
+        if (isset($decoded['data']) && is_array($decoded['data'])) {
+            $data = $decoded['data'];
+            if (!empty($data['transferRecipientId'])) {
+                $transferRecipientId = $data['transferRecipientId'];
+            } elseif (!empty($data['recipientId'])) {
+                $transferRecipientId = $data['recipientId'];
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Recipient resolved',
+            'transferRecipientId' => $transferRecipientId,
+            'raw' => $decoded,
+        ];
+    }
+
     /**
-     * Fetch the Lenco account UUID (accountId) using the current API key.
+     * Normalize a phone number for the specified country.
      *
-     * This is useful when you have an API key but don't know the account ID.
-     * It calls GET /accounts and returns the first account's `id`.
+     * Lenco expects mobile-money phone numbers in a consistent format (usually E.164).
+     * This ensures we send numbers like 260771234567 rather than 0771234567.
+     *
+     * @param string|null $phone
+     * @param string|null $country
+     * @return string|null
+     */
+    private static function normalizePhoneForCountry(?string $phone, ?string $country): ?string {
+        if (empty($phone)) {
+            return null;
+        }
+
+        // Strip non-digit characters
+        $digits = preg_replace('/\D+/', '', $phone);
+        if (empty($digits)) {
+            return null;
+        }
+
+        $country = is_string($country) ? strtolower(trim($country)) : null;
+
+        // Normalize for Zambia (common for this project)
+        if ($country === 'zm' || $country === 'zambia') {
+            // Drop leading zero if present (local format: 07xxxxxxxx)
+            if (strpos($digits, '0') === 0) {
+                $digits = substr($digits, 1);
+            }
+            // Ensure country code is present
+            if (strpos($digits, '260') !== 0) {
+                $digits = '260' . $digits;
+            }
+        }
+
+        // Add other country normalization rules here as needed.
+
+        return $digits;
+    }
+
+    /**
+     * Guess the mobile money operator from the phone number prefix.
+     *
+     * This is useful when the operator isn't explicitly stored in the user/company record.
+     *
+     * @param string|null $phone
+     * @return string|null
+     */
+    private static function guessMobileOperator(?string $phone): ?string {
+        if (empty($phone)) {
+            return null;
+        }
+
+        // Clean to digits only
+        $digits = preg_replace('/\D+/', '', $phone);
+        if (empty($digits)) {
+            return null;
+        }
+
+        // Remove leading zero or country code prefix for Zambia (260)
+        if (strpos($digits, '0') === 0) {
+            $digits = substr($digits, 1);
+        }
+        if (strpos($digits, '260') === 0) {
+            $digits = substr($digits, 3);
+        }
+
+        $prefix = substr($digits, 0, 2);
+        if (in_array($prefix, ['96', '76'], true)) {
+            return 'mtn';
+        }
+        if (in_array($prefix, ['97', '77'], true)) {
+            return 'airtel';
+        }
+        if (in_array($prefix, ['95', '55'], true)) {
+            return 'zamtel';
+        }
+
+        return null;
+    }
+
+    /**
+     *
      *
      * @return string|null
      */
@@ -239,14 +427,10 @@ class LencoPayoutService {
             return ['success' => false, 'message' => 'Invalid response from Lenco', 'raw' => $response, 'http_code' => $http];
         }
 
-        // Lenco returns a top-level status boolean and a message.
         $success = isset($decoded['status']) && filter_var($decoded['status'], FILTER_VALIDATE_BOOLEAN);
-
-        // Some endpoints return a data object containing transfer status + reason.
         $data = isset($decoded['data']) && is_array($decoded['data']) ? $decoded['data'] : [];
         $transferStatus = isset($data['status']) ? strtolower($data['status']) : null;
 
-        // Treat as failed if the transfer explicitly failed even when top-level status is true.
         $success = $success && ($transferStatus === null || in_array($transferStatus, ['successful', 'completed', 'pending'], true));
 
         $message = $decoded['message'] ?? ($data['message'] ?? null) ?? ($success ? 'Payout executed' : 'Payout failed');
@@ -254,7 +438,6 @@ class LencoPayoutService {
             $message = $data['reasonForFailure'];
         }
 
-        // Debug logging for failures
         if (!$success) {
             $debug = getenv('LENCO_DEBUG') ?: false;
             if ($debug) {

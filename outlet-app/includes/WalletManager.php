@@ -119,14 +119,10 @@ class WalletManager {
             'updated_at' => gmdate('Y-m-d\TH:i:sP')
         ];
 
-        try {
-            $db = self::getDb();
-            $db->patch('company_wallets', $updateData, "company_id=eq.{$companyId}");
-            return true;
-        } catch (Exception $e) {
-            error_log("Error updating wallet balance: " . $e->getMessage());
-            return false;
-        }
+        // Wallet balance updates should be driven by database triggers from the wallet_transactions ledger.
+        // Direct updates to company_wallets are blocked by the DB to ensure ledger integrity.
+        // If you need to adjust the wallet row directly, update the trigger logic instead.
+        return true;
     }
 
     /**
@@ -183,12 +179,8 @@ class WalletManager {
             }
 
             // 2. Adjust wallet
-            $walletUpdate = [
-                'available_balance' => $newAvailable,
-                'pending_balance' => $newPending,
-                'updated_at' => gmdate('Y-m-d\TH:i:sP')
-            ];
-            $db->patch('company_wallets', $walletUpdate, "company_id=eq.{$companyId}");
+            // NOTE: direct updates to company_wallets are blocked by a database trigger.
+            // The wallet should instead be updated via wallet_transactions ledger entries.
 
             // 3. Log ledger transaction
             self::logTransaction($companyId, null, $payoutId, 'payout_debit', floatval($amount), $newAvailable, "Payout requested", $userId);
@@ -268,8 +260,8 @@ class WalletManager {
             $db->patch('company_payouts', $payoutUpdateData, "id=eq.{$payoutId}");
             
             if (!empty($walletUpdateData)) {
-                $walletUpdateData['updated_at'] = gmdate('Y-m-d\TH:i:sP');
-                $db->patch('company_wallets', $walletUpdateData, "company_id=eq.{$companyId}");
+                // Direct wallet updates are blocked by a DB trigger.
+                // Any balance updates should be derived from wallet_transactions.
             }
             return true;
         } catch (Exception $e) {

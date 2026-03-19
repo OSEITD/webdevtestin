@@ -74,12 +74,8 @@ class CompanyWalletManager {
             $newPending = floatval($wallet['pending_balance']) + floatval($amount);
 
             // 5. Update wallet balances
-            $updateData = [
-                'available_balance' => $newAvailable,
-                'pending_balance' => $newPending,
-                'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
-            ];
-            $client->put("company_wallets?company_id=eq.{$companyId}", $updateData);
+            // NOTE: Direct updates to company_wallets are blocked by a DB trigger to ensure ledger integrity.
+            // Wallet balances should be updated via wallet_transactions instead.
 
             // 5. Create payout record
             $payoutData = [
@@ -134,7 +130,23 @@ class CompanyWalletManager {
                 'reference' => $payoutId ?: null,
                 'created_by' => $_SESSION['user_id'] ?? null
             ];
-            $client->post('wallet_transactions', $transactionData, true);
+
+            $txResp = $client->post('wallet_transactions', $transactionData, true);
+            $txData = static::extractData($txResp);
+            if (empty($txData) || count($txData) === 0) {
+                // If the ledger entry failed, don't hide the failure behind a successful payout request.
+                return ['success' => false, 'message' => 'Unable to record payout transaction. Please try again or contact support.'];
+            }
+
+            // 7. Update the wallet balances (so Pending Withdrawals and Available Balance reflect the payout request)
+            // Note: the system is designed so the ledger drives the wallet balances, but we must also keep the
+            // wallet row in sync when a payout is requested.
+            $walletUpdate = [
+                'available_balance' => $newAvailable,
+                'pending_balance' => $newPending,
+                'updated_at' => date('c')
+            ];
+            $client->put("company_wallets?id=eq.{$companyId}", $walletUpdate, true);
 
             return ['success' => true, 'message' => 'Payout requested successfully'];
 
@@ -211,6 +223,17 @@ class CompanyWalletManager {
                 }
             }
 
+            // Include any manual adjustment/refund credits (not tied to a specific payment transaction)
+            // so corrections show up in the available payout balance.
+            $adjustResp = $client->getRecord(
+                "wallet_transactions?company_id=eq.{$companyId}&transaction_type=in.(adjustment_credit,refund_credit)",
+                true
+            );
+            $adjustData = static::extractData($adjustResp) ?: [];
+            foreach ($adjustData as $tx) {
+                $netGateway += floatval($tx['amount'] ?? 0);
+            }
+
             // Subtract payout debits (money already paid out) so the balance reflects remaining
             // gateway-derived funds available for future payouts.
             $payoutResp = $client->getRecord(
@@ -262,6 +285,30 @@ class CompanyWalletManager {
             error_log("Error getting payouts for company {$companyId}: " . $e->getMessage());
         }
         return [];
+    }
+
+    /**
+     * Compute pending withdrawals based on payout requests that are not completed/failed/cancelled.
+     * This is used to show the pending withdrawal amount when the wallet row isn't being updated.
+     */
+    public static function getPendingWithdrawals($companyId) {
+        try {
+            $client = new SupabaseClient();
+            // Sum payout amounts for requests that are still outstanding.
+            $response = $client->getRecord(
+                "company_payouts?company_id=eq.{$companyId}&status=not.in.(completed,failed,cancelled)&select=amount",
+                true
+            );
+            $rows = static::extractData($response) ?: [];
+            $sum = 0.0;
+            foreach ($rows as $r) {
+                $sum += floatval($r['amount'] ?? 0);
+            }
+            return $sum;
+        } catch (Exception $e) {
+            error_log("Error computing pending withdrawals for company {$companyId}: " . $e->getMessage());
+        }
+        return 0.0;
     }
     
     /**

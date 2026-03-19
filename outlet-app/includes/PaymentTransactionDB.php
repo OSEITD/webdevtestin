@@ -1,3 +1,4 @@
+
 <?php
 
 require_once __DIR__ . '/supabase-client.php';
@@ -30,17 +31,11 @@ class PaymentTransactionDB {
     public function createTransaction($data) {
         try {
             
-            $commissionPercentage = $data['commission_percentage'] ?? 0;
             $amount = $data['amount'];
-            $commissionAmount = $data['commission_amount'] ?? ($amount * $commissionPercentage / 100);
-            $netAmount = $data['net_amount'] ?? ($amount - $commissionAmount);
-            
-            
-            $vatPercentage = $data['vat_percentage'] ?? 16.00;
-            $vatAmount = $data['vat_amount'] ?? ($amount * $vatPercentage / 100);
-            
-            // assemble transaction data; defaults are used when not provided
-            // and we will trim any null values below so only relevant columns are sent
+
+            // Assemble the payload for the DB. The DB trigger/function is responsible for
+            // computing all financial fields (fees, commission, net, total, etc.).
+            // Do not send those fields from the app; the DB will reject them.
             $transactionData = [
                 'tx_ref' => $data['tx_ref'],
                 'company_id' => $data['company_id'],
@@ -48,42 +43,46 @@ class PaymentTransactionDB {
                 'user_id' => $data['user_id'],
                 'parcel_id' => $data['parcel_id'] ?? null,
                 'amount' => $amount,
-                'transaction_fee' => $data['transaction_fee'] ?? 0,
-                'commission_percentage' => $commissionPercentage,
-                'commission_amount' => $commissionAmount,
-                'net_amount' => $netAmount,
-                'total_amount' => $data['total_amount'],
-                'currency' => $data['currency'] ?? 'ZMW',
-                'exchange_rate' => $data['exchange_rate'] ?? 1.0000,
-                'original_amount' => $data['original_amount'] ?? null,
-                'original_currency' => $data['original_currency'] ?? null,
                 'payment_method' => $data['payment_method'],
+
                 'payment_type' => $data['payment_type'] ?? null,
                 'mobile_network' => $data['mobile_network'] ?? null,
                 'mobile_number' => $this->maskMobileNumber($data['mobile_number'] ?? null),
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'],
                 'customer_phone' => $data['customer_phone'],
-                'payment_link' => $data['payment_link'] ?? null,
-                'redirect_url' => $data['redirect_url'] ?? null,
-                'vat_percentage' => $vatPercentage,
-                'vat_amount' => $vatAmount,
-                'receipt_number' => $data['receipt_number'] ?? null,
-                'fiscal_year' => $data['fiscal_year'] ?? date('Y'),
-                'accounting_period' => $data['accounting_period'] ?? date('Y-m'),
-                'metadata' => json_encode($data['metadata'] ?? []),
-                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
-                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
-                'device_fingerprint' => $data['device_fingerprint'] ?? null,
-                'geolocation' => isset($data['geolocation']) ? json_encode($data['geolocation']) : null,
-                'status' => $data['status'] ?? 'pending',
-                'settlement_status' => $data['settlement_status'] ?? 'pending',
-                'paid_at' => $data['paid_at'] ?? null,
-                'expires_at' => date('Y-m-d H:i:s', strtotime('+1 hour'))
+                // Metadata can contain financial fields; avoid sending it on insert.
+                // User-facing metadata can be saved/updated after transaction is created.
             ];
             // strip out null entries so database only sees fields we care about
-            $transactionData = array_filter($transactionData, function($v) { return $v !== null; });
-            
+            // We also remove any fields that are calculated on the DB side (financial fields)
+            // to avoid triggering the "Financial fields cannot be set manually" rule.
+            $forbiddenFields = [
+                'transaction_fee',
+                'commission_percentage',
+                'commission_amount',
+                'net_amount',
+                'total_amount',
+                'currency',
+                'exchange_rate',
+                'vat_percentage',
+                'vat_amount',
+            ];
+
+            $transactionData = array_filter($transactionData, function($v, $k) use ($forbiddenFields) {
+                if (in_array($k, $forbiddenFields, true)) {
+                    return false;
+                }
+                return $v !== null;
+            }, ARRAY_FILTER_USE_BOTH);
+
+            // DEBUG: sanity assert - should never send calculated financial fields
+            foreach (['transaction_fee','commission_amount','net_amount','total_amount'] as $f) {
+                if (array_key_exists($f, $transactionData)) {
+                    error_log("WARNING: forbidden financial field still present: $f");
+                }
+            }
+
             // Use raw HTTP request since custom Supabase client doesn't support insert
             $url = $this->getSupabaseRestUrl() . '/payment_transactions';
 
@@ -110,6 +109,8 @@ class PaymentTransactionDB {
                     'data' => $responseData[0] ?? null
                 ];
             } else {
+                error_log('PaymentTransactionDB create transaction failed: HTTP ' . $httpCode . ' - ' . $responseBody);
+                error_log('PaymentTransactionDB create payload: ' . json_encode($transactionData));
                 return [
                     'success' => false,
                     'error' => 'Failed to create transaction: HTTP ' . $httpCode . ' - ' . $responseBody

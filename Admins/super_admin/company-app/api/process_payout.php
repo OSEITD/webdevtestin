@@ -98,8 +98,9 @@ try {
         }
 
         if (!empty($walletUpdate)) {
-            $walletUpdate['updated_at'] = $now;
-            callSupabaseWithServiceKey("company_wallets?company_id=eq.{$companyId}", 'PATCH', $walletUpdate);
+            // Persist updated wallet balances so the UI reflects pending/completed payouts.
+            // If the DB uses triggers to reconcile ledger entries, this will still keep the row in sync.
+            callSupabaseWithServiceKey("company_wallets?id=eq.{$companyId}", 'PATCH', $walletUpdate);
         }
     }
 

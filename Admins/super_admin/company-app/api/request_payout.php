@@ -46,7 +46,7 @@ if ($payout_method === 'bank_transfer') {
     }
 }
 
-// Determine currency from company record (enables non-ZMW setups)
+
 $companyCurrency = 'ZMW';
 try {
     $supabase = new SupabaseClient();
@@ -56,7 +56,7 @@ try {
         $companyCurrency = $companyData['currency'];
     }
 } catch (Exception $e) {
-    // fallback to default; not critical for payout creation
+    
 }
 
 $result = CompanyWalletManager::requestPayout(
@@ -73,7 +73,7 @@ $result = CompanyWalletManager::requestPayout(
     ]
 );
 
-// If payout request succeeded, send a notification email to the company contact email.
+// sending a notification email to the company contact email if the payout if completed.
 if (!empty($result['success']) && $result['success'] === true) {
     try {
         $supabase = new SupabaseClient();

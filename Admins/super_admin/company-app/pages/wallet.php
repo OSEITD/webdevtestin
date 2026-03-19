@@ -10,7 +10,17 @@ if (!$companyId) {
 
 $wallet = CompanyWalletManager::getWallet($companyId);
 $availableBalance = $wallet ? floatval($wallet['available_balance']) : 0.00;
-$pendingBalance = $wallet ? floatval($wallet['pending_balance']) : 0.00;
+$pendingBalance = 0.00;
+if ($wallet) {
+    $pendingBalance = floatval($wallet['pending_balance']);
+}
+
+// If the wallet row isn't being updated properly on payout request, compute pending from payout requests.
+$pendingWithdrawalComputed = CompanyWalletManager::getPendingWithdrawals($companyId);
+if ($pendingWithdrawalComputed > $pendingBalance) {
+    $pendingBalance = $pendingWithdrawalComputed;
+}
+
 $totalEarned = $wallet ? floatval($wallet['total_earned']) : 0.00;
 $gatewayEligibleBalance = CompanyWalletManager::getGatewayEligibleBalance($companyId);
 

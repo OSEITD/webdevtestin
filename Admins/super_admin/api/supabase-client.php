@@ -342,6 +342,18 @@ class SupabaseClient {
         return $this->makeRequest($url, 'PATCH', $data);
     }
 
+    /**
+     * Alias for update() (legacy name used in some code paths).
+     *
+     * @param string $endpoint
+     * @param array  $data
+     * @param string $query
+     * @return mixed
+     */
+    public function put($endpoint, $data, $query = '') {
+        return $this->update($endpoint, $data, $query);
+    }
+
     public function delete($endpoint, $query = '') {
         $url = ltrim($endpoint, '/') . ($query ? '?' . $query : '');
         return $this->makeRequest($url, 'DELETE');
