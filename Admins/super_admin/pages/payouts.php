@@ -101,6 +101,7 @@ require_once __DIR__ . '/../includes/header.php';
                                             data-method="<?php echo htmlspecialchars($payout['payout_method']); ?>"
                                             data-status="<?php echo htmlspecialchars($payout['status']); ?>"
                                             data-notes="<?php echo htmlspecialchars($payout['notes'] ?? ''); ?>"
+                                            data-failure_reason="<?php echo htmlspecialchars($payout['failure_reason'] ?? ''); ?>"
                                             data-details="<?php 
                                             // Handle various payment details formats
                                             $detailsStr = '';
@@ -170,6 +171,11 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="form-group" style="margin-top: 15px">
                     <label>Admin Notes</label>
                     <textarea id="payoutNotes" name="notes" class="form-control" rows="2" placeholder="Visible internally logs"></textarea>
+                </div>
+
+                <div id="failureReasonField" class="form-group" style="margin-top: 15px; display: none;">
+                    <label>Failure Reason</label>
+                    <textarea id="failureReason" name="failure_reason" class="form-control" rows="2" placeholder="Reason for failure (optional)"></textarea>
                 </div>
 
                 <div class="form-actions" style="margin-top: 20px;">
@@ -298,7 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveBtn.disabled = false;
             }
 
+            // Ensure the form reflects the current state (e.g. show failure reason when needed)
+            updateSaveButtonText();
+
             document.getElementById('payoutNotes').value = this.getAttribute('data-notes');
+            document.getElementById('failureReason').value = this.getAttribute('data-failure_reason') || '';
             document.getElementById('payoutRef').value = '';
 
             // No payout preview lookup is performed; the payout will be executed when marked completed.
@@ -317,6 +327,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateSaveButtonText = () => {
         if (!saveBtn || !payoutActionSelect) return;
         const status = payoutActionSelect.value;
+
+        // Show failure reason input only when relevant
+        const failureField = document.getElementById('failureReasonField');
+        if (failureField) {
+            failureField.style.display = (status === 'failed' || status === 'cancelled') ? 'block' : 'none';
+        }
+
         if (status === 'completed') {
             saveBtn.textContent = 'Confirm & Execute Payout';
         } else {

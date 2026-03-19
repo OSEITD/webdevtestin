@@ -431,7 +431,8 @@ function callSupabaseWithServiceKey($endpoint, $method = 'GET', $data = null, $c
             case 'POST':
                 return $client->insert($endpoint, $data);
             case 'PATCH':
-                return $client->update($endpoint, $data);
+                // SupabaseClient uses put() for PATCH/UPDATE operations.
+                return $client->put($endpoint, $data);
             case 'DELETE':
                 return $client->delete($endpoint);
             default:

@@ -14,10 +14,29 @@ class SupabaseClient {
     }
 
     public function __construct() {
-        $this->supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
-        $this->supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
-        // Optionally set a SUPABASE_SERVICE_ROLE env var on the server for elevated server-side operations
-        $this->serviceRoleKey = getenv('SUPABASE_SERVICE_ROLE') ?: null;
+        // Ensure env vars are loaded so we can correctly pick up the service role key
+        if (!class_exists('EnvLoader')) {
+            // Ensure we load the shared env loader used by the super_admin app.
+            $envPath = __DIR__ . '/../../includes/env.php';
+            if (file_exists($envPath)) {
+                require_once $envPath;
+            }
+        }
+
+        // If EnvLoader is available, load it.
+        if (class_exists('EnvLoader')) {
+            EnvLoader::load();
+        }
+
+        $this->supabaseUrl = EnvLoader::get('SUPABASE_URL', 'https://xerpchdsykqafrsxbqef.supabase.co');
+        $this->supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E');
+
+        // Prefer service role key when available for elevated access to restricted tables.
+        $this->serviceRoleKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY');
+        if (empty($this->serviceRoleKey)) {
+            $this->serviceRoleKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
+        }
+
         $this->defaultHeaders = [
             'apikey: ' . $this->supabaseKey,
             'Content-Type: application/json'
@@ -102,11 +121,7 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Normalize driver status values used across the app to DB enum values.
-     * Accepts legacy values like 'active'/'inactive' and converts them to
-     * 'available'/'unavailable' which the DB constraint requires.
-     */
+    
     public static function normalizeDriverStatus(string $status): string {
         $s = strtolower(trim($status));
         $map = [
@@ -327,9 +342,7 @@ class SupabaseClient {
         }
     }
 
-    /**
-     * Create a new trip stop
-     */
+    
     public function createTripStop($stopData) {
         $url = "{$this->supabaseUrl}/rest/v1/trip_stops";
         $authKey = $this->serviceRoleKey ? $this->serviceRoleKey : $this->supabaseKey;
@@ -343,9 +356,7 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Create a new parcel list assignment
-     */
+    
     public function createParcelListAssignment($parcelData) {
     $url = "{$this->supabaseUrl}/rest/v1/parcel_list";
         $authKey = $this->serviceRoleKey ? $this->serviceRoleKey : $this->supabaseKey;
@@ -359,12 +370,9 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Update any record in a table
-     */
     public function put($path, $data) {
         $url = "{$this->supabaseUrl}/rest/v1/{$path}";
-        // Prefer using the service role key for trusted server-side updates when available
+       
         $authKey = $this->serviceRoleKey ? $this->serviceRoleKey : $this->supabaseKey;
         if ($this->serviceRoleKey) {
             error_log("Supabase PUT using service role key for path: {$path}");
@@ -377,9 +385,7 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Insert records into a table
-     */
+    
     public function post($path, $data, $useServiceRole = false) {
         $url = "{$this->supabaseUrl}/rest/v1/{$path}";
         $authKey = ($useServiceRole && $this->serviceRoleKey) ? $this->serviceRoleKey : $this->supabaseKey;
@@ -393,24 +399,21 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Get records from any table
-     */
+    
     public function get($endpoint) {
         $url = "{$this->supabaseUrl}/rest/v1/{$endpoint}";
         $response = $this->makeRequest('GET', $url);
         
-        // Return a standard object with data property
         $result = new stdClass();
         $result->data = null;
         
-        // If response is already an array, put it in data
+        
         if (is_array($response)) {
             $result->data = $response;
             return $result;
         }
         
-        // Try to decode JSON response
+        
         if (is_string($response)) {
             $decoded = json_decode($response, true);
             if (json_last_error() === JSON_ERROR_NONE) {
@@ -423,13 +426,10 @@ class SupabaseClient {
         return $result;
     }
 
-    /**
-     * Get a single record or set of records with default auth headers
-     * Helpful to confirm visibility when RLS might be in effect.
-     */
+  
     public function getRecord($endpoint, $useServiceRole = false) {
         $url = "{$this->supabaseUrl}/rest/v1/{$endpoint}";
-        // Choose which key to use for Authorization: service role when requested and available, otherwise default key
+        
         $authKey = ($useServiceRole && $this->serviceRoleKey) ? $this->serviceRoleKey : $this->supabaseKey;
         $headers = array_merge($this->defaultHeaders, [
             'Authorization: Bearer ' . $authKey
@@ -438,13 +438,11 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Delete a record or set of records
-     */
+    
     public function delete($endpoint, $accessToken = null) {
         $url = "{$this->supabaseUrl}/rest/v1/{$endpoint}";
         
-        // If access token is provided, use it. Otherwise fall back to service key or anon key
+        
         if ($accessToken) {
              $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
         } else {
@@ -457,16 +455,15 @@ class SupabaseClient {
     }
 
     /**
-     * Soft-delete a record: sets deleted_at = NOW() and deleted_by = user ID.
-     * Uses PATCH instead of DELETE to preserve the record and avoid FK constraint errors.
+   
      *
-     * @param string      $endpoint    PostgREST endpoint with filters, e.g. "outlets?id=eq.123&company_id=eq.456"
-     * @param string|null $accessToken JWT access token for RLS-aware requests
-     * @param string|null $deletedBy   UUID of the user performing the deletion (for audit trail)
+     * @param string      $endpoint    
+     * @param string|null $accessToken 
+     * @param string|null $deletedBy   
      * @return mixed Parsed response
      */
     public function softDelete($endpoint, $accessToken = null, $deletedBy = null) {
-        $data = ['deleted_at' => date('c')]; // ISO 8601 timestamp
+        $data = ['deleted_at' => date('c')]; 
         if ($deletedBy) {
             $data['deleted_by'] = $deletedBy;
         }
@@ -519,11 +516,7 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Get records from any table using an access token (session user)
-     * This is useful for server-side endpoints that should query Supabase
-     * using the currently authenticated user's JWT (respecting RLS).
-     */
+   
     public function getWithToken($endpoint, $accessToken) {
         $url = "{$this->supabaseUrl}/rest/v1/{$endpoint}";
         $headers = array_merge($this->defaultHeaders, [

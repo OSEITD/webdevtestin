@@ -1,5 +1,5 @@
 <?php
-// Enable error reporting
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -380,120 +380,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#2e0b3f">
-  <link rel="stylesheet" href="../company-app/assets/css/login-styles.css">
+  <link rel="stylesheet" href="../../../outlet-app/css/login-styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('../service-worker.js', {
-        scope: '/WDParcelSendReceiverPWA/Admins/super_admin/'
-      });
-    });
-  }
-</script>
-  <div class="container">
-    <img src="../assets/img/Logo.png" alt="Logo for WebDev Technologies" class="logo">
-    <div class="form-box">
-      
-      <h2>Login</h2>
-
-      <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
-        <div class="input-container"><i class="fa fa-envelope"></i>
-          <input type="email" name="email" placeholder="Email Address" required autocomplete="username">
+<body class="login-body">
+    <!-- Toast Notifications -->
+    <?php if (!empty($error)): ?>
+        <div class="toast-notification error" id="errorToast">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><?= htmlspecialchars($error) ?></span>
         </div>
+    <?php endif; ?>
 
-        <div class="input-container">
-          <i class="fa fa-lock"></i>
-          <input type="password" name="password" id="passwordInput" placeholder="Password" required autocomplete="current-password" style="padding-right: 50px;">
-          <button type="button" id="togglePassword" class="toggle-password" aria-label="Show password" title="Show password">
-                <svg id="iconEye" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <svg id="iconEyeOff" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
-                    <path d="M17.94 17.94A10.06 10.06 0 0 1 12 20c-7 0-11-8-11-8a21.84 21.84 0 0 1 5.06-6.16"></path>
-                    <path d="M1 1l22 22"></path>
-                    <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12"></path>
-                </svg>
-            </button>
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="brand-panel">
+                <div class="brand-logo">
+                    <img src="../assets/img/Logo.png" alt="Company logo" style="border-radius: 50%;" />
+                </div>
+                <h1 class="brand-title">Welcome back</h1>
+                <p class="brand-tagline">Sign in to continue managing your outlet operations.</p>
+            </div>
+            <div class="form-box">
+                <h2>Admin Login</h2>
+                <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
+                    <div class="input-container">
+                        <i class="fa fa-envelope"></i>
+                        <input type="email" name="email" placeholder="Email Address" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
+                    </div>
+                    <div class="input-container">
+                        <i class="fa fa-lock"></i>
+                        <input type="password" name="password" placeholder="Password" required id="passwordInput" />
+                        <button type="button" class="toggle-password" aria-label="Show password" title="Show password">
+                            <svg class="icon-eye" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A1C40" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg class="icon-eye-off" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A1C40" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                                <path d="M17.94 17.94A10.06 10.06 0 0 1 12 20c-7 0-11-8-11-8a21.84 21.84 0 0 1 5.06-6.16"></path>
+                                <path d="M1 1l22 22"></path>
+                                <path d="M9.88 9.88A3 3 0 0 0 14.12 14.12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="form-meta">
+                        <a href="forgot_password.php" class="muted-link">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="btn">Sign In</button>
+                </form>
+            </div>
         </div>
-
-        <div class="p"><a href="forgot_password.php"><u>Forgot Password</u></a></div>
-
-        <div>
-          <button type="submit" class="btn">Login</button>
-        </div>
-      </form>
-    </div>
     </div>
 
-  <?php if (isset($_GET['registered']) && $_GET['registered'] === 'success') : ?>
-    <script>alert('Registered successfully! You can now log in.');</script>
-  <?php endif; ?>
-  <?php if (!empty($error)) : ?>
-    <?php
-      // Determine icon and CSS class based on error type
-      switch ($errorType) {
-        case 'connection':
-          $toastIcon = 'fa-wifi';
-          $toastClass = 'warning';
-          break;
-        case 'not_found':
-          $toastIcon = 'fa-user-slash';
-          $toastClass = 'error';
-          break;
-        case 'suspended':
-          $toastIcon = 'fa-ban';
-          $toastClass = 'error suspended';
-          break;
-        case 'credentials':
-        default:
-          $toastIcon = 'fa-key';
-          $toastClass = 'error';
-          break;
-      }
-    ?>
-    <div class="login-toast <?= $toastClass ?>" id="loginToast">
-      <i class="fas <?= $toastIcon ?>"></i>
-      <span><?= htmlspecialchars($error) ?></span>
-    </div>
-  <?php endif; ?>
-  
   <script>
-    // Auto-dismiss login toast notification
-    (function() {
-      var toast = document.getElementById('loginToast');
-      if (toast) {
+    document.addEventListener('DOMContentLoaded', function() {
+      const toasts = document.querySelectorAll('.toast-notification');
+      toasts.forEach(function(toast) {
         setTimeout(function() {
           toast.classList.add('hiding');
-          setTimeout(function() { toast.remove(); }, 300);
-        }, 6000);
-      }
-    })();
-
-    // Password toggle functionality
-    const togglePasswordBtn = document.getElementById('togglePassword');
-    const passwordInput = document.getElementById('passwordInput');
-    const iconEye = document.getElementById('iconEye');
-    const iconEyeOff = document.getElementById('iconEyeOff');
-
-    if (togglePasswordBtn) {
-      togglePasswordBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-        iconEye.style.display = isPassword ? 'none' : 'block';
-        iconEyeOff.style.display = isPassword ? 'block' : 'none';
-        this.setAttribute('title', isPassword ? 'Hide password' : 'Show password');
-        this.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+          setTimeout(function() {
+            toast.remove();
+          }, 300);
+        }, 5000);
       });
-    }
+
+      document.querySelectorAll('.input-container .toggle-password').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+              const input = this.closest('.input-container').querySelector('input');
+              if (!input) return;
+              const iconEye = this.querySelector('.icon-eye');
+              const iconEyeOff = this.querySelector('.icon-eye-off');
+              if (input.type === 'password') {
+                  input.type = 'text';
+                  this.setAttribute('aria-label','Hide password');
+                  this.setAttribute('title','Hide password');
+                  this.setAttribute('aria-pressed','true');
+                  if (iconEye) iconEye.style.display = 'none';
+                  if (iconEyeOff) iconEyeOff.style.display = 'inline-block';
+              } else {
+                  input.type = 'password';
+                  this.setAttribute('aria-label','Show password');
+                  this.setAttribute('title','Show password');
+                  this.setAttribute('aria-pressed','false');
+                  if (iconEye) iconEye.style.display = 'inline-block';
+                  if (iconEyeOff) iconEyeOff.style.display = 'none';
+              }
+          });
+      });
+
+    });
   </script>
-  </body>
-  </html>
+</body>
+</html>
 

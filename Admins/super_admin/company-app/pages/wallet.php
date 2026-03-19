@@ -12,9 +12,11 @@ $wallet = CompanyWalletManager::getWallet($companyId);
 $availableBalance = $wallet ? floatval($wallet['available_balance']) : 0.00;
 $pendingBalance = $wallet ? floatval($wallet['pending_balance']) : 0.00;
 $totalEarned = $wallet ? floatval($wallet['total_earned']) : 0.00;
+$gatewayEligibleBalance = CompanyWalletManager::getGatewayEligibleBalance($companyId);
 
 $payouts = CompanyWalletManager::getPayouts($companyId, 20);
 $transactions = CompanyWalletManager::getTransactions($companyId, 30);
+$hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
 
     //  payout method / saved payout details from the company record.
     $defaultPayoutMethod = 'bank_transfer';
@@ -157,6 +159,8 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
         border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         overflow-x: auto;
+        overflow-y: auto;
+        max-height: 520px;
     }
     
     .data-table {
@@ -297,9 +301,16 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
     <main class="main-content">
         <div class="wallet-header">
             <h1>Wallet & Payouts</h1>
-            <button class="request-payout-btn" onclick="openPayoutModal()">
-                <i class="fas fa-hand-holding-usd"></i> Request Payout
-            </button>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
+                <button class="request-payout-btn" onclick="openPayoutModal()" <?php echo $hasGatewayPayments ? '' : 'disabled'; ?> >
+                    <i class="fas fa-hand-holding-usd"></i> Request Payout
+                </button>
+                <?php if (!$hasGatewayPayments): ?>
+                    <div style="font-size:0.9rem; color:#64748b; text-align:right; max-width:360px;">
+                        Payouts can only be requested after your company has received at least one successful bank transfer or mobile money payment.
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- Balances Grid -->
@@ -307,6 +318,11 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
             <div class="balance-card">
                 <div class="label">Available Balance</div>
                 <div class="amount available"><?php echo $currencyStr; ?><?php echo number_format($availableBalance, 2); ?></div>
+            </div>
+            <div class="balance-card">
+                <div class="label">Online Balance</div>
+                <div class="amount"><?php echo $currencyStr; ?><?php echo number_format($gatewayEligibleBalance, 2); ?></div>
+                <small style="color:#64748b; margin-top:0.5rem; display:block;">Funds eligible for payout (bank transfer or mobile money)</small>
             </div>
             <div class="balance-card">
                 <div class="label">Pending Withdrawals</div>
@@ -417,13 +433,13 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
         <h3>Request Payout</h3>
         
         <div class="form-group">
-            <label>Available to Withdraw</label>
-            <input type="text" value="<?php echo $currencyStr . number_format($availableBalance, 2); ?>" readonly disabled style="background:#f8fafc; color:#64748b; font-weight:bold;">
+            <label>Online Balance</label>
+            <input type="text" value="<?php echo $currencyStr . number_format($gatewayEligibleBalance, 2); ?>" readonly disabled style="background:#f8fafc; color:#64748b; font-weight:bold;">
         </div>
 
         <div class="form-group">
             <label for="payoutAmount">Amount (<?php echo $currencyStr; ?>)</label>
-            <input type="number" id="payoutAmount" min="100" max="<?php echo $availableBalance; ?>" step="0.01" placeholder="Enter amount..." required>
+            <input type="number" id="payoutAmount" min="100" max="<?php echo $gatewayEligibleBalance; ?>" step="0.01" placeholder="Enter amount..." required>
         </div>
 
         <div class="form-group">
@@ -480,7 +496,15 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
     const payoutModal = document.getElementById('payoutModal');
     
     function openPayoutModal() {
-        <?php if ($availableBalance <= 0): ?>
+        <?php if (!$hasGatewayPayments): ?>
+            Swal.fire({
+                title: 'Payout Not Available',
+                text: 'Payouts can only be requested after you have received at least one successful payment through the configured payment gateway.',
+                icon: 'info',
+                confirmButtonColor: '#3498db'
+            });
+            return;
+        <?php elseif ($availableBalance <= 0): ?>
             Swal.fire({
                 title: 'Insufficient Balance',
                 text: 'You do not have any available balance to withdraw.',
@@ -496,10 +520,7 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
     function closePayoutModal() {
         payoutModal.style.display = 'none';
         document.getElementById('payoutAmount').value = '';
-        document.getElementById('bankName').value = '';
-        document.getElementById('bankAccountNumber').value = '';
-        document.getElementById('bankAccountName').value = '';
-        document.getElementById('mobileNumber').value = '';
+        // Keep bank/mobile fields populated with saved defaults so the user doesn't need to re-enter them every time.
     }
 
     //  Payout submition using API
@@ -522,7 +543,7 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
     function submitPayoutRequest() {
         const amount = document.getElementById('payoutAmount').value;
         const method = document.getElementById('payoutMethod').value;
-        const maxAmount = <?php echo $availableBalance; ?>;
+        const maxAmount = <?php echo $gatewayEligibleBalance; ?>; // only gateway funds are eligible for payout
         
         if (!amount || amount <= 0) {
             Swal.fire('Error', 'Please enter a valid amount.', 'error');
@@ -530,7 +551,7 @@ $transactions = CompanyWalletManager::getTransactions($companyId, 30);
         }
         
         if (parseFloat(amount) > maxAmount) {
-            Swal.fire('Error', 'Amount exceeds available balance.', 'error');
+            Swal.fire('Error', 'Amount exceeds Gateway Eligible Balance.', 'error');
             return;
         }
 

@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/../../includes/notification_helper.php';
 require_once __DIR__ . '/../../includes/sms_service.php';
+require_once __DIR__ . '/../../includes/email_helper.php';
 require_once __DIR__ . '/../../includes/EnhancedParcelDeliveryManager.php';
 require_once __DIR__ . '/../../includes/barcode_generator.php';
 require_once __DIR__ . '/../../includes/supabase-helper.php';
@@ -1077,6 +1078,33 @@ try {
         
         error_log("Failed to send SMS notifications: " . $e->getMessage());
         $response['sms_error'] = 'SMS notification failed but parcel created successfully';
+    }
+
+    // Send parcel creation emails to sender and receiver (if email addresses are provided)
+    try {
+        $emailHelper = new EmailHelper();
+        $senderEmail = $input['senderEmail'] ?? '';
+        $receiverEmail = $input['recipientEmail'] ?? '';
+
+        $emailResults = $emailHelper->notifyParcelCreated([
+            'track_number' => $trackingNumber,
+            'sender_name' => $input['senderName'] ?? '',
+            'receiver_name' => $input['recipientName'] ?? '',
+            'sender_email' => $senderEmail,
+            'receiver_email' => $receiverEmail
+        ]);
+
+        $response['email_attempted'] = true;
+        $response['email_addresses'] = [
+            'sender' => $senderEmail,
+            'receiver' => $receiverEmail
+        ];
+        $response['email_notifications'] = $emailResults;
+
+        error_log('Email send results: ' . json_encode($emailResults));
+    } catch (Exception $e) {
+        error_log("Failed to send parcel creation emails: " . $e->getMessage());
+        $response['email_error'] = 'Email notification failed but parcel created successfully';
     }
 
     echo json_encode($response);

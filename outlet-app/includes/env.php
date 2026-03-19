@@ -14,8 +14,24 @@ class EnvLoader {
         }
 
         if (!file_exists($path)) {
-            self::$loaded = true;
-            return;
+            // Try common alternative locations for .env (project root, parent, etc.)
+            $candidates = [
+                __DIR__ . '/../../.env',   // repo root (common)
+                __DIR__ . '/../../../.env' // one level higher
+            ];
+            $found = false;
+            foreach ($candidates as $candidate) {
+                if (file_exists($candidate)) {
+                    $path = $candidate;
+                    $found = true;
+                    break;
+                }
+            }
+
+            if (!$found) {
+                self::$loaded = true;
+                return;
+            }
         }
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

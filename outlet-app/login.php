@@ -458,6 +458,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login - Outlet Management</title>
+  <link rel="icon" href="/favicon.png" type="image/png" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2e0b3f" />
   <link rel="stylesheet" href="./css/login-styles.css" />

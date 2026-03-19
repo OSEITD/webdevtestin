@@ -1,6 +1,7 @@
 {
     "require": {
         "supabase/supabase-php": "^0.0.1",
-        "minishlink/web-push": "^8.0"
+        "minishlink/web-push": "^8.0",
+        "phpmailer/phpmailer": "^7.0"
     }
 }
