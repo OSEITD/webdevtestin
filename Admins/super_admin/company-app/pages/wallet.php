@@ -2,6 +2,7 @@
 $page_title = 'Company - Wallet & Payouts';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/WalletManager.php';
+require_once __DIR__ . '/../../includes/csrf-helper.php';
 
 $companyId = $_SESSION['company_id'] ?? $_SESSION['id'] ?? null;
 if (!$companyId) {
@@ -311,6 +312,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
     <main class="main-content">
         <div class="wallet-header">
             <h1>Wallet & Payouts</h1>
+            <input type="hidden" id="csrf_token" value="<?php echo htmlspecialchars(CSRFHelper::getToken()); ?>" />
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
                 <button class="request-payout-btn" onclick="openPayoutModal()" <?php echo $hasGatewayPayments ? '' : 'disabled'; ?> >
                     <i class="fas fa-hand-holding-usd"></i> Request Payout
