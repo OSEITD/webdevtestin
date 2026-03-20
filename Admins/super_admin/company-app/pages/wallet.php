@@ -344,7 +344,12 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
             </div>
         </div>
 
-        <!-- Navigation Tabs -->
+        <!-- Filter + Navigation Tabs -->
+        <div style="margin-bottom: 1rem; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+            <div style="flex:1; min-width:250px;">
+                <input id="walletFilterInput" type="text" placeholder="Search transactions or payouts..." style="width:100%; padding:0.7rem 0.9rem; border:1px solid #cbd5e1; border-radius:8px;" />
+            </div>
+        </div>
         <div class="wallet-tabs">
             <div class="wallet-tab active" onclick="switchThemeTab(event, 'transactions')">Recent Transactions</div>
             <div class="wallet-tab" onclick="switchThemeTab(event, 'payouts')">Payout History</div>
@@ -500,6 +505,26 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
         const clickedTab = event.currentTarget || event.target;
         clickedTab.classList.add('active');
         document.getElementById('tab-' + tabId).classList.add('active');
+
+        // Re-run filtering for visible rows
+        filterWalletRows();
+    }
+
+    function filterWalletRows() {
+        const query = document.getElementById('walletFilterInput')?.value.trim().toLowerCase() || '';
+        const activeTabId = document.querySelector('.wallet-tab.active')?.textContent.trim().toLowerCase() || 'recent transactions';
+
+        const tableSelector = activeTabId.includes('payout') ? '#tab-payouts tbody tr' : '#tab-transactions tbody tr';
+        const rows = document.querySelectorAll(tableSelector);
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (!query || text.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
     }
 
     // Modal Handling
@@ -619,6 +644,12 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
     // Initialize form state
     document.addEventListener('DOMContentLoaded', () => {
         updatePayoutFieldsVisibility();
+        filterWalletRows();
+
+        const filterInput = document.getElementById('walletFilterInput');
+        if (filterInput) {
+            filterInput.addEventListener('input', filterWalletRows);
+        }
     });
 
     // Sidebar toggling (same behavior across company-app pages)

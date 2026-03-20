@@ -41,6 +41,11 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="card-header">
                 <h2>All Transactions</h2>
             </div>
+
+            <div class="filter-bar" style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+                <label for="payoutFilterInput" style="font-weight:600; margin:0;">Filter:</label>
+                <input id="payoutFilterInput" type="text" placeholder="Search company, amount, method, status..." style="flex:1; padding:8px 10px; border:1px solid #ccc; border-radius:4px;" />
+            </div>
             
             <div class="tabs-container">
                 <div class="tabs">
@@ -53,7 +58,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="table-scrollable overflow-x-auto">
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -215,6 +220,8 @@ require_once __DIR__ . '/../includes/header.php';
 .badge-danger { background: #f8d7da; color: #721c24; }
 .badge-primary { background: #cce5ff; color: #004085; }
 .badge-info { background: #d1ecf1; color: #0c5460; }
+.table-scrollable { max-height: 70vh; overflow-y: auto; overflow-x: auto; }
+.overflow-x-auto { overflow-x: auto; }
 .form-group { margin-bottom: 15px; }
 .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; }
@@ -257,22 +264,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab switching logic
     const tabs = document.querySelectorAll('.tab-btn');
     const rows = document.querySelectorAll('.payout-row');
-    
+    const filterInput = document.getElementById('payoutFilterInput');
+
+    const filterRows = () => {
+        const targetStatus = document.querySelector('.tab-btn.active')?.getAttribute('data-status') || 'all';
+        const searchText = (filterInput?.value || '').trim().toLowerCase();
+
+        rows.forEach(row => {
+            const status = row.getAttribute('data-status');
+            const rowText = row.textContent.toLowerCase();
+
+            const statusMatch = (targetStatus === 'all' || status === targetStatus);
+            const textMatch = !searchText || rowText.includes(searchText);
+
+            row.style.display = (statusMatch && textMatch) ? '' : 'none';
+        });
+    };
+
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            const targetStatus = tab.getAttribute('data-status');
-            
-            rows.forEach(row => {
-                if (targetStatus === 'all' || row.getAttribute('data-status') === targetStatus) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+            filterRows();
         });
     });
+
+    if (filterInput) {
+        filterInput.addEventListener('input', filterRows);
+    }
+
+    filterRows();
 
     // Modal Logic
     const modal = document.getElementById('payoutModal');
