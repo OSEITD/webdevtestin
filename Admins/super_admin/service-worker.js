@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wd-admin-v2';
+const CACHE_NAME = 'wd-admin-v3';
 const CRITICAL_ASSETS = [
     '/WDParcelSendReceiverPWA/Admins/super_admin/offline.html',
     '/WDParcelSendReceiverPWA/Admins/super_admin/assets/css/admin-dashboard.css',

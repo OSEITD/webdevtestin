@@ -342,6 +342,11 @@ class SupabaseClient {
         return $this->makeRequest($url, 'PATCH', $data);
     }
 
+    public function put($endpoint, $data, $query = '') {
+        // Alias for update() - performs PATCH operation
+        return $this->update($endpoint, $data, $query);
+    }
+
     public function delete($endpoint, $query = '') {
         $url = ltrim($endpoint, '/') . ($query ? '?' . $query : '');
         return $this->makeRequest($url, 'DELETE');
@@ -431,8 +436,8 @@ function callSupabaseWithServiceKey($endpoint, $method = 'GET', $data = null, $c
             case 'POST':
                 return $client->insert($endpoint, $data);
             case 'PATCH':
-                // SupabaseClient uses put() for PATCH/UPDATE operations.
-                return $client->put($endpoint, $data);
+                // SupabaseClient uses update() for PATCH/UPDATE operations.
+                return $client->update($endpoint, $data);
             case 'DELETE':
                 return $client->delete($endpoint);
             default:

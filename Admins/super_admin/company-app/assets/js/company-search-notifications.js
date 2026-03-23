@@ -295,6 +295,13 @@ class NotificationManager {
 
         this.loadUnreadCount();
 
+        // Wire up "Mark all as read" button in the notification panel footer
+        const markAllReadBtn = document.getElementById('markAllRead');
+        if (markAllReadBtn) {
+            markAllReadBtn.addEventListener('click', () => {
+                this.markAllAsRead();
+            });
+        }
 
         this.refreshInterval = setInterval(() => {
             this.loadUnreadCount();

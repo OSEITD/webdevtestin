@@ -17,7 +17,7 @@ class PresenceTracker {
         this.config = {
             heartbeatInterval: config.heartbeatInterval || 5 * 60 * 1000, // 5 minutes
             inactivityTimeout: config.inactivityTimeout || 30 * 60 * 1000, // 30 minutes
-            heartbeatUrl: config.heartbeatUrl || '../api/presence_heartbeat.php',
+            heartbeatUrl: config.heartbeatUrl || this.getHeartbeatUrl(),
             logEnabled: config.logEnabled !== false,
             autoStart: config.autoStart !== false
         };
@@ -30,6 +30,33 @@ class PresenceTracker {
         if (this.config.autoStart) {
             this.start();
         }
+    }
+
+    /**
+     * Get the correct heartbeat URL based on current page location.
+     * Always resolves to super_admin/api/ regardless of sub-app context.
+     */
+    getHeartbeatUrl() {
+        // Explicitly set heartbeat URL takes precedence
+        if (window.HEARTBEAT_URL) {
+            return window.HEARTBEAT_URL;
+        }
+
+        const currentPath = window.location.pathname;
+        // Extract base path up to /Admins/super_admin (strip any sub-app suffix)
+        const match = currentPath.match(/^(.+\/Admins\/super_admin)(?:\/|$)/i);
+        if (match) {
+            return match[1] + '/api/presence_heartbeat.php';
+        }
+
+        // Fallback for sibling apps (like outlet-app) running in a subdirectory (e.g. XAMPP)
+        const localMatch = currentPath.match(/^(\/[^\/]+)/);
+        if (localMatch && currentPath.toLowerCase().includes('webdevtestin')) {
+            return localMatch[1] + '/Admins/super_admin/api/presence_heartbeat.php';
+        }
+
+        // Fallback for production or domain-root setup
+        return '/Admins/super_admin/api/presence_heartbeat.php';
     }
 
     /**
@@ -81,7 +108,10 @@ class PresenceTracker {
      */
     async sendHeartbeat() {
         try {
-            const response = await fetch(this.config.heartbeatUrl, {
+            const url = this.config.heartbeatUrl;
+            this.log(`Sending heartbeat to: ${url}`);
+
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -91,18 +121,26 @@ class PresenceTracker {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    this.lastHeartbeat = new Date();
-                    this.log(`Heartbeat sent successfully at ${this.lastHeartbeat.toLocaleTimeString()}`);
-                } else {
-                    this.log(`Heartbeat failed: ${data.error}`, 'warn');
+                const text = await response.text();
+                this.log(`Raw response: ${text.substring(0, 200)}`);
+
+                try {
+                    const data = JSON.parse(text);
+                    if (data.success) {
+                        this.lastHeartbeat = new Date();
+                        this.log(`Heartbeat sent successfully at ${this.lastHeartbeat.toLocaleTimeString()}`);
+                    } else {
+                        this.log(`Heartbeat failed: ${data.error}`, 'warn');
+                    }
+                } catch (parseError) {
+                    this.log(`JSON parse error: ${parseError.message}. Response: ${text.substring(0, 300)}`, 'error');
                 }
             } else if (response.status === 401) {
                 this.log('User session expired - redirecting to login', 'error');
                 this.handleSessionExpired();
             } else {
-                this.log(`Heartbeat error: ${response.status} ${response.statusText}`, 'warn');
+                const text = await response.text();
+                this.log(`Heartbeat error: ${response.status} ${response.statusText}. Response: ${text.substring(0, 200)}`, 'warn');
             }
         } catch (error) {
             this.log(`Heartbeat send failed: ${error.message}`, 'error');
@@ -190,9 +228,18 @@ class PresenceTracker {
      */
     handleSessionExpired() {
         this.stop();
-        // Redirect to login after a short delay
+        // Redirect to login after a short delay using absolute path
         setTimeout(() => {
-            window.location.href = 'login.php';
+            // Construct absolute path to login page
+            const currentPath = window.location.pathname;
+            const match = currentPath.match(/^(.+\/Admins\/super_admin)/i);
+            if (match) {
+                const basePath = match[1];
+                window.location.href = basePath + '/auth/login.php?error=session_expired';
+            } else {
+                // Fallback to relative path
+                window.location.href = '/webdevtestin/Admins/super_admin/auth/login.php?error=session_expired';
+            }
         }, 2000);
     }
 
@@ -250,7 +297,6 @@ if (document.readyState === 'loading') {
         window.presenceTracker = new PresenceTracker({
             heartbeatInterval: 5 * 60 * 1000, // 5 minutes
             inactivityTimeout: 30 * 60 * 1000, // 30 minutes
-            heartbeatUrl: '../api/presence_heartbeat.php',
             logEnabled: true,
             autoStart: true
         });
@@ -260,7 +306,6 @@ if (document.readyState === 'loading') {
     window.presenceTracker = new PresenceTracker({
         heartbeatInterval: 5 * 60 * 1000, // 5 minutes
         inactivityTimeout: 30 * 60 * 1000, // 30 minutes
-        heartbeatUrl: '../api/presence_heartbeat.php',
         logEnabled: true,
         autoStart: true
     });
@@ -273,7 +318,7 @@ if (document.readyState === 'loading') {
 /**
  * Get current presence tracking status (can be called from console)
  */
-window.getPresenceStatus = function() {
+window.getPresenceStatus = function () {
     if (window.presenceTracker) {
         return window.presenceTracker.getStatus();
     }
@@ -283,7 +328,7 @@ window.getPresenceStatus = function() {
 /**
  * Manually send a heartbeat (can be called from console)
  */
-window.sendManualHeartbeat = function() {
+window.sendManualHeartbeat = function () {
     if (window.presenceTracker) {
         window.presenceTracker.sendHeartbeat();
         return 'Heartbeat sent';
@@ -294,7 +339,7 @@ window.sendManualHeartbeat = function() {
 /**
  * Stop presence tracking (can be called from console)
  */
-window.stopPresenceTracking = function() {
+window.stopPresenceTracking = function () {
     if (window.presenceTracker) {
         window.presenceTracker.stop();
         return 'Presence tracking stopped';
@@ -305,7 +350,7 @@ window.stopPresenceTracking = function() {
 /**
  * Start presence tracking (can be called from console)
  */
-window.startPresenceTracking = function() {
+window.startPresenceTracking = function () {
     if (window.presenceTracker) {
         window.presenceTracker.start();
         return 'Presence tracking started';

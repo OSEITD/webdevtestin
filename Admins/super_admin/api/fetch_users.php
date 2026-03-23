@@ -19,9 +19,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
 try {
     error_log("Fetching users data from Supabase...");
     
-    // Get users with their active status
+    // Get users with their status (all_users view has 'status' column, not 'is_active')
     $users = callSupabaseWithServiceKey('all_users', 'GET', [
-        'select' => 'id,is_active'
+        'select' => 'id,status'
     ]);
     
     if (!is_array($users)) {
@@ -30,7 +30,7 @@ try {
     }
     
     $activeUsers = array_filter($users, function($user) {
-        return isset($user['is_active']) && $user['is_active'] === true;
+        return isset($user['status']) && $user['status'] === 'active';
     });
     
     echo json_encode([

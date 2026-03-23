@@ -61,8 +61,8 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
     <link rel="stylesheet" href="../assets/css/company-search-notifications.css">
     <!-- Form Validation Styles (shared with super_admin) -->
     <link rel="stylesheet" href="../../assets/css/form-validation.css">
-    <!-- PWA Manifest - Pointing to super_admin root -->
-    <link rel="manifest" href="../../manifest.json">
+    <!-- PWA Manifest - Pointing to company-app folder -->
+    <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#2e0b3f">
 
     <!-- Supabase JS -->
@@ -78,7 +78,9 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
         // Initialize Supabase Client Globally
         window.SUPABASE_URL = '<?php echo $supabaseUrl; ?>';
         window.SUPABASE_ANON_KEY = '<?php echo $supabaseKey; ?>';
-        window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        if (!window.supabaseClient) {
+            window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        }
         // Expose current user details for presence tracking
         window.CURRENT_USER_ID = '<?php echo $_SESSION['id'] ?? ''; ?>';
         window.CURRENT_USER_FULLNAME = '<?php echo addslashes($_SESSION['full_name'] ?? ''); ?>';

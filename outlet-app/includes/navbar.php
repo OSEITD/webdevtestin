@@ -60,6 +60,7 @@
 
 <!-- JavaScript -->
 <script src="../assets/js/search-notifications.js"></script>
+<script src="../../Admins/super_admin/assets/js/presence.js" defer></script>
 
 <style>
 

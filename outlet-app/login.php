@@ -335,6 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             $_SESSION['user_id'] = $userId;
                             $_SESSION['email'] = $email;
+                            $_SESSION['logged_in'] = true;
                             $_SESSION['role'] = $userRole;  
                             $_SESSION['company_id'] = $profile['company_id'];
                             $_SESSION['company_name'] = $company['company_name'];

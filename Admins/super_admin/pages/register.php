@@ -1,9 +1,10 @@
 <?php
 session_start();
 include_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/env.php';
 
-$supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
-$supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
+$supabaseUrl = EnvLoader::get('SUPABASE_URL');
+$supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
 $headers = [
   "apikey: $supabaseKey",
   "Content-Type: application/json",

@@ -10,28 +10,39 @@ class EnvLoader {
         }
 
         if ($path === null) {
-            $path = __DIR__ . '/../.env';
-        }
-
-        if (!file_exists($path)) {
-            // Try common alternative locations for .env (project root, parent, etc.)
-            $candidates = [
-                __DIR__ . '/../../.env',   // repo root (common)
-                __DIR__ . '/../../../.env' // one level higher
-            ];
-            $found = false;
-            foreach ($candidates as $candidate) {
-                if (file_exists($candidate)) {
-                    $path = $candidate;
-                    $found = true;
-                    break;
+            // Check for Admins/.env first (primary config source for all apps)
+            $adminsEnv = __DIR__ . '/../../Admins/.env';
+            // Then check for outlet-app/.env
+            $outletEnv = __DIR__ . '/../.env';
+            // Then check for root level .env
+            $rootEnv = __DIR__ . '/../../.env';
+            
+            if (file_exists($adminsEnv)) {
+                $path = $adminsEnv;
+            } elseif (file_exists($outletEnv)) {
+                $path = $outletEnv;
+            } elseif (file_exists($rootEnv)) {
+                $path = $rootEnv;
+            } else {
+                // Try common alternative locations
+                $candidates = [
+                    __DIR__ . '/../../.env',   // repo root
+                    __DIR__ . '/../../../.env' // one level higher
+                ];
+                foreach ($candidates as $candidate) {
+                    if (file_exists($candidate)) {
+                        $path = $candidate;
+                        break;
+                    }
                 }
             }
+        }
 
-            if (!$found) {
-                self::$loaded = true;
-                return;
-            }
+        if ($path === null || !file_exists($path)) {
+            // No .env file found - this is OK in production
+            // Environment variables may come from the platform (e.g., Render, Docker)
+            self::$loaded = true;
+            return;
         }
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

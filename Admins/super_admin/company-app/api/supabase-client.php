@@ -28,8 +28,8 @@ class SupabaseClient {
             EnvLoader::load();
         }
 
-        $this->supabaseUrl = EnvLoader::get('SUPABASE_URL', 'https://xerpchdsykqafrsxbqef.supabase.co');
-        $this->supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E');
+        $this->supabaseUrl = EnvLoader::get('SUPABASE_URL');
+        $this->supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
 
         // Prefer service role key when available for elevated access to restricted tables.
         $this->serviceRoleKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY');

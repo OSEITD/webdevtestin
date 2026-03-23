@@ -1,0 +1,23 @@
+{
+  "name": "WDParcel Admin Dashboard",
+  "short_name": "Admin",
+  "start_url": "./super_admin/pages/dashboard.php",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2e0b3f",
+  "scope": "./super_admin/",
+  "icons": [
+    {
+      "src": "./super_admin/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./super_admin/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

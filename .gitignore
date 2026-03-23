@@ -1,6 +1,11 @@
 .env
+**/.env
+*.env.local
 
+# Sensitive files
 vapid-keys.txt
+*.key
+*.pem
 # Log files
 *.log
 logs/

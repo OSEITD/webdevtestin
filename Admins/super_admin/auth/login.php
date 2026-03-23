@@ -42,13 +42,16 @@ error_log("Session ID at start: " . session_id());
 error_log("Session path: " . session_save_path());
 error_log("Initial session data: " . print_r($_SESSION, true));
 
+// Load environment variables
+require_once __DIR__ . '/../includes/env.php';
+
 // Debug session state
 error_log("Session state at login: " . print_r($_SESSION, true));
 error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
 
-// Supabase config
-$supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
-$supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
+// Supabase config - loaded from .env
+$supabaseUrl = EnvLoader::get('SUPABASE_URL');
+$supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
 
 $error = '';
 $errorType = '';
@@ -380,7 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login</title>
-  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' font-family='Arial' fill='%232e0b3f'>A</text></svg>" type="image/svg+xml">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#2e0b3f">
   <link rel="stylesheet" href="../../../outlet-app/css/login-styles.css">
@@ -403,18 +406,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <img src="../assets/img/Logo.png" alt="Company logo" style="border-radius: 50%;" />
                 </div>
                 <h1 class="brand-title">Welcome back</h1>
-                <p class="brand-tagline">Sign in to continue managing your outlet operations.</p>
+                <p class="brand-tagline">Sign in to continue managing your admin operations.</p>
             </div>
             <div class="form-box">
                 <h2>Admin Login</h2>
                 <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
                     <div class="input-container">
                         <i class="fa fa-envelope"></i>
-                        <input type="email" name="email" placeholder="Email Address" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
+                        <input type="email" name="email" placeholder="Email Address" autocomplete="username" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
                     </div>
                     <div class="input-container">
                         <i class="fa fa-lock"></i>
-                        <input type="password" name="password" placeholder="Password" required id="passwordInput" />
+                        <input type="password" name="password" placeholder="Password" autocomplete="current-password" required id="passwordInput" />
                         <button type="button" class="toggle-password" aria-label="Show password" title="Show password">
                             <svg class="icon-eye" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A1C40" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>

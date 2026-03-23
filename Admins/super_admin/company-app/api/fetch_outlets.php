@@ -54,118 +54,47 @@ try {
 
     // Initialize Supabase client
     $supabase = new SupabaseClient();
+    
+    // Dump diagnostic info directly to our own log
+    $debugInfo = "Supabase URL: " . ($supabase->getUrl() ?: 'EMPTY') . "\n";
+    $debugInfo .= "EnvLoader exists: " . (class_exists('EnvLoader') ? 'YES' : 'NO') . "\n";
+    $debugInfo .= "EnvLoader loaded flag: " . (property_exists('EnvLoader', 'loaded') ? 'Unknown' : 'Unknown') . "\n"; 
+    $debugInfo .= "EnvLoader SUPABASE_URL: " . (class_exists('EnvLoader') ? (EnvLoader::get('SUPABASE_URL') ?: 'EMPTY') : 'N/A') . "\n";
+    
+    // Check if $_ENV or getenv has it natively without EnvLoader
+    $debugInfo .= "getenv('SUPABASE_URL'): " . (getenv('SUPABASE_URL') ?: 'EMPTY') . "\n";
+    $debugInfo .= '$_ENV["SUPABASE_URL"]: ' . ($_ENV['SUPABASE_URL'] ?? 'EMPTY') . "\n";
+    
+    file_put_contents(__DIR__ . '/debug_outlets.log', $debugInfo);
 
-    // Function to refresh token
-    function refreshToken($supabase, $refreshToken) {
-        $refreshUrl = $supabase->getUrl() . '/auth/v1/token?grant_type=refresh_token';
-        $headers = [
-            'apikey: ' . $supabase->getKey(),
-            'Content-Type: application/json'
-        ];
+    $filters = "company_id=eq.{$companyId}&deleted_at=is.null&order=created_at.desc&select=id,company_id,outlet_name,address,contact_person,contact_email,contact_phone,status";
+    $urlPath = "outlets?{$filters}";
 
-        $ch = curl_init($refreshUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['refresh_token' => $refreshToken]));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    error_log("Fetching outlets via SupabaseClient for URL path: {$urlPath}");
+    $response = $supabase->getWithToken($urlPath, $accessToken);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode === 200) {
-            $result = json_decode($response, true);
-            if (isset($result['access_token'])) {
-                $_SESSION['access_token'] = $result['access_token'];
-                return $result['access_token'];
-            }
-        }
-        return null;
+    if (is_array($response) && isset($response['error'])) {
+        throw new Exception('Failed to fetch outlets: ' . $response['error']);
     }
 
-    // Try to refresh token if refresh_token exists
-    if ($refreshToken) {
-        error_log("Attempting to refresh token");
-        $newAccessToken = refreshToken($supabase, $refreshToken);
-        if ($newAccessToken) {
-            error_log("Token refreshed successfully");
-            $accessToken = $newAccessToken;
-        }
-    }
-
-    // Build Supabase request
-    $url = $supabase->getUrl() . '/rest/v1/outlets';
-    $url .= '?select=id,company_id,outlet_name,address,contact_person,contact_email,contact_phone,status';
-    $url .= '&company_id=eq.' . $companyId; // FIX: filter by company_id
-    $url .= '&deleted_at=is.null';
-    $url .= '&order=created_at.desc';
-
-    $headers = [
-        'apikey: ' . $supabase->getKey(),
-        'Authorization: Bearer ' . $accessToken,
-        'Content-Type: application/json',
-        'Accept: application/json'
-    ];
-
-    // Debug request details
-    error_log("Fetching outlets for company_id={$companyId}");
-    error_log("Request URL: " . $url);
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    // Gate SSL verification by APP_ENV: enforce in production, allow bypass in development
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, (getenv('APP_ENV') ?: 'production') === 'production');
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, (getenv('APP_ENV') ?: 'production') === 'production' ? 2 : 0);
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    if ($response === false) {
-        throw new Exception('Failed to fetch outlets: ' . curl_error($ch));
-    }
-
-    curl_close($ch);
-
-    // Debug response
-    error_log("Supabase Response Code: " . $httpCode);
-    error_log("Supabase Response: " . $response);
-
-    if ($httpCode === 401) {
-        if (strpos($response, 'JWT expired') !== false) {
-            session_destroy();
-            throw new Exception('Session expired. Please log in again.', 401);
-        }
-    }
-
-    if ($httpCode !== 200) {
-        $error = json_decode($response, true);
-        $errorMessage = isset($error['message']) ? $error['message'] : 'Unknown error';
-        throw new Exception('Failed to fetch outlets: ' . $errorMessage, $httpCode);
-    }
-
-    $outlets = json_decode($response, true);
-    if (!is_array($outlets)) {
-        error_log("Invalid response format: " . $response);
-        throw new Exception('Invalid response format from Supabase');
-    }
-
-    if (empty($outlets)) {
-        error_log("No outlets found for company_id={$companyId}");
-    } else {
-        error_log("Fetched outlets: " . print_r($outlets, true));
+    $outlets = (is_array($response) && !isset($response['error']) && !isset($response['message'])) ? $response : [];
+    
+    // Some endpoints wrap data in a 'data' array
+    if (isset($outlets['data']) && is_array($outlets['data'])) {
+        $outlets = $outlets['data'];
     }
 
     $result = [
         'success' => true,
         'data' => array_map(function ($outlet) {
             return [
-                'id' => $outlet['id'],
-                'company_id' => $outlet['company_id'],
-                'outlet_name' => $outlet['outlet_name'],
-                'address' => $outlet['address'],
-                'contact_person' => $outlet['contact_person'],
-                'contact_email' => $outlet['contact_email'],
-                'contact_phone' => $outlet['contact_phone'],
+                'id' => $outlet['id'] ?? null,
+                'company_id' => $outlet['company_id'] ?? null,
+                'outlet_name' => $outlet['outlet_name'] ?? null,
+                'address' => $outlet['address'] ?? null,
+                'contact_person' => $outlet['contact_person'] ?? null,
+                'contact_email' => $outlet['contact_email'] ?? null,
+                'contact_phone' => $outlet['contact_phone'] ?? null,
                 'status' => $outlet['status'] ?? 'inactive'
             ];
         }, $outlets)
@@ -175,6 +104,7 @@ try {
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new Exception('Failed to encode response: ' . json_last_error_msg());
     }
-} catch (Exception $e) {
+} catch (Throwable $e) {
+    file_put_contents(__DIR__ . '/debug_outlets.log', "\n--- EXCEPTION ---\n" . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
     ErrorHandler::handleException($e, 'fetch_outlets.php');
 }

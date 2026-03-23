@@ -37,30 +37,6 @@ require_once __DIR__ . '/../includes/header.php';
                         <input id="profilePhone" type="text" placeholder="e.g. +12025550123" value="<?php echo htmlspecialchars($_SESSION['user_phone'] ?? ''); ?>">
                     </div>
                     <div class="form-group">
-                        <label>Address Line 1</label>
-                        <input id="profileAddress" type="text" placeholder="Address line 1">
-                    </div>
-                    <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>City</label>
-                            <input id="profileCity" type="text" placeholder="City">
-                        </div>
-                        <div class="form-group">
-                            <label>State / Province</label>
-                            <input id="profileState" type="text" placeholder="State">
-                        </div>
-                    </div>
-                    <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label>Postal Code</label>
-                            <input id="profilePostalCode" type="text" placeholder="Postal Code">
-                        </div>
-                        <div class="form-group">
-                            <label>Country</label>
-                            <input id="profileCountry" type="text" placeholder="Country">
-                        </div>
-                    </div>
-                    <div class="form-group">
                         <label>Avatar</label>
                         <input id="profileAvatar" type="file" accept="image/*">
                         <div id="avatarPreview" style="margin-top:8px;">

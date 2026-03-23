@@ -109,34 +109,3 @@ try {
     ]);
 }
 ?>
-                "user_sessions?id=eq.{$sessionId}",
-                'PATCH',
-                ['last_active_time' => $currentTime]
-            );
-
-            if ($sessionUpdate) {
-                error_log("Updated user_sessions.last_active_time for session: {$sessionId}");
-            } else {
-                error_log("Warning: Failed to update user_sessions.last_active_time for session: {$sessionId}");
-            }
-        }
-    } else {
-        error_log("No active session found for user: {$userId}");
-    }
-
-    // Return success response
-    echo json_encode([
-        'success' => true,
-        'message' => 'Heartbeat recorded successfully',
-        'timestamp' => $currentTime
-    ]);
-
-} catch (Exception $e) {
-    error_log('Error in presence_heartbeat.php: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage()
-    ]);
-}
-?>

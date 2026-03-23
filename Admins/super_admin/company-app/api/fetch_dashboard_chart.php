@@ -82,28 +82,37 @@ class DashboardChartAPI {
                     if (!empty($serviceFilter)) $filters['service_type'] = $serviceFilter;
                     return (new SupabaseClient())->getParcels($companyId, $accessToken, $filters);
                 } catch (Exception $e) {
+                    error_log('fetch_dashboard_chart: getParcels first attempt failed: ' . $e->getMessage());
                     // attempt refresh
                     if ($refreshToken) {
                         $new = $refreshFn($refreshToken);
                         if ($new) {
                             $accessToken = $new;
-                            $filters = ['date' => date('Y-m-d', strtotime('-29 days'))];
-                            if (!empty($outletFilter)) $filters['outlet_id'] = $outletFilter;
-                            if (!empty($serviceFilter)) $filters['service_type'] = $serviceFilter;
-                            return (new SupabaseClient())->getParcels($companyId, $accessToken, $filters);
+                            try {
+                                $filters = ['date' => date('Y-m-d', strtotime('-29 days'))];
+                                if (!empty($outletFilter)) $filters['outlet_id'] = $outletFilter;
+                                if (!empty($serviceFilter)) $filters['service_type'] = $serviceFilter;
+                                return (new SupabaseClient())->getParcels($companyId, $accessToken, $filters);
+                            } catch (Exception $e2) {
+                                error_log('fetch_dashboard_chart: getParcels after refresh failed: ' . $e2->getMessage());
+                            }
                         }
                     }
                     // service role fallback
-                    $svc = new SupabaseClient();
-                    $query = "parcels?company_id=eq.{$companyId}&select=created_at,delivery_fee,fee,amount,price";
-                    if (!empty($outletFilter)) {
-                        // Use origin_outlet_id since that's the correct field in parcels table
-                        $query .= "&or=(origin_outlet_id.eq.{$outletFilter},outlet_id.eq.{$outletFilter})";
+                    try {
+                        $svc = new SupabaseClient();
+                        $query = "parcels?company_id=eq.{$companyId}&select=created_at,delivery_fee,fee,amount,price";
+                        if (!empty($outletFilter)) {
+                            $query .= "&or=(origin_outlet_id.eq.{$outletFilter},outlet_id.eq.{$outletFilter})";
+                        }
+                        if (!empty($serviceFilter)) $query .= "&service_type=eq.{$serviceFilter}";
+                        $res = $svc->getRecord($query, true);
+                        if (is_object($res) && isset($res->data)) return $res->data;
+                        return [];
+                    } catch (Exception $e3) {
+                        error_log('fetch_dashboard_chart: service role fallback failed: ' . $e3->getMessage());
+                        return [];
                     }
-                    if (!empty($serviceFilter)) $query .= "&service_type=eq.{$serviceFilter}";
-                    $res = $svc->getRecord($query, true);
-                    if (is_object($res) && isset($res->data)) return $res->data;
-                    return [];
                 }
             };
 
@@ -143,18 +152,19 @@ class DashboardChartAPI {
 
         } catch (Exception $e) {
             // Log exception and session context for debugging (server-side only)
+            error_log('fetch_dashboard_chart: Exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             ErrorHandler::logError('Exception: ' . $e->getMessage(), 'fetch_dashboard_chart.php', [
                 'exception_file' => $e->getFile(),
                 'exception_line' => $e->getLine(),
                 'session' => isset($_SESSION) ? $_SESSION : null,
                 'get' => $_GET
             ]);
-            // Temporary: return detailed error to client to aid local debugging. Remove in production.
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+            echo json_encode(['success' => false, 'error' => 'Internal server error']);
         }
     }
 }
 
 $api = new DashboardChartAPI();
 $api->handleRequest();
+

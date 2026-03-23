@@ -40,10 +40,12 @@ $adminBaseUrl = '..';
     require_once __DIR__ . '/../api/supabase-client.php';
     ?>
     <script>
-        // Initialize Supabase Client Globally
+        // Initialize Supabase Client Globally (singleton – only create once)
         window.SUPABASE_URL = '<?php echo $supabaseUrl; ?>';
         window.SUPABASE_ANON_KEY = '<?php echo $supabaseKey; ?>';
-        window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        if (!window.supabaseClient) {
+            window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        }
         // Expose current user ID for presence tracking
         window.CURRENT_USER_ID = '<?php echo $_SESSION['user_id'] ?? ''; ?>';
         window.CURRENT_USER_FULLNAME = '<?php echo addslashes($_SESSION['user_fullname'] ?? ''); ?>';
@@ -170,8 +172,7 @@ $adminBaseUrl = '..';
 
     <!-- JavaScript for Search & Notifications -->
     <script src="<?php echo $adminBaseUrl; ?>/assets/js/search-notifications.js"></script>
-    <!-- Admin Notification System -->
-    <script src="<?php echo $adminBaseUrl; ?>/assets/js/admin-notifications.js"></script>
+    <!-- Admin Notification System is handled by NotificationManager in search-notifications.js -->
     <!-- Admin Push Notification Manager -->
     <script src="<?php echo $adminBaseUrl; ?>/assets/js/admin-push-manager.js"></script>
     

@@ -6,10 +6,14 @@ class EnvLoader {
 
     private static function loadFile(string $path): void {
         if (!file_exists($path)) {
+            error_log("EnvLoader: .env file not found: {$path}");
             return;
         }
 
+        error_log("EnvLoader: Reading .env file from: {$path}");
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $loadedCount = 0;
+        
         foreach ($lines as $line) {
             $line = trim($line);
             if (!$line || strpos($line, '#') === 0) {
@@ -25,30 +29,36 @@ class EnvLoader {
                 if (preg_match('/^["\'](.*)["\']$/', $value, $matches)) {
                     $value = $matches[1];
                 }
-                if (getenv($key) !== false || isset($_ENV[$key]) || isset(self::$variables[$key])) {
-                    continue;
-                }
-
+                
                 self::$variables[$key] = $value;
                 $_ENV[$key] = $value;
                 putenv("$key=$value");
+                $loadedCount++;
+                
+                if ($key === 'SUPABASE_URL') {
+                    error_log("EnvLoader: Set SUPABASE_URL = {$value}");
+                }
             }
         }
+        
+        error_log("EnvLoader: Loaded {$loadedCount} variables from {$path}");
     }
 
     public static function load($path = null) {
+        error_log("=== EnvLoader::load() called, \$loaded = " . (self::$loaded ? 'true' : 'false'));
+        
         if (self::$loaded) {
+            error_log("=== EnvLoader::load() returning early because already loaded");
             return;
         }
 
         if ($path === null) {
-            $rootEnv = dirname(__DIR__, 3) . '/.env';
-            $path = file_exists($rootEnv) ? $rootEnv : __DIR__ . '/../.env';
+            $adminsEnv = dirname(__DIR__, 2) . '/.env';  // Admins/.env (preferred)
+            $rootEnv = dirname(__DIR__, 3) . '/.env';    // webdevtestin/.env (fallback)
+            $path = file_exists($adminsEnv) ? $adminsEnv : $rootEnv;
         }
 
-        if (getenv('APP_ENV') !== 'production') {
-            error_log("EnvLoader: loading env file from: {$path}");
-        }
+        error_log("=== EnvLoader: loading env file from: {$path}");
 
         if (!file_exists($path)) {
             $examplePath = dirname($path) . '/.env.example';

@@ -31,9 +31,12 @@ if (!$companyId) {
 
 error_log("Fetching vehicles for company: $companyId");
 
+// Load environment variables
+require_once __DIR__ . '/../../includes/env.php';
+
 // Supabase credentials
-$SUPABASE_URL = "https://xerpchdsykqafrsxbqef.supabase.co";
-$SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ";
+$SUPABASE_URL = EnvLoader::get('SUPABASE_URL');
+$SUPABASE_API_KEY = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
 
 try {
     // Fetch vehicles for the specific company only, and only available ones

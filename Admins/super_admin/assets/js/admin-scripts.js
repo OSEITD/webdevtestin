@@ -1,11 +1,14 @@
 // admin-scripts.js
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const supabaseUrl = 'https://xerpchdsykqafrsxbqef.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NjQ5NTcsImV4cCI6MjA2ODM0MDk1N30.g2XzfiG0wwgLUS4on2GbSmxnWAog6tW5Am5SvhBHm5E';
     let supabase = null;
-    if (window.supabase) {
+    if (window.supabaseClient) {
+        supabase = window.supabaseClient;
+    } else if (window.supabase) {
         supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        window.supabaseClient = supabase; // Export for others
     } else {
         console.warn('Supabase library not loaded, some features may not work');
     }
@@ -34,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (debugCloseBtn && debugStatus) {
         debugCloseBtn.addEventListener('click', () => debugStatus.style.display = 'none');
     }
-    
+
     // Toggle-based sidebar (mirrors company app behavior)
     function toggleMenu() {
         if (!sidebar || !overlay) return;
@@ -75,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Menu button click event
     if (menuBtn) {
-        menuBtn.addEventListener('click', function(e) {
+        menuBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             toggleMenu();
         });
@@ -123,17 +126,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Cache-Control': 'no-cache'
                 }
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             if (result.status === 'success') {
                 const activeUsersElement = document.getElementById('activeUsers');
                 const totalUsersElement = document.getElementById('totalUsers');
-                
+
                 if (activeUsersElement) {
                     activeUsersElement.textContent = result.active_users.toLocaleString();
                 }
@@ -180,14 +183,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add event listeners to the new buttons
         document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const userId = this.dataset.id;
                 showMessage('Edit user functionality will be implemented soon.');
             });
         });
-        
+
         document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const userId = this.dataset.id;
                 showMessage('Delete user functionality will be implemented soon.');
             });
@@ -205,10 +208,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedRole = filterRoleSelect.value.toLowerCase();
 
         const filteredUsers = allUsers.filter(user => {
-            const matchesSearch = (user.name || '').toLowerCase().includes(searchTerm) || 
-                                (user.email || '').toLowerCase().includes(searchTerm);
-            const matchesRole = selectedRole === '' || 
-                              (user.role || '').toLowerCase().includes(selectedRole);
+            const matchesSearch = (user.name || '').toLowerCase().includes(searchTerm) ||
+                (user.email || '').toLowerCase().includes(searchTerm);
+            const matchesRole = selectedRole === '' ||
+                (user.role || '').toLowerCase().includes(selectedRole);
             return matchesSearch && matchesRole;
         });
 
@@ -264,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Message box function for showing notifications
-window.showMessage = function(text) {
+window.showMessage = function (text) {
     // Create overlay
     const overlay = document.createElement('div');
     overlay.style.position = 'fixed';
@@ -308,13 +311,13 @@ window.showMessage = function(text) {
     closeButton.style.fontWeight = 'bold';
     closeButton.style.cursor = 'pointer';
     closeButton.style.border = 'none';
-    
+
     // Add hover effects
     closeButton.onmouseover = () => closeButton.style.backgroundColor = '#2563eb';
     closeButton.onmouseout = () => closeButton.style.backgroundColor = '#3b82f6';
-    
+
     // Close functionality
-    closeButton.onclick = function() {
+    closeButton.onclick = function () {
         document.body.removeChild(overlay);
         document.body.removeChild(messageBox);
     };

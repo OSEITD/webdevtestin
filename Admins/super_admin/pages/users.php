@@ -668,6 +668,22 @@ require_once __DIR__ . '/../includes/header.php';
             });
         });
 
+        // Start polling for online users
+        function pollOnlineUsers() {
+            fetch('../api/fetch_online_users.php')
+                .then(res => res.json())
+                .then(json => {
+                    if (json.success && json.data) {
+                        document.dispatchEvent(new CustomEvent('presence_sync', { detail: json.data }));
+                    }
+                })
+                .catch(err => console.error('Error fetching online users:', err));
+        }
+
+        // Poll immediately, then every 30 seconds
+        pollOnlineUsers();
+        setInterval(pollOnlineUsers, 30000);
+
         // Menu functionality (guarded attachments)
         const menuBtn = document.getElementById('menuBtn');
         const closeMenu = document.getElementById('closeMenu');

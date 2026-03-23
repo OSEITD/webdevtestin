@@ -4,7 +4,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 ?>
   <!-- Supabase JS (browser) -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Supabase JS already loaded via header.php -->
 
   <style>
     .modal { display:none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
@@ -112,11 +112,11 @@ require_once __DIR__ . '/../includes/header.php';
 
   <script>
     // ====== CONFIG: Supabase ======
-    const SUPABASE_URL = 'https://xerpchdsykqafrsxbqef.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlcnBjaGRzeWtxYWZyc3hicWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mjc2NDk1NywiZXhwIjoyMDY4MzQwOTU3fQ.LEzV6B20wOKypjnGX6jZMos_HG_9OHOT2OqPrdRVmpQ';
+    const SUPABASE_URL = '<?php echo EnvLoader::get('SUPABASE_URL'); ?>';
+    const SUPABASE_ANON_KEY = '<?php echo EnvLoader::get('SUPABASE_ANON_KEY'); ?>';
     // Use let instead of const to allow redeclaration if included multiple times
     // Use a unique name to avoid conflicts with global 'supabase' identifier
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabaseClient || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Session outlet id from PHP
   const CURRENT_OUTLET_ID = <?php echo isset($outletId) ? json_encode($outletId) : 'null'; ?>;

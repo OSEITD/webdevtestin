@@ -40,11 +40,25 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION[
     session_destroy();
     session_start();
 
-    // Redirect to login
-    header("Location: ../../auth/login.php?error=session_invalid");
+    // Calculate base URL dynamically for portability
+    // This file is at: /path/to/webroot/Admins/super_admin/company-app/includes/init.php
+    // We need to redirect to: /path/to/webroot/Admins/super_admin/auth/login.php (super_admin's login, not company-app's)
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'];
+    
+    // Extract the base path from REQUEST_URI 
+    // e.g., /webdevtestin/Admins/super_admin/company-app/pages/wallet.php → /webdevtestin
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    preg_match('#^(/[^/]*/)#', $requestUri, $matches);
+    $basePath = $matches[1] ?? '/';
+    
+    // Redirect to the SUPER_ADMIN login, not company-app login
+    $loginUrl = $protocol . '://' . $host . $basePath . 'Admins/super_admin/auth/login.php?error=session_invalid';
+    
+    header("Location: {$loginUrl}");
     // Flush buffers and exit to ensure redirect is effective
     while (ob_get_level()) { @ob_end_clean(); }
-    echo '<!doctype html><html><head><meta http-equiv="refresh" content="0;url=../../auth/login.php?error=session_invalid"></head><body>If you are not redirected, <a href="../../auth/login.php?error=session_invalid">login</a>.</body></html>';
+    echo '<!doctype html><html><head><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($loginUrl) . '"></head><body>If you are not redirected, <a href="' . htmlspecialchars($loginUrl) . '">login</a>.</body></html>';
     exit;
 }
 
