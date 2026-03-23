@@ -2,6 +2,7 @@
 $page_title = 'Company - Wallet & Payouts';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/WalletManager.php';
+require_once __DIR__ . '/../../includes/csrf-helper.php';
 
 $companyId = $_SESSION['company_id'] ?? $_SESSION['id'] ?? null;
 if (!$companyId) {
@@ -10,7 +11,17 @@ if (!$companyId) {
 
 $wallet = CompanyWalletManager::getWallet($companyId);
 $availableBalance = $wallet ? floatval($wallet['available_balance']) : 0.00;
-$pendingBalance = $wallet ? floatval($wallet['pending_balance']) : 0.00;
+$pendingBalance = 0.00;
+if ($wallet) {
+    $pendingBalance = floatval($wallet['pending_balance']);
+}
+
+// If the wallet row isn't being updated properly on payout request, compute pending from payout requests.
+$pendingWithdrawalComputed = CompanyWalletManager::getPendingWithdrawals($companyId);
+if ($pendingWithdrawalComputed > $pendingBalance) {
+    $pendingBalance = $pendingWithdrawalComputed;
+}
+
 $totalEarned = $wallet ? floatval($wallet['total_earned']) : 0.00;
 $gatewayEligibleBalance = CompanyWalletManager::getGatewayEligibleBalance($companyId);
 
@@ -301,6 +312,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
     <main class="main-content">
         <div class="wallet-header">
             <h1>Wallet & Payouts</h1>
+            <input type="hidden" id="csrf_token" value="<?php echo htmlspecialchars(CSRFHelper::getToken()); ?>" />
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.5rem;">
                 <button class="request-payout-btn" onclick="openPayoutModal()" <?php echo $hasGatewayPayments ? '' : 'disabled'; ?> >
                     <i class="fas fa-hand-holding-usd"></i> Request Payout
@@ -334,7 +346,12 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
             </div>
         </div>
 
-        <!-- Navigation Tabs -->
+        <!-- Filter + Navigation Tabs -->
+        <div style="margin-bottom: 1rem; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+            <div style="flex:1; min-width:250px;">
+                <input id="walletFilterInput" type="text" placeholder="Search transactions or payouts..." style="width:100%; padding:0.7rem 0.9rem; border:1px solid #cbd5e1; border-radius:8px;" />
+            </div>
+        </div>
         <div class="wallet-tabs">
             <div class="wallet-tab active" onclick="switchThemeTab(event, 'transactions')">Recent Transactions</div>
             <div class="wallet-tab" onclick="switchThemeTab(event, 'payouts')">Payout History</div>
@@ -490,6 +507,26 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
         const clickedTab = event.currentTarget || event.target;
         clickedTab.classList.add('active');
         document.getElementById('tab-' + tabId).classList.add('active');
+
+        // Re-run filtering for visible rows
+        filterWalletRows();
+    }
+
+    function filterWalletRows() {
+        const query = document.getElementById('walletFilterInput')?.value.trim().toLowerCase() || '';
+        const activeTabId = document.querySelector('.wallet-tab.active')?.textContent.trim().toLowerCase() || 'recent transactions';
+
+        const tableSelector = activeTabId.includes('payout') ? '#tab-payouts tbody tr' : '#tab-transactions tbody tr';
+        const rows = document.querySelectorAll(tableSelector);
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (!query || text.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
     }
 
     // Modal Handling
@@ -609,6 +646,12 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
     // Initialize form state
     document.addEventListener('DOMContentLoaded', () => {
         updatePayoutFieldsVisibility();
+        filterWalletRows();
+
+        const filterInput = document.getElementById('walletFilterInput');
+        if (filterInput) {
+            filterInput.addEventListener('input', filterWalletRows);
+        }
     });
 
     // Sidebar toggling (same behavior across company-app pages)

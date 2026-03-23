@@ -20,7 +20,7 @@ class WalletManager {
     public static function getWallet($companyId) {
         try {
             $db = self::getDb();
-            $response = $db->get('company_wallets', "company_id=eq.{$companyId}&limit=1");
+            $response = $db->get('company_wallets', "company_id=eq." . urlencode($companyId) . "&limit=1");
             if (is_array($response) && isset($response[0])) {
                 return $response[0];
             }
@@ -119,12 +119,14 @@ class WalletManager {
             'updated_at' => gmdate('Y-m-d\TH:i:sP')
         ];
 
+        // Wallet balance updates should be driven by database triggers from the wallet_transactions ledger.
+        // However, we apply a direct update to ensure immediate consistency in this implementation.
+        $db = self::getDb();
         try {
-            $db = self::getDb();
             $db->patch('company_wallets', $updateData, "company_id=eq.{$companyId}");
             return true;
         } catch (Exception $e) {
-            error_log("Error updating wallet balance: " . $e->getMessage());
+            error_log("Error updating wallet row after payment: " . $e->getMessage());
             return false;
         }
     }
@@ -182,16 +184,19 @@ class WalletManager {
                 $payoutId = $payoutResult['id'];
             }
 
-            // 2. Adjust wallet
-            $walletUpdate = [
-                'available_balance' => $newAvailable,
-                'pending_balance' => $newPending,
-                'updated_at' => gmdate('Y-m-d\TH:i:sP')
-            ];
-            $db->patch('company_wallets', $walletUpdate, "company_id=eq.{$companyId}");
-
-            // 3. Log ledger transaction
+            // 2. Adjust wallet via ledger and direct row update for consistency
             self::logTransaction($companyId, null, $payoutId, 'payout_debit', floatval($amount), $newAvailable, "Payout requested", $userId);
+
+            try {
+                $db->patch('company_wallets', [
+                    'available_balance' => $newAvailable,
+                    'pending_balance' => $newPending,
+                    'updated_at' => gmdate('Y-m-d\TH:i:sP')
+                ], "company_id=eq.{$companyId}");
+            } catch (Exception $e) {
+                error_log("Error updating company wallet after payout request: " . $e->getMessage());
+                // not failing user action yet, as ledger entry exists, but log for support.
+            }
 
             return ['success' => true, 'message' => 'Payout requested successfully.'];
         } catch (Exception $e) {
@@ -268,8 +273,12 @@ class WalletManager {
             $db->patch('company_payouts', $payoutUpdateData, "id=eq.{$payoutId}");
             
             if (!empty($walletUpdateData)) {
-                $walletUpdateData['updated_at'] = gmdate('Y-m-d\TH:i:sP');
-                $db->patch('company_wallets', $walletUpdateData, "company_id=eq.{$companyId}");
+                try {
+                    $walletUpdateData['updated_at'] = gmdate('Y-m-d\TH:i:sP');
+                    $db->patch('company_wallets', $walletUpdateData, "company_id=eq.{$companyId}");
+                } catch (Exception $e) {
+                    error_log("Error updating wallet balances during payout resolution: " . $e->getMessage());
+                }
             }
             return true;
         } catch (Exception $e) {

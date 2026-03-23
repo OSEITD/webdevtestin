@@ -16,7 +16,7 @@ class CompanyWalletManager {
     public static function getWallet($companyId) {
         try {
             $client = new SupabaseClient();
-            $response = $client->getRecord("company_wallets?company_id=eq.{$companyId}&limit=1", true); // useServiceRole=true
+            $response = $client->getRecord("company_wallets?company_id=eq." . urlencode($companyId) . "&limit=1", true); // useServiceRole=true
             
             $data = static::extractData($response);
             if (is_array($data) && count($data) > 0) {
@@ -74,12 +74,8 @@ class CompanyWalletManager {
             $newPending = floatval($wallet['pending_balance']) + floatval($amount);
 
             // 5. Update wallet balances
-            $updateData = [
-                'available_balance' => $newAvailable,
-                'pending_balance' => $newPending,
-                'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
-            ];
-            $client->put("company_wallets?company_id=eq.{$companyId}", $updateData);
+            // NOTE: Direct updates to company_wallets are blocked by a DB trigger to ensure ledger integrity.
+            // Wallet balances should be updated via wallet_transactions instead.
 
             // 5. Create payout record
             $payoutData = [
@@ -134,7 +130,23 @@ class CompanyWalletManager {
                 'reference' => $payoutId ?: null,
                 'created_by' => $_SESSION['user_id'] ?? null
             ];
-            $client->post('wallet_transactions', $transactionData, true);
+
+            $txResp = $client->post('wallet_transactions', $transactionData, true);
+            $txData = static::extractData($txResp);
+            if (empty($txData) || count($txData) === 0) {
+                // If the ledger entry failed, don't hide the failure behind a successful payout request.
+                return ['success' => false, 'message' => 'Unable to record payout transaction. Please try again or contact support.'];
+            }
+
+            // 7. Update the wallet balances (so Pending Withdrawals and Available Balance reflect the payout request)
+            // Note: the system is designed so the ledger drives the wallet balances, but we must also keep the
+            // wallet row in sync when a payout is requested.
+            $walletUpdate = [
+                'available_balance' => $newAvailable,
+                'pending_balance' => $newPending,
+                'updated_at' => date('c')
+            ];
+            $client->put("company_wallets?id=eq.{$companyId}", $walletUpdate, true);
 
             return ['success' => true, 'message' => 'Payout requested successfully'];
 
@@ -166,7 +178,7 @@ class CompanyWalletManager {
             $gatewayMethods = ['mobile_money', 'bank_transfer'];
             $gatewayMethodsList = implode(',', $gatewayMethods);
             $gatewayResp = $client->getRecord(
-                "payment_transactions?company_id=eq.{$companyId}&status=eq.successful&or=(payment_method.in.({$gatewayMethodsList}),payment_type.in.({$gatewayMethodsList}))&select=id",
+                "payment_transactions?company_id=eq." . urlencode($companyId) . "&status=eq.successful&or=(payment_method.in.({$gatewayMethodsList}),payment_type.in.({$gatewayMethodsList}))&select=id",
                 true
             );
             $gatewayData = static::extractData($gatewayResp);
@@ -195,7 +207,7 @@ class CompanyWalletManager {
 
             // Sum gateway-derived wallet transactions
             $walletResp = $client->getRecord(
-                "wallet_transactions?company_id=eq.{$companyId}&payment_transaction_id=in.({$encodedIds})",
+                "wallet_transactions?company_id=eq." . urlencode($companyId) . "&payment_transaction_id=in.({$encodedIds})",
                 true
             );
             $walletData = static::extractData($walletResp) ?: [];
@@ -209,6 +221,17 @@ class CompanyWalletManager {
                 } elseif ($type === 'commission_debit') {
                     $netGateway -= $amount;
                 }
+            }
+
+            // Include any manual adjustment/refund credits (not tied to a specific payment transaction)
+            // so corrections show up in the available payout balance.
+            $adjustResp = $client->getRecord(
+                "wallet_transactions?company_id=eq.{$companyId}&transaction_type=in.(adjustment_credit,refund_credit)",
+                true
+            );
+            $adjustData = static::extractData($adjustResp) ?: [];
+            foreach ($adjustData as $tx) {
+                $netGateway += floatval($tx['amount'] ?? 0);
             }
 
             // Subtract payout debits (money already paid out) so the balance reflects remaining
@@ -238,7 +261,7 @@ class CompanyWalletManager {
     public static function getTransactions($companyId, $limit = 50) {
         try {
             $client = new SupabaseClient();
-            $endpoint = "wallet_transactions?company_id=eq.{$companyId}&order=created_at.desc&limit={$limit}";
+            $endpoint = "wallet_transactions?company_id=eq." . urlencode($companyId) . "&order=created_at.desc&limit={$limit}";
             error_log("WalletManager: fetching transactions with endpoint: {$endpoint}");
             $response = $client->getRecord($endpoint, true);
             $data = static::extractData($response) ?: [];
@@ -256,12 +279,68 @@ class CompanyWalletManager {
     public static function getPayouts($companyId, $limit = 50) {
         try {
             $client = new SupabaseClient();
-            $response = $client->getRecord("company_payouts?company_id=eq.{$companyId}&order=created_at.desc&limit={$limit}", true);
+            $response = $client->getRecord("company_payouts?company_id=eq." . urlencode($companyId) . "&order=created_at.desc&limit={$limit}", true);
             return static::extractData($response) ?: [];
         } catch (Exception $e) {
             error_log("Error getting payouts for company {$companyId}: " . $e->getMessage());
         }
         return [];
+    }
+
+    /**
+     * Compute pending withdrawals based on payout requests that are not completed/failed/cancelled.
+     * This is used to show the pending withdrawal amount when the wallet row isn't being updated.
+     */
+    public static function applyPayoutStatusUpdate($companyId, $amount, $status) {
+        try {
+            $wallet = self::getWallet($companyId);
+            if (!$wallet) {
+                return false;
+            }
+
+            $updateData = [];
+            if ($status === 'completed') {
+                $updateData['pending_balance'] = max(0, (float)$wallet['pending_balance'] - $amount);
+                $updateData['total_paid_out'] = (float)$wallet['total_paid_out'] + $amount;
+                $updateData['last_payout_at'] = date('c');
+            } elseif (in_array($status, ['failed', 'cancelled'], true)) {
+                $updateData['pending_balance'] = max(0, (float)$wallet['pending_balance'] - $amount);
+                $updateData['available_balance'] = (float)$wallet['available_balance'] + $amount;
+            }
+
+            if (empty($updateData)) {
+                return true;
+            }
+
+            $updateData['updated_at'] = date('c');
+            $client = new SupabaseClient();
+            $client->put("company_wallets?company_id=eq." . urlencode($companyId), $updateData, true);
+
+            return true;
+        } catch (Exception $e) {
+            error_log("Error applying payout status update for company {$companyId}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public static function getPendingWithdrawals($companyId) {
+        try {
+            $client = new SupabaseClient();
+            // Sum payout amounts for requests that are still outstanding.
+            $response = $client->getRecord(
+                "company_payouts?company_id=eq." . urlencode($companyId) . "&status=not.in.(completed,failed,cancelled)&select=amount",
+                true
+            );
+            $rows = static::extractData($response) ?: [];
+            $sum = 0.0;
+            foreach ($rows as $r) {
+                $sum += floatval($r['amount'] ?? 0);
+            }
+            return $sum;
+        } catch (Exception $e) {
+            error_log("Error computing pending withdrawals for company {$companyId}: " . $e->getMessage());
+        }
+        return 0.0;
     }
     
     /**

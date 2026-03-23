@@ -15,15 +15,22 @@ if (!$companyId) {
     exit;
 }
 
+// CSRF protection
+$csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+if (!class_exists('CSRFHelper') || !CSRFHelper::validateToken($csrfToken)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token.']);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
-$amount = $input['amount'] ?? 0;
-$payout_method = $input['payout_method'] ?? 'bank_transfer';
+$amount = isset($input['amount']) ? filter_var($input['amount'], FILTER_VALIDATE_FLOAT) : false;
+$payout_method = trim($input['payout_method'] ?? 'bank_transfer');
 $bankName = $input['bank_name'] ?? '';
 $bankAccountNumber = $input['bank_account_number'] ?? '';
 $bankAccountName = $input['bank_account_name'] ?? '';
 $mobileNumber = $input['mobile_number'] ?? '';
 
-if (empty($amount) || $amount <= 0) {
+if ($amount === false || $amount <= 0) {
     echo json_encode(['success' => false, 'message' => 'Valid amount is required.']);
     exit;
 }
@@ -46,7 +53,7 @@ if ($payout_method === 'bank_transfer') {
     }
 }
 
-// Determine currency from company record (enables non-ZMW setups)
+
 $companyCurrency = 'ZMW';
 try {
     $supabase = new SupabaseClient();
@@ -56,7 +63,7 @@ try {
         $companyCurrency = $companyData['currency'];
     }
 } catch (Exception $e) {
-    // fallback to default; not critical for payout creation
+    
 }
 
 $result = CompanyWalletManager::requestPayout(
@@ -73,7 +80,7 @@ $result = CompanyWalletManager::requestPayout(
     ]
 );
 
-// If payout request succeeded, send a notification email to the company contact email.
+// sending a notification email to the company contact email if the payout if completed.
 if (!empty($result['success']) && $result['success'] === true) {
     try {
         $supabase = new SupabaseClient();

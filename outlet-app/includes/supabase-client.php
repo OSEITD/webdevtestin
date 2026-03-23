@@ -9,7 +9,7 @@ EnvLoader::load();
 
 $supabaseUrl = EnvLoader::get('SUPABASE_URL');
 
-// Prefer the strongest key available for outbound API calls (service role > service > anon)
+
 $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY');
 if (empty($supabaseServiceKey)) {
     $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
@@ -17,7 +17,7 @@ if (empty($supabaseServiceKey)) {
 
 $supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
 
-// If a service key exists, use it for requests; otherwise fall back to anon
+
 if (!empty($supabaseServiceKey)) {
     $supabaseKey = $supabaseServiceKey;
 }

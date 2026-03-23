@@ -1,7 +1,6 @@
 <?php
 
-// Ensure we can access the Supabase HTTP client helper.
-// In this repo the helper is in outlet-app/includes/supabase-client.php.
+
 require_once __DIR__ . '/../outlet-app/includes/supabase-client.php';
 
 class PaymentTransactionDB {
@@ -12,23 +11,27 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Create a new payment transaction record
+     * Creating a new payment transaction record
      * 
      * @param array $data Transaction data
      * @return array Result with success status and transaction ID
      */
     public function createTransaction($data) {
         try {
-            // Calculate commission if not provided
+            
             $commissionPercentage = $data['commission_percentage'] ?? 0;
             $amount = $data['amount'];
-            $commissionAmount = $data['commission_amount'] ?? ($amount * $commissionPercentage / 100);
-            $netAmount = $amount - $commissionAmount;
-            
-            // Calculate VAT (16% for Zambia)
+
+            $commissionPercentage = $data['commission_percentage'] ?? 0;
+            $transactionFee = $data['transaction_fee'] ?? 0;
+            $commissionAmount = $data['commission_amount'] ?? round($amount * $commissionPercentage / 100, 2);
+            $netAmount = $data['net_amount'] ?? ($amount - $commissionAmount);
             $vatPercentage = $data['vat_percentage'] ?? 16.00;
-            $vatAmount = $data['vat_amount'] ?? ($amount * $vatPercentage / 100);
-            
+            $vatAmount = $data['vat_amount'] ?? round($amount * $vatPercentage / 100, 2);
+
+            // total_amount is required by the schema and must be provided.
+            // We populate it using the value passed in or default to amount.
+            // If the DB trigger expects a certain relationship between amount/fee/total, this should match.
             $transactionData = [
                 'tx_ref' => $data['tx_ref'],
                 'company_id' => $data['company_id'],
@@ -36,13 +39,15 @@ class PaymentTransactionDB {
                 'user_id' => $data['user_id'],
                 'parcel_id' => $data['parcel_id'] ?? null,
                 'amount' => $amount,
-                'transaction_fee' => $data['transaction_fee'] ?? 0,
+                'transaction_fee' => $transactionFee,
                 'commission_percentage' => $commissionPercentage,
                 'commission_amount' => $commissionAmount,
                 'net_amount' => $netAmount,
-                'total_amount' => $data['total_amount'],
+                'total_amount' => $data['total_amount'] ?? $amount,
                 'currency' => $data['currency'] ?? 'ZMW',
                 'exchange_rate' => $data['exchange_rate'] ?? 1.0000,
+                'vat_percentage' => $vatPercentage,
+                'vat_amount' => $vatAmount,
                 'original_amount' => $data['original_amount'] ?? null,
                 'original_currency' => $data['original_currency'] ?? null,
                 'payment_method' => $data['payment_method'],
@@ -54,8 +59,6 @@ class PaymentTransactionDB {
                 'customer_phone' => $data['customer_phone'],
                 'payment_link' => $data['payment_link'] ?? null,
                 'redirect_url' => $data['redirect_url'] ?? null,
-                'vat_percentage' => $vatPercentage,
-                'vat_amount' => $vatAmount,
                 'receipt_number' => $data['receipt_number'] ?? null,
                 'fiscal_year' => $data['fiscal_year'] ?? date('Y'),
                 'accounting_period' => $data['accounting_period'] ?? date('Y-m'),
@@ -83,6 +86,9 @@ class PaymentTransactionDB {
                     'data' => $response->data
                 ];
             } else {
+                error_log('PaymentTransactionDB (sql) create transaction failed: HTTP ' . $response->status);
+                error_log('PaymentTransactionDB (sql) create payload: ' . json_encode($transactionData));
+                error_log('PaymentTransactionDB (sql) create response: ' . json_encode($response));
                 return [
                     'success' => false,
                     'error' => 'Failed to create transaction'
@@ -97,15 +103,15 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Update transaction status after payment verification
+     * Updating transaction status after payment verification
      * 
      * @param string $txRef Transaction reference
-     * @param array $verificationData Data from Flutterwave verification
-     * @return array Result with success status
+     * @param array $verificationData 
+     * @return array 
      */
     public function verifyTransaction($txRef, $verificationData) {
         try {
-            // Fetch existing transaction to avoid double-processing
+            // Fetching existing transaction to avoid double-processing
             $supabaseUrl = EnvLoader::get('SUPABASE_URL');
             $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
 
@@ -139,7 +145,7 @@ class PaymentTransactionDB {
             }
 
             $updateData = [
-                // This table schema expects lenco_* columns (not flutterwave_*)
+            
                 'lenco_tx_id' => $verificationData['transaction_id'],
                 'lenco_tx_ref' => $verificationData['tx_ref'] ?? null,
                 'lenco_status' => $verificationData['status'],
@@ -151,7 +157,7 @@ class PaymentTransactionDB {
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
-            // Normalize status to avoid case mismatches (Lenco may return 'success' or 'Successful')
+           
             $normalizedStatus = strtolower(trim((string)($verificationData['status'] ?? '')));
             $successStatuses = ['successful', 'success', 'completed', 'paid'];
 
@@ -163,20 +169,19 @@ class PaymentTransactionDB {
                 $updateData['failed_at'] = date('Y-m-d H:i:s');
                 $updateData['error_message'] = $verificationData['error_message'] ?? 'Payment failed';
             } else {
-                // Keep the status as-is for pending / processing states
+             
                 $updateData['status'] = $normalizedStatus ?: ($updateData['status'] ?? 'pending');
             }
-            
-            // Add card details if available
+       
             if (isset($verificationData['card'])) {
                 $updateData['card_last4'] = $verificationData['card']['last_4digits'] ?? null;
                 $updateData['card_type'] = $verificationData['card']['type'] ?? null;
                 $updateData['card_bin'] = $verificationData['card']['first_6digits'] ?? null;
             }
             
-            // Update transaction via direct REST call (Supabase PHP client uses /rest not /rest/v1 in this version)
+           
             $updateUrl = $restBase . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
-            // Debug: log which keys we're sending to Supabase (helps diagnose schema mismatch)
+           
             error_log('PaymentTransactionDB verify updateData keys: ' . implode(', ', array_keys($updateData)));
             error_log('PaymentTransactionDB verify updateData JSON: ' . json_encode($updateData));
             $ch = curl_init($updateUrl);
@@ -235,7 +240,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Update transaction status (for COD, cash, or manual status updates)
+     * Updating transaction status (for COD, cash, or manual status updates)
      * 
      * @param string $txRef Transaction reference (or parcel_id for COD lookup)
      * @param string $newStatus New status (successful, failed, cancelled, etc.)
@@ -249,7 +254,7 @@ class PaymentTransactionDB {
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
-            // Set paid_at or failed_at based on status
+            // Setting paid_at or failed_at based on status
             if ($newStatus === 'successful' && !isset($additionalData['paid_at'])) {
                 $updateData['paid_at'] = date('Y-m-d H:i:s');
             } else if ($newStatus === 'failed' && !isset($additionalData['failed_at'])) {
@@ -258,7 +263,7 @@ class PaymentTransactionDB {
                 $updateData['error_message'] = $additionalData['error_message'] ?? 'Payment cancelled';
             }
             
-            // Merge additional data
+         
             $updateData = array_merge($updateData, $additionalData);
             
             $response = $this->supabase
@@ -289,7 +294,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Update COD payment status when parcel is delivered
+     * Updating COD payment status when parcel is delivered
      * 
      * @param string $parcelId Parcel UUID
      * @return array Result with success status
@@ -334,7 +339,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Get transaction by reference
+     * Getting transaction by reference
      * 
      * @param string $txRef Transaction reference
      * @return array Transaction data or error
@@ -368,7 +373,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Get transaction by Flutterwave transaction ID
+     * Getting transaction by Flutterwave transaction ID
      * 
      * @param string $flwTxId Flutterwave transaction ID
      * @return array Transaction data or error
@@ -569,7 +574,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Generate receipt number
+   
      * 
      * @param string $companyId Company UUID
      * @return string Receipt number
@@ -578,7 +583,6 @@ class PaymentTransactionDB {
         $year = date('Y');
         $month = date('m');
         
-        // Get count of transactions this month for this company
         try {
             $response = $this->supabase
                 ->from('payment_transactions')
@@ -652,7 +656,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Get pending settlements
+     * Getting pending settlements
      * 
      * @param string $companyId Company UUID
      * @return array Pending settlement transactions
@@ -689,7 +693,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Mask mobile number for security
+     * Masking mobile number for security
      * 
      * @param string $phoneNumber Phone number
      * @return string Masked phone number
@@ -705,7 +709,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Get daily revenue for a company
+     * Getting daily revenue for a company
      * 
      * @param string $companyId Company UUID
      * @param string $date Date in Y-m-d format
@@ -745,7 +749,7 @@ class PaymentTransactionDB {
     }
     
     /**
-     * Get payment method distribution
+     * Getting payment method distribution
      * 
      * @param string $companyId Company UUID
      * @param int $daysBack Number of days to look back

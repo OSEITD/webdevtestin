@@ -342,8 +342,15 @@ class SupabaseClient {
         return $this->makeRequest($url, 'PATCH', $data);
     }
 
+    /**
+     * Alias for update() (legacy name used in some code paths).
+     *
+     * @param string $endpoint
+     * @param array  $data
+     * @param string $query
+     * @return mixed
+     */
     public function put($endpoint, $data, $query = '') {
-        // Alias for update() - performs PATCH operation
         return $this->update($endpoint, $data, $query);
     }
 

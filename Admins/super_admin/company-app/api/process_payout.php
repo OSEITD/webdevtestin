@@ -15,6 +15,12 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
     exit;
 }
 
+$csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+if (!class_exists('CSRFHelper') || !CSRFHelper::validateToken($csrfToken)) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid CSRF token.']);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
 $payoutId = $input['payout_id'] ?? null;
 $companyId = $input['company_id'] ?? null;
@@ -34,14 +40,37 @@ if (!in_array($status, $allowedStatuses, true)) {
     exit;
 }
 
+$transitionRules = [
+    'pending' => ['approved', 'processing', 'failed', 'cancelled'],
+    'approved' => ['processing', 'completed', 'failed', 'cancelled'],
+    'processing' => ['completed', 'failed', 'cancelled'],
+];
+
 try {
     // Fetching the existing payout to know the amount and company
     $supabase = new SupabaseClient();
     $payoutResp = $supabase->getRecord("company_payouts?id=eq.{$payoutId}", true);
     $payoutData = is_object($payoutResp) ? ($payoutResp->data[0] ?? null) : ($payoutResp[0] ?? null);
 
-    if (empty($payoutData) || ($payoutData['company_id'] ?? null) !== $companyId) {
+    if (empty($payoutData)) {
         throw new Exception('Payout request not found.');
+    }
+
+    // enforce server-trust company id to avoid client override
+    $companyId = $payoutData['company_id'] ?? null;
+    if (empty($companyId)) {
+        throw new Exception('Payout request missing company association.');
+    }
+
+    $currentStatus = $payoutData['status'] ?? 'pending';
+    if (in_array($currentStatus, ['completed', 'failed', 'cancelled'], true)) {
+        echo json_encode(['status' => 'error', 'message' => 'Payout request already finalized.']);
+        exit;
+    }
+
+    if (isset($transitionRules[$currentStatus]) && !in_array($status, $transitionRules[$currentStatus], true)) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid payout state transition from ' . $currentStatus . ' to ' . $status]);
+        exit;
     }
 
     $amount = floatval($payoutData['amount'] ?? 0);
@@ -71,6 +100,9 @@ try {
 
     callSupabaseWithServiceKey("company_payouts?id=eq.{$payoutId}", 'PATCH', $updateData);
 
+    // Keep wallet row synced in a single method and avoid client-side direct patch logic.
+    CompanyWalletManager::applyPayoutStatusUpdate($companyId, $amount, $status);
+
     // Updatin the wallet balances for completed / failed/cancelled payouts ensuring that the wallet remains consistent even if the payout request itself did not adjust balances.
     $wallet = CompanyWalletManager::getWallet($companyId);
     if ($wallet && $amount > 0) {
@@ -98,8 +130,9 @@ try {
         }
 
         if (!empty($walletUpdate)) {
-            $walletUpdate['updated_at'] = $now;
-            callSupabaseWithServiceKey("company_wallets?company_id=eq.{$companyId}", 'PATCH', $walletUpdate);
+            // Persist updated wallet balances so the UI reflects pending/completed payouts.
+            // If the DB uses triggers to reconcile ledger entries, this will still keep the row in sync.
+            callSupabaseWithServiceKey("company_wallets?id=eq.{$companyId}", 'PATCH', $walletUpdate);
         }
     }
 

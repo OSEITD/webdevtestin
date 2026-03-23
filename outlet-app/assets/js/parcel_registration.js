@@ -430,57 +430,44 @@ function setupFeeCalculation() {
     const cashAmountInput = document.getElementById('cashAmount');
     const codAmountInput = document.getElementById('codAmount');
     const dimensionsInput = document.getElementById('dimensions');
-    
-    // Track if user has manually overridden the delivery fee
+
+    // The delivery fee can be entered manually by the user.
+    // Auto-calculation will only update it if the user has not overridden it.
     let userOverrodeDeliveryFee = false;
-    
     if (deliveryFeeInput) {
         deliveryFeeInput.addEventListener('focus', function() {
             userOverrodeDeliveryFee = true;
         });
     }
     
-    // Auto-calculate delivery fee when weight, dimensions, or delivery option change
-    [weightInput, dimensionsInput, deliveryOption].forEach(input => {
-        if (input) {
-            input.addEventListener('change', function() {
-                userOverrodeDeliveryFee = false; // Reset override on relevant field changes
-                autoCalculateDeliveryFee();
-            });
-            input.addEventListener('input', debounce(function() {
-                userOverrodeDeliveryFee = false;
-                autoCalculateDeliveryFee();
-            }, 500));
-        }
-    });
-    
-    // Update summary when insurance or delivery fee changes
+    // Update summary when insurance, delivery fee, cash, or COD change
     [insuranceInput, deliveryFeeInput, cashAmountInput, codAmountInput].forEach(input => {
         if (input) {
             input.addEventListener('change', updatePaymentSummarySection);
             input.addEventListener('input', debounce(updatePaymentSummarySection, 300));
         }
     });
+
+    // Do not auto-calculate delivery fee; value is entered manually by the user.
+    updatePaymentSummarySection();
     
-    // Initial calculation
-    autoCalculateDeliveryFee();
-    
-    // Auto-calculate delivery fee using billing config
+    // Calculate delivery fee locally based on the billing config (same logic as the server used to).
+    // If the user edits the delivery fee input manually, we respect their override.
     function autoCalculateDeliveryFee() {
         const config = window.BILLING_CONFIG;
         if (!config) return;
-        
+
         const weight = parseFloat(weightInput?.value) || 0;
         if (weight <= 0 && !userOverrodeDeliveryFee) {
             if (deliveryFeeInput) deliveryFeeInput.value = '';
             updatePaymentSummarySection();
             return;
         }
-        
+
         const option = deliveryOption?.value || 'standard';
         const parcelValue = parseFloat(valueInput?.value) || 0;
         const insurance = parseFloat(insuranceInput?.value) || 0;
-        
+
         // Parse dimensions
         let length = 0, width = 0, height = 0;
         const dimStr = dimensionsInput?.value || '';
@@ -492,47 +479,51 @@ function setupFeeCalculation() {
                 height = parseFloat(dims[2]);
             }
         }
-        
-        // Calculate using local billing config (same logic as server)
+
         const deliveryOptions = config.additional_rules?.delivery_options || {};
         let baseFee = config.base_rate;
         if (deliveryOptions[option]) {
             baseFee = deliveryOptions[option].base_fee || config.base_rate;
         }
-        
+
         let weightFee = weight * config.rate_per_kg;
         let volumetricFee = 0;
-        
+
         if (length > 0 && width > 0 && height > 0) {
             const volumetricWeight = (length * width * height) / config.volumetric_divisor;
             const chargeableWeight = Math.max(weight, volumetricWeight);
             volumetricFee = (chargeableWeight - weight) * config.rate_per_kg;
             weightFee = chargeableWeight * config.rate_per_kg;
         }
-        
+
         let insuranceFee = 0;
         if (insurance > 0) {
             const insuranceRate = config.additional_rules?.insurance_rate || 0.02;
             insuranceFee = Math.max(parcelValue, insurance) * insuranceRate;
         }
-        
+
         let total = baseFee + weightFee + volumetricFee + insuranceFee;
         const minFee = config.additional_rules?.min_fee || 0;
         if (minFee > 0 && total < minFee) {
             total = minFee;
         }
-        
+
         total = Math.round(total * 100) / 100;
-        
+
         if (!userOverrodeDeliveryFee && deliveryFeeInput) {
             deliveryFeeInput.value = total.toFixed(2);
-            // Update help text to show breakdown
-            const helpEl = document.getElementById('deliveryFeeHelp');
-            if (helpEl) {
-                helpEl.textContent = `Base: K${baseFee.toFixed(0)} + Weight: K${weightFee.toFixed(0)}${volumetricFee > 0 ? ' + Vol: K' + volumetricFee.toFixed(0) : ''}${insuranceFee > 0 ? ' + Ins: K' + insuranceFee.toFixed(0) : ''}`;
-            }
         }
-        
+
+        const helpEl = document.getElementById('deliveryFeeHelp');
+        if (helpEl) {
+            const parts = [];
+            parts.push(`Base: K${baseFee.toFixed(0)}`);
+            if (weightFee) parts.push(`Weight: K${weightFee.toFixed(0)}`);
+            if (volumetricFee) parts.push(`Vol: K${volumetricFee.toFixed(0)}`);
+            if (insuranceFee) parts.push(`Ins: K${insuranceFee.toFixed(0)}`);
+            helpEl.textContent = parts.join(' + ');
+        }
+
         updatePaymentSummarySection();
     }
 }
@@ -1273,12 +1264,17 @@ function validateForm() {
             field?.classList.remove('error');
         }
     });
-    // Delivery fee must be > 0
+    // Delivery fee is computed by the server and may be 0 at the time of submission.
     const deliveryFee = document.getElementById('deliveryFee');
-    if (deliveryFee && (parseFloat(deliveryFee.value) <= 0 || !deliveryFee.value)) {
-        deliveryFee.classList.add('error');
-        isValid = false;
-        message = 'Delivery fee must be greater than zero.';
+    if (deliveryFee) {
+        const feeValue = parseFloat(deliveryFee.value);
+        if (Number.isNaN(feeValue) || feeValue < 0) {
+            deliveryFee.classList.add('error');
+            isValid = false;
+            message = 'Invalid delivery fee value.';
+        } else {
+            deliveryFee.classList.remove('error');
+        }
     }
     
     // Validate trip-destination compatibility

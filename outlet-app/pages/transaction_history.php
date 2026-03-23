@@ -151,6 +151,26 @@ if (!empty($userIds)) {
             <div class="dashboard-content">
                 <div class="activity-table-wrapper" id="transactionTableWrapper">
                     <div class="form-section">
+                        <div id="txnFilterPanel" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px;">
+                            <input id="txnFilterInput" type="search" placeholder="Search reference, customer, phone, amount, status" style="flex:1; min-width:220px; padding:8px 10px; border:1px solid #ccc; border-radius:6px;">
+                            <select id="txnStatusFilter" style="padding:8px 10px; border:1px solid #ccc; border-radius:6px;">
+                                <option value="">All statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="paid">Paid</option>
+                                <option value="completed">Completed</option>
+                                <option value="failed">Failed</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="refunded">Refunded</option>
+                            </select>
+                            <select id="txnMethodFilter" style="padding:8px 10px; border:1px solid #ccc; border-radius:6px;">
+                                <option value="">All methods</option>
+                                <option value="mobile_money">Mobile Money</option>
+                                <option value="card">Card</option>
+                                <option value="cash">Cash</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <button id="txnFilterClear" type="button" style="padding:8px 11px; border:1px solid #888; background:#fff; border-radius:6px; cursor:pointer;">Clear</button>
+                        </div>
                         <table class="recent-activity-table data-table" style="min-width:900px;">
                         <thead>
                             <tr>
@@ -307,7 +327,40 @@ if (!empty($userIds)) {
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.txn-row').forEach(row => {
+        const txnRows = Array.from(document.querySelectorAll('.txn-row'));
+
+        function applyTxnFilter() {
+            const query = document.getElementById('txnFilterInput').value.trim().toLowerCase();
+            const status = document.getElementById('txnStatusFilter').value.trim().toLowerCase();
+            const method = document.getElementById('txnMethodFilter').value.trim().toLowerCase();
+
+            txnRows.forEach(row => {
+                const data = JSON.parse(row.dataset.txn || '{}');
+                const text = [
+                    data.tx_ref, data.receipt_number, data.customer_name, data.customer_phone,
+                    data.payment_method, data.payment_type, data.mobile_network, data.status,
+                    data.parcel_id, data.staff_name
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                const matchesQuery = !query || text.includes(query);
+                const matchesStatus = !status || (data.status || '').toLowerCase().includes(status);
+                const matchesMethod = !method || (data.payment_method || '').toLowerCase().includes(method) || (data.payment_type || '').toLowerCase().includes(method);
+
+                row.style.display = (matchesQuery && matchesStatus && matchesMethod) ? '' : 'none';
+            });
+        }
+
+        document.getElementById('txnFilterInput').addEventListener('input', applyTxnFilter);
+        document.getElementById('txnStatusFilter').addEventListener('change', applyTxnFilter);
+        document.getElementById('txnMethodFilter').addEventListener('change', applyTxnFilter);
+        document.getElementById('txnFilterClear').addEventListener('click', function() {
+            document.getElementById('txnFilterInput').value = '';
+            document.getElementById('txnStatusFilter').value = '';
+            document.getElementById('txnMethodFilter').value = '';
+            applyTxnFilter();
+        });
+
+        txnRows.forEach(row => {
             row.addEventListener('click', function() {
                 try {
                     const txn = JSON.parse(this.dataset.txn);

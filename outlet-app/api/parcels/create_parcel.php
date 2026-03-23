@@ -3,9 +3,20 @@ require_once __DIR__ . '/../../includes/security_headers.php';
 SecurityHeaders::apply();
 
 header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
+$allowedOrigins = [
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://localhost:5500',
+    'http://localhost:3000'
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: {$origin}");
+} else {
+    header("Access-Control-Allow-Origin: http://localhost");
+}
 header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-TOKEN");
 require_once __DIR__ . '/../../includes/session_manager.php';
 initSession();
 
@@ -596,6 +607,7 @@ try {
     'delivery_option' => $input['deliveryOption'],
     'declared_value' => isset($input['declaredValue']) ? (float)$input['declaredValue'] : 0,
     'parcel_value' => isset($input['declaredValue']) ? (float)$input['declaredValue'] : 0,
+    // Delivery fee is calculated server-side to prevent tampering.
     'delivery_fee' => isset($input['deliveryFee']) ? (float)$input['deliveryFee'] : 0,
         'insurance_amount' => isset($input['insuranceAmount']) ? (float)$input['insuranceAmount'] : 0,
         'cod_amount' => isset($input['codAmount']) ? (float)$input['codAmount'] : 0,
@@ -632,6 +644,7 @@ try {
     $parcelData['parcel_length'] = $parcelLength;
     $parcelData['parcel_width'] = $parcelWidth;
     $parcelData['parcel_height'] = $parcelHeight;
+
     $parcelData['estimated_delivery_date'] = $estimatedDeliveryDate ?? null;
     $parcelData['barcode_url'] = $barcodeUrl ?? null;
     $parcelData['nrc'] = $input['senderNRC'] ?? null;
@@ -851,7 +864,8 @@ try {
         $paymentDB = new PaymentTransactionDB();
         
         //  total amount based on payment method
-        $deliveryFee = (float)($input['deliveryFee'] ?? 0);
+        // Use the server-calculated delivery fee to prevent client-side tampering.
+        $deliveryFee = $parcelData['delivery_fee'] ?? 0;
         $insuranceAmount = (float)($input['insuranceAmount'] ?? 0);
         $codAmount = (float)($input['codAmount'] ?? 0);
         $cashAmount = (float)($input['cashAmount'] ?? 0);
@@ -947,9 +961,6 @@ try {
                 'cash_amount' => $cashAmount,
                 'delivery_option' => $input['deliveryOption'] ?? 'standard',
                 'payment_provider' => $paymentProvider,
-                'commission_percentage' => $companyCommissionPercent,
-                'commission_amount' => $commissionAmount,
-                'net_amount' => $netAmount,
                 'payment_note' => $paymentMethod === 'cash' ? 'Paid at outlet' : 
                                 ($paymentMethod === 'cod' ? 'To be paid on delivery' : 'Online payment pending')
             ]
