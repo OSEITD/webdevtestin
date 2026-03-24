@@ -57,9 +57,12 @@ error_log('DEBUG login: supabaseKey source=' . (getenv('SUPABASE_SERVICE_ROLE_KE
 
 $error = '';
 $errorType = '';
+$debugInfo = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $host = $_SERVER['HTTP_HOST'];
+  error_log('Login POST received: ' . date('c'));
+  error_log('POST payload: ' . json_encode($_POST));
   // Extract subdomain from the current URL path instead of host
   $path = $_SERVER['REQUEST_URI'];
   $pathParts = explode('/', $path);
@@ -117,12 +120,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Defensive checks: ensure we decoded JSON and have an array
   if (!is_array($authData)) {
     error_log("Auth decode failed or returned non-array: " . var_export($response, true));
+    $debugInfo = 'Invalid JSON from Supabase : ' . substr($response ?? '', 0, 500);
     $error = "Unable to connect to the server. Please check your internet connection and try again.";
     $errorType = 'connection';
   } elseif (isset($authData['error'])) {
     $loginError = $authData['error'] ?? 'Unknown error';
     $rawError = $authData['error_description'] ?? $loginError;
+    $debugInfo = 'Supabase auth error: ' . $rawError . ' (code: ' . ($authData['status'] ?? 'n/a') . ')';
     error_log("Login Error: " . $rawError);
+    error_log("Full auth response on error: " . json_encode($authData));
 
     // Friendly feedback plus useful debug hint for hosted env
     if (stripos($rawError, 'Invalid login credentials') !== false || stripos($rawError, 'invalid email or password') !== false) {
@@ -279,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log("User ID: " . ($userId ?? 'NULL'));
 
     if (!$userId) {
+      $debugInfo = 'No user ID after fallback; authData keys: ' . json_encode(array_keys($authData));
       error_log("No user ID in response after all fallback attempts.");
       if (empty($accessToken)) {
         $error = "Invalid email or password. Please check your credentials and try again.";
@@ -600,6 +607,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="toast-notification error" id="errorToast">
             <i class="fas fa-exclamation-triangle"></i>
             <span><?= htmlspecialchars($error) ?></span>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($debugInfo)): ?>
+        <div class="toast-notification info" id="debugToast" style="background: #1d2a42; color: #fff;">
+            <i class="fas fa-info-circle"></i>
+            <span>Debug: <?= htmlspecialchars($debugInfo) ?></span>
         </div>
     <?php endif; ?>
 
