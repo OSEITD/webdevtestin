@@ -81,6 +81,37 @@ function generate_uuid() {
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
+function sendEarlyResponse(array $response) {
+    // Return JSON immediately to client, then continue processing in background.
+    ignore_user_abort(true);
+
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        header('Cache-Control: no-cache');
+        header('Connection: close');
+    }
+
+    $payload = json_encode($response);
+    if ($payload === false) {
+        $payload = json_encode(['success' => false, 'error' => 'Failed to encode response']);
+    }
+
+    // Use fastcgi_finish_request when available to close connection early
+    if (function_exists('fastcgi_finish_request')) {
+        echo $payload;
+        header('Content-Length: ' . strlen($payload));
+        ob_flush();
+        flush();
+        fastcgi_finish_request();
+    } else {
+        echo $payload;
+        if (ob_get_length()) {
+            ob_flush();
+        }
+        flush();
+    }
+}
+
 function uploadPhotoToSupabaseStorage($file, $bucket = 'parcel-photos') {
     
     require_once __DIR__ . '/../../config/supabase_config.php';
@@ -1042,6 +1073,9 @@ try {
     }
 
     
+    // Send success response immediately so the user is not waiting on slower notifications.
+    sendEarlyResponse($response);
+
     try {
         $notificationHelper = new NotificationHelper();
         
@@ -1136,7 +1170,7 @@ try {
         $response['email_error'] = 'Email notification failed but parcel created successfully';
     }
 
-    echo json_encode($response);
+    exit;
 
 } catch (Exception $e) {
     error_log('DEBUG: Exception: ' . $e->getMessage());

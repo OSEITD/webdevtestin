@@ -525,10 +525,16 @@ function resetPaymentState(specificButtonId = null) {
 
 
 function showPaymentSuccessMessage(reference, paymentData) {
+    // Guard against duplicate success messages
+    if (document.querySelector('.payment-success-notification')) {
+        console.warn('Payment success message already displayed, skipping duplicate.');
+        return;
+    }
+
     const amount = paymentData?.amount || lencoPaymentState.amount;
     const type = paymentData?.type || lencoPaymentState.method;
     
-    //  success notification
+    // successful notification
     const notification = document.createElement('div');
     notification.className = 'payment-success-notification';
     notification.innerHTML = `

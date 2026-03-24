@@ -179,7 +179,7 @@ class SupabaseClient {
 
     public function __construct($url, $key) {
         if (empty($key)) {
-            throw new Exception("API key cannot be empty");
+            error_log("SupabaseClient constructed with empty API key; requests may fail if a key is required.");
         }
         $this->url = rtrim($url, '/');
         $this->key = trim($key);
@@ -412,7 +412,12 @@ function callSupabase($endpoint, $query = '') {
 }
 
 function callSupabaseWithServiceKey($endpoint, $method = 'GET', $data = null, $customHeaders = []) {
-    global $supabaseUrl, $supabaseServiceKey;
+    global $supabaseUrl, $supabaseServiceKey, $supabaseKey;
+
+    if (empty($supabaseServiceKey)) {
+        error_log('callSupabaseWithServiceKey: SUPABASE_SERVICE_KEY/SERVICE_ROLE_KEY missing; falling back to SUPABASE_ANON_KEY for this request.');
+        $supabaseServiceKey = $supabaseKey;
+    }
 
     $client = new SupabaseClient($supabaseUrl, $supabaseServiceKey);
 

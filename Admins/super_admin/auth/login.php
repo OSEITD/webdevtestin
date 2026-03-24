@@ -76,6 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Supabase sign-in endpoint
   $authUrl = "$supabaseUrl/auth/v1/token?grant_type=password";
 
+  // Use the public ANON key specifically for auth/token requests (matches Supabase client behaviour)
+  $authApikey = getenv('SUPABASE_ANON_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
+  if (empty($authApikey)) {
+    // fallback to whichever key is available but log it
+    $authApikey = $supabaseKey;
+    error_log('Warning: SUPABASE_ANON_KEY not found; using fallback key for auth request.');
+  }
+
   $payload = json_encode([
     'email' => $email,
     'password' => $password
@@ -85,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
   curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "apikey: $supabaseKey",
+    "apikey: $authApikey",
     "Content-Type: application/json"
   ]);
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
@@ -125,35 +133,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Getting access token and user info (use null coalescing to avoid undefined index warnings)
     $accessToken = $authData['access_token'] ?? null;
     $refreshToken = $authData['refresh_token'] ?? null; // Store refresh token
-    $userId = null;
-    if (isset($authData['user']) && is_array($authData['user'])) {
-      $userId = $authData['user']['id'] ?? null;
+
+    // Robust extractor for user ID: Supabase responses can vary by client version
+    function extractUserIdFromAuthData($authData) {
+      if (!is_array($authData)) return null;
+      // Common shapes to check
+      $paths = [
+        ['user','id'], // { user: { id: ... } }
+        ['data','user','id'], // { data: { user: { id: ... } } }
+        ['session','user','id'], // { session: { user: { id: ... } } }
+        ['data','id'], // { data: { id: ... } }
+        ['id'] // { id: ... }
+      ];
+
+      foreach ($paths as $path) {
+        $cursor = $authData;
+        $found = true;
+        foreach ($path as $key) {
+          if (!is_array($cursor) || !array_key_exists($key, $cursor)) {
+            $found = false;
+            break;
+          }
+          $cursor = $cursor[$key];
+        }
+        if ($found && !empty($cursor)) return $cursor;
+      }
+      return null;
+    }
+
+    $userId = extractUserIdFromAuthData($authData);
+
+    // Log the authData structure lightly to help hosted debug (first-level keys only)
+    error_log('Auth response keys: ' . json_encode(array_keys(is_array($authData) ? $authData : [])));
+
+    function supabaseGetJson($url, $accessToken, $supabaseKey) {
+      $ch = curl_init($url);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer $accessToken",
+        "apikey: $supabaseKey",
+        "Content-Type: application/json"
+      ]);
+      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+      curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+      $resp = curl_exec($ch);
+      $err = curl_error($ch);
+      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+      curl_close($ch);
+      if ($err || !$resp) {
+        error_log("supabaseGetJson failed ($url): " . ($err ?: 'empty response') . " http_code=" . ($httpCode ?: 'N/A'));
+        return null;
+      }
+      $data = json_decode($resp, true);
+      if (JSON_ERROR_NONE !== json_last_error()) {
+        error_log('supabaseGetJson invalid JSON response for ' . $url . ': ' . json_last_error_msg());
+        return null;
+      }
+      return $data;
     }
 
     // Fallback: if Supabase /token did not include user payload, get user from auth endpoint
     if (!$userId && $accessToken) {
       $userUrl = "$supabaseUrl/auth/v1/user";
-      $chUser = curl_init($userUrl);
-      curl_setopt($chUser, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($chUser, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer $accessToken",
-        "apikey: $supabaseKey",
-        "Content-Type: application/json"
-      ]);
-      curl_setopt($chUser, CURLOPT_CONNECTTIMEOUT, 10);
-      curl_setopt($chUser, CURLOPT_TIMEOUT, 30);
-      $userResponse = curl_exec($chUser);
-      $userCurlError = curl_error($chUser);
-      curl_close($chUser);
-
-      if (!$userCurlError && $userResponse) {
-        $userData = json_decode($userResponse, true);
-        if (is_array($userData) && isset($userData['id'])) {
-          $userId = $userData['id'];
-          error_log("Fallback user lookup success (auth/v1/user) - User ID: $userId");
-        }
-      } else {
-        error_log("Fallback user lookup failed: " . ($userCurlError ?: 'empty response'));
+      $userData = supabaseGetJson($userUrl, $accessToken, $supabaseKey);
+      if (!empty($userData['id'])) {
+        $userId = $userData['id'];
+        error_log("Fallback user lookup success (auth/v1/user) - User ID: $userId");
       }
     }
 
@@ -177,19 +222,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Second fallback: use profile lookup by email when still missing userId
     if (!$userId && !empty($email)) {
       $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id&email=eq." . urlencode($email);
-      $profileContext = stream_context_create([
-        'http' => [
-          'method' => 'GET',
-          'header' => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
-        ]
-      ]);
-      $profileData = @file_get_contents($profileUrl, false, $profileContext);
-      if ($profileData) {
-        $profiles = json_decode($profileData, true);
-        if (!empty($profiles) && !empty($profiles[0]['id'])) {
-          $userId = $profiles[0]['id'];
-          error_log("Fallback profile lookup success by email: $userId");
-        }
+      $profilesObj = supabaseGetJson($profileUrl, $accessToken ?: $supabaseKey, $supabaseKey);
+      if (!empty($profilesObj[0]['id'])) {
+        $userId = $profilesObj[0]['id'];
+        error_log("Fallback profile lookup success by email: $userId");
       }
     }
 
