@@ -166,14 +166,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Log the authData structure lightly to help hosted debug (first-level keys only)
     error_log('Auth response keys: ' . json_encode(array_keys(is_array($authData) ? $authData : [])));
 
-    function supabaseGetJson($url, $accessToken, $supabaseKey) {
+    function supabaseGetJson($url, $accessToken = null, $supabaseKey = null) {
+      $headers = ["Content-Type: application/json"];
+      if (!empty($accessToken)) {
+        $headers[] = "Authorization: Bearer $accessToken";
+      }
+      if (!empty($supabaseKey)) {
+        $headers[] = "apikey: $supabaseKey";
+      }
+
       $ch = curl_init($url);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer $accessToken",
-        "apikey: $supabaseKey",
-        "Content-Type: application/json"
-      ]);
+      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
       curl_setopt($ch, CURLOPT_TIMEOUT, 30);
       $resp = curl_exec($ch);
@@ -189,19 +193,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log('supabaseGetJson invalid JSON response for ' . $url . ': ' . json_last_error_msg());
         return null;
       }
-      return $data;
+      return ['status' => $httpCode, 'data' => $data];
     }
 
     // Fallback: if Supabase /token did not include user payload, get user from auth endpoint
     if (!$userId && $accessToken) {
       $userUrl = "$supabaseUrl/auth/v1/user";
-      $userData = supabaseGetJson($userUrl, $accessToken, $supabaseKey);
-      if (!empty($userData['id'])) {
-        $userId = $userData['id'];
+      $userDataResp = supabaseGetJson($userUrl, $accessToken, $supabaseKey);
+      if (!empty($userDataResp['data']) && isset($userDataResp['data']['id'])) {
+        $userId = $userDataResp['data']['id'];
         error_log("Fallback user lookup success (auth/v1/user) - User ID: $userId");
+      } elseif (!empty($userDataResp['data']) && is_array($userDataResp['data']) && isset($userDataResp['data'][0]['id'])) {
+        $userId = $userDataResp['data'][0]['id'];
+        error_log("Fallback user lookup success (auth/v1/user first item) - User ID: $userId");
       }
     }
 
+    // Fallback: if still not found, query Supabase admin users endpoint using service role key
+    if (!$userId && !empty($email)) {
+      $adminKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_KEY');
+      if (!empty($adminKey)) {
+        $adminUserUrl = "$supabaseUrl/auth/v1/admin/users?email=eq." . urlencode($email);
+        $adminUserResp = supabaseGetJson($adminUserUrl, null, $adminKey);
+        if (!empty($adminUserResp['data']) && is_array($adminUserResp['data']) && !empty($adminUserResp['data'][0]['id'])) {
+          $userId = $adminUserResp['data'][0]['id'];
+          error_log("Fallback admin user lookup success - User ID: $userId");
+        }
+      } else {
+        error_log("Fallback admin user lookup skipped: missing service role key");
+      }
+    }
 
     // New fallback: decode access token JWT to extract user ID (sub claim)
     function getUserIdFromJwtToken($token) {
@@ -221,10 +242,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Second fallback: use profile lookup by email when still missing userId
     if (!$userId && !empty($email)) {
-      $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id&email=eq." . urlencode($email);
-      $profilesObj = supabaseGetJson($profileUrl, $accessToken ?: $supabaseKey, $supabaseKey);
-      if (!empty($profilesObj[0]['id'])) {
-        $userId = $profilesObj[0]['id'];
+      $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id&email=ilike." . urlencode($email);
+      $profileResp = supabaseGetJson($profileUrl, null, getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: $supabaseKey);
+      if (!empty($profileResp['data']) && is_array($profileResp['data']) && !empty($profileResp['data'][0]['id'])) {
+        $userId = $profileResp['data'][0]['id'];
         error_log("Fallback profile lookup success by email: $userId");
       }
     }
