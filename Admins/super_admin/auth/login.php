@@ -163,8 +163,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $userId = extractUserIdFromAuthData($authData);
 
+    // Extra sanity path: directly try an obvious candidate from user node
+    if (!$userId && !empty($authData['user']) && is_array($authData['user'])) {
+      $userId = $authData['user']['id'] ?? $authData['user']['sub'] ?? null;
+      if ($userId) {
+        error_log("Fallback: derived userId from authData['user'] directly: $userId");
+      }
+    }
+
     // Log the authData structure lightly to help hosted debug (first-level keys only)
     error_log('Auth response keys: ' . json_encode(array_keys(is_array($authData) ? $authData : [])));
+    error_log('Auth user node: ' . (is_array($authData['user'] ?? null) ? json_encode(array_keys($authData['user'])) : var_export($authData['user'] ?? null, true)));
 
     function supabaseGetJson($url, $accessToken = null, $supabaseKey = null) {
       $headers = ["Content-Type: application/json"];
@@ -264,37 +273,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log("User ID: " . ($userId ?? 'NULL'));
 
     if (!$userId) {
-      error_log("No user ID in response; using fallback anonymous user handling.");
-      // do not force fail right away when user is likely authenticated; attempt to proceed with email-based profile
-      $error = null;
+      error_log("No user ID in response after all fallback attempts.");
+      if (empty($accessToken)) {
+        $error = "Invalid email or password. Please check your credentials and try again.";
+        $errorType = 'credentials';
+      } else {
+        $error = "Login succeeded, but user ID was not returned. Please contact support.";
+        $errorType = 'credentials';
+      }
     }
 
-    // If we still don't have userId, we continue to profile query by email below
-    if (!$userId && !empty($email)) {
-      $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&email=eq." . urlencode($email);
-      $contextFallback = stream_context_create([
+    // If we still don't have userId, do not proceed to sensitive auth flow.
+    if (!$userId) {
+      // fallback: attempt profile lookup by email to help diagnose, but do not override invalid cred state.
+      if (!empty($email)) {
+        $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&email=eq." . urlencode($email);
+        $contextFallback = stream_context_create([
           'http' => [
-              'method' => 'GET',
-              'header' => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
+            'method' => 'GET',
+            'header' => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
           ]
-      ]);
-      $profileByEmail = @file_get_contents($profileUrl, false, $contextFallback);
-      if ($profileByEmail) {
+        ]);
+        $profileByEmail = @file_get_contents($profileUrl, false, $contextFallback);
+        if ($profileByEmail) {
           $profileList = json_decode($profileByEmail, true);
           if (!empty($profileList[0]['id'])) {
-              $userId = $profileList[0]['id'];
-              $profile = $profileList[0];
-              error_log("Fallback extended profile lookup success by email: $userId");
+            $userId = $profileList[0]['id'];
+            $profile = $profileList[0];
+            error_log("Fallback extended profile lookup success by email: $userId");
+            $error = null;
+            $errorType = '';
           }
+        }
       }
     }
 
     if (!$userId) {
-      $error = $error ?: "Login succeeded, but user ID was not returned.";
-    }
-
-    if (!$userId) {
-      // still no user id after all fallback attempts, show the login error
+      // still no user id after all fallback attempts, show the login error and stop.
     } else {
       // Getting the user's profile
       $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&id=eq.$userId";

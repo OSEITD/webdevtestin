@@ -130,10 +130,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $refreshToken = $authData['refresh_token'] ?? null;
                     $expiresIn = isset($authData['expires_in']) ? intval($authData['expires_in']) : 3600;
                     $tokenExpiresAt = time() + $expiresIn;
-                    $userId = $authData['user']['id'] ?? null;
+
+                    // Robust user ID extraction for Supabase auth response variations.
+                    $userId = null;
+                    if (isset($authData['user']['id'])) {
+                        $userId = $authData['user']['id'];
+                    } elseif (isset($authData['data']['user']['id'])) {
+                        $userId = $authData['data']['user']['id'];
+                    } elseif (isset($authData['session']['user']['id'])) {
+                        $userId = $authData['session']['user']['id'];
+                    } elseif (isset($authData['user_id'])) {
+                        $userId = $authData['user_id'];
+                    }
+
+                    // fallback: query /auth/v1/user with access token
+                    if (empty($userId) && !empty($accessToken)) {
+                        $fallbackUrl = "$supabaseUrl/auth/v1/user";
+                        $fallbackCtx = stream_context_create(["http" => [
+                            "method" => "GET",
+                            "header" => "apikey: $supabaseKey\r\nAuthorization: Bearer $accessToken\r\n"
+                        ]]);
+                        $fallbackResp = @file_get_contents($fallbackUrl, false, $fallbackCtx);
+                        if ($fallbackResp) {
+                            $fbData = json_decode($fallbackResp, true);
+                            if (is_array($fbData) && !empty($fbData['id'])) {
+                                $userId = $fbData['id'];
+                            }
+                        }
+                    }
+
+                    if (empty($userId) && !empty($email)) {
+                        // Additional fallback: look up profile by email
+                        $profileUrlCandidate = "$supabaseUrl/rest/v1/profiles?select=id&email=eq." . urlencode($email);
+                        $profileResp = @file_get_contents($profileUrlCandidate, false, stream_context_create(["http" => [
+                            "method" => "GET",
+                            "header" => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
+                        ]]));
+                        if ($profileResp) {
+                            $profileData = json_decode($profileResp, true);
+                            if (is_array($profileData) && isset($profileData[0]['id'])) {
+                                $userId = $profileData[0]['id'];
+                            }
+                        }
+                    }
 
                     if (!$userId) {
                         $error = "Login succeeded, but user ID was not returned.";
+                        echo "<!-- DEBUG: Auth data (no userId): " . htmlspecialchars(json_encode($authData), ENT_QUOTES) . " -->";
+                        echo "<!-- DEBUG: fallback /auth/v1/user response: " . htmlspecialchars($fallbackResp ?? '', ENT_QUOTES) . " -->";
                     } else {
                         // Store auth tokens for later API calls and refresh handling
                         $_SESSION['access_token'] = $accessToken;
