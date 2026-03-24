@@ -19,6 +19,7 @@ $supabaseUrl = getenv('SUPABASE_URL') ?: EnvLoader::get('SUPABASE_URL');
 
 $supabaseKey = getenv('SUPABASE_ANON_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
 
+// Prefer explicit Render/production env vars over local .env (EnvLoader)
 $supabaseServiceKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 if (empty($supabaseServiceKey)) {
     $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY');
@@ -26,6 +27,18 @@ if (empty($supabaseServiceKey)) {
 if (empty($supabaseServiceKey)) {
     $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
 }
+
+// final fallback to anon key if no service key available (improves resilience)
+if (empty($supabaseServiceKey) && !empty($supabaseKey)) {
+    $supabaseServiceKey = $supabaseKey;
+    $serviceKeyName = 'SUPABASE_ANON_KEY';
+    error_log('WARNING: No service key defined; falling back to anon key for Supabase operations.');
+}
+
+if (empty($supabaseServiceKey)) {
+    error_log('ERROR: SUPABASE_SERVICE_KEY not set in Render env and no fallback found.');
+}
+
 
 error_log('DEBUG: Supabase URL from env=' . ($supabaseUrl ?: '[missing]'));
 error_log('DEBUG: Supabase key source: ' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY env' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY env' : 'EnvLoader')));
