@@ -102,8 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
   curl_setopt($ch, CURLOPT_TIMEOUT, 30);
   $response = curl_exec($ch);
+  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $curlError = curl_error($ch);
   curl_close($ch);
+  error_log("Auth request HTTP code: " . ($httpCode ?: 'N/A'));
 
   // Log the raw response for debugging
   error_log("Auth Response: " . $response);
@@ -123,12 +125,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $debugInfo = 'Invalid JSON from Supabase : ' . substr($response ?? '', 0, 500);
     $error = "Unable to connect to the server. Please check your internet connection and try again.";
     $errorType = 'connection';
-  } elseif (isset($authData['error'])) {
-    $loginError = $authData['error'] ?? 'Unknown error';
-    $rawError = $authData['error_description'] ?? $loginError;
-    $debugInfo = 'Supabase auth error: ' . $rawError . ' (code: ' . ($authData['status'] ?? 'n/a') . ')';
+  } elseif (isset($authData['error']) || (isset($authData['message']) && isset($authData['hint']) && empty($authData['access_token']))) {
+    $loginError = $authData['error'] ?? ($authData['message'] ?? 'Unknown error');
+    $rawError = $authData['error_description'] ?? ($authData['message'] ?? $loginError);
+    if (!empty($authData['hint'])) {
+      $rawError .= ' | hint: ' . $authData['hint'];
+    }
+    $debugInfo = 'Supabase auth error: ' . $rawError . ' (HTTP ' . ($httpCode ?: 'n/a') . ')';
     error_log("Login Error: " . $rawError);
     error_log("Full auth response on error: " . json_encode($authData));
+    $error = "Invalid email or password. Please check your credentials and try again.";
+    $errorType = 'credentials';
 
     // Friendly feedback plus useful debug hint for hosted env
     if (stripos($rawError, 'Invalid login credentials') !== false || stripos($rawError, 'invalid email or password') !== false) {
