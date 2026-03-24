@@ -561,6 +561,15 @@ try {
     }
 
    
+    $paymentMethod = $input['paymentMethod'] ?? '';
+    $paymentProvider = $input['paymentProvider'] ?? $paymentMethod;
+    $paymentStatus = ($paymentMethod === 'cash') ? 'successful' : 'pending';
+    $paidAt = ($paymentMethod === 'cash') ? date('Y-m-d H:i:s') : null;
+    if (!empty($input['onlinePaymentStatus']) && strtolower($input['onlinePaymentStatus']) === 'paid') {
+        $paymentStatus = 'successful';
+        $paidAt = date('Y-m-d H:i:s');
+    }
+
     $parcelManager = new EnhancedParcelDeliveryManager(true); 
     
     $photoUrls = [];
@@ -614,7 +623,7 @@ try {
         'special_instructions' => $input['specialInstructions'] ?? null,
         'photo_urls' => $photoUrls,
         
-        'payment_status' => (isset($input['paymentMethod']) && $input['paymentMethod'] === 'cash') ? 'paid' : 'pending',
+        'payment_status' => ($paymentStatus === 'successful' || $paymentStatus === 'paid' || (isset($input['paymentMethod']) && $input['paymentMethod'] === 'cash')) ? 'paid' : 'pending',
     ];
 
     $parcelLength = null;
@@ -1001,6 +1010,15 @@ try {
                     );
                 } catch (Exception $e) {
                     error_log('Failed to update wallet ledger after payment: ' . $e->getMessage());
+                }
+
+                try {
+                    if (!empty($parcelId)) {
+                        $supabaseHelper->patch('parcels', [['payment_status' => 'paid']], 'id=eq.' . urlencode($parcelId));
+                        error_log('Parcel payment_status updated to paid for parcel: ' . $parcelId);
+                    }
+                } catch (Exception $e) {
+                    error_log('Failed to update parcel payment_status after successful payment: ' . $e->getMessage());
                 }
             }
         } else {

@@ -66,6 +66,14 @@ function setupPaymentMethodHandler() {
         hideAllPaymentSections();
        
         if (selectedMethod === 'lenco_mobile') {
+            if (!window.LENCO_CONFIG || !window.LENCO_CONFIG.configured) {
+                alert('Lenco payment is not configured; please use another payment method (Cash or COD).');
+                paymentMethodSelect.value = 'cash';
+                selectedMethod = 'cash';
+            }
+        }
+
+        if (selectedMethod === 'lenco_mobile') {
             if (mobileMoneySection) {
                 mobileMoneySection.style.display = 'block';
                 if (mobileNumberField) {
@@ -75,6 +83,17 @@ function setupPaymentMethodHandler() {
                 updatePaymentSummary('mobile');
             }
         } else if (selectedMethod === 'lenco_card') {
+            if (!window.LENCO_CONFIG || !window.LENCO_CONFIG.configured) {
+                alert('Lenco payment is not configured; please use another payment method (Cash or COD).');
+                paymentMethodSelect.value = 'cash';
+                selectedMethod = 'cash';
+            }
+            if (selectedMethod === 'lenco_card') {
+                if (cardPaymentSection) {
+                    cardPaymentSection.style.display = 'block';
+                    updatePaymentSummary('card');
+                }
+            }
             if (cardPaymentSection) {
                 cardPaymentSection.style.display = 'block';
                 updatePaymentSummary('card');
@@ -254,7 +273,7 @@ function initiateLencoPayment(channel) {
     }
     
     if (!window.LENCO_CONFIG || !window.LENCO_CONFIG.publicKey) {
-        alert('Payment configuration error. Please contact support.');
+        alert('Lenco payment is currently not configured. Please select Cash or COD and contact support to configure online payment.');
         lencoWarn('Lenco configuration not found');
         return;
     }

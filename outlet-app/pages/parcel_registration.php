@@ -43,12 +43,19 @@ $lencoEnv = LENCO_ENV;
     
     <!-- Lenco Configuration for JavaScript -->
     <script>
+        const configuredPublicKey = '<?php echo htmlspecialchars($lencoPublicKey); ?>';
+
         window.LENCO_CONFIG = {
-            publicKey: '<?php echo htmlspecialchars($lencoPublicKey); ?>',
+            publicKey: configuredPublicKey,
             currency: '<?php echo htmlspecialchars($lencoCurrency); ?>',
             environment: '<?php echo htmlspecialchars($lencoEnv); ?>',
-            verifyUrl: '../api/payments/verify_lenco.php'
+            verifyUrl: '../api/payments/verify_lenco.php',
+            configured: Boolean(configuredPublicKey)
         };
+
+        if (!window.LENCO_CONFIG.configured) {
+            console.warn('Lenco public key is missing. Lenco payment options will be disabled.');
+        }
     </script>
     
     <!-- Error Handler for Browser Extension Issues -->
@@ -174,22 +181,7 @@ $lencoEnv = LENCO_ENV;
                                     <div id="photoPreview" class="photo-preview"></div>
                                 </div>
                                 
-                                <div class="submit-area">
-                                    <!-- Form Actions -->
-                                    <div class="form-actions">
-                                        <button type="button" class="btn-secondary" onclick="window.history.back()">
-                                            <i class="fas fa-arrow-left"></i> Cancel
-                                        </button>
-                                        <button type="submit" class="btn-primary" id="submitBtn">
-                                            <i class="fas fa-paper-plane"></i> Register Parcel
-                                        </button>
-                                    </div>
-                                    
-                                    <div class="submit-info">
-                                        <p><i class="fas fa-info-circle"></i> Please review all information before submitting.</p>
-                                        <p><i class="fas fa-shield-alt"></i> Your parcel will be assigned a tracking number upon registration.</p>
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
 
@@ -839,6 +831,22 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Section Outside Card -->
+                    <div class="submit-area submit-area-outside-card">
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </button>
+                            <button type="submit" class="btn-primary" id="submitBtn">
+                                <i class="fas fa-paper-plane"></i> Register Parcel
+                            </button>
+                        </div>
+                        <div class="submit-info">
+                            <p><i class="fas fa-info-circle"></i> Please review all information before submitting.</p>
+                            <p><i class="fas fa-shield-alt"></i> Your parcel will be assigned a tracking number upon registration.</p>
                         </div>
                     </div>
 

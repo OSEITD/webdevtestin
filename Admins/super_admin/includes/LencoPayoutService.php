@@ -13,7 +13,7 @@ class LencoPayoutService {
      */
     public static function buildPayload(array $payout, array $company, string $adminId): array {
         $payload = [
-            'accountId' => getenv('LENCO_ACCOUNT_ID'),
+            'accountId' => getenv('LENCO_ACCOUNT_ID') ?: getenv('LENCO_API_NAME'),
             'amount' => floatval($payout['amount']),
             'reference' => (string)$payout['id'],
             'narration' => 'Company payout for ' . ($company['company_name'] ?? $payout['company_id']),
@@ -90,12 +90,18 @@ class LencoPayoutService {
         $apiKey = getenv('LENCO_API_KEY') ?: self::getApiKeyFromEnv();
 
         if (empty($apiKey)) {
+            error_log('LencoPayoutService: missing LENCO_API_KEY and no secret key found in LENCO_SECRET_KEY_LIVE/LENCO_SECRET_KEY_SANDBOX.');
             return ['success' => false, 'message' => 'Lenco payout is not configured (missing LENCO_API_KEY or secret key).'];
         }
 
-        if (empty(getenv('LENCO_ACCOUNT_ID'))) {
+        $accountId = getenv('LENCO_ACCOUNT_ID') ?: getenv('LENCO_API_NAME');
+        if (empty($accountId)) {
+            error_log('LencoPayoutService: missing LENCO_ACCOUNT_ID or LENCO_API_NAME fallback.');
             return ['success' => false, 'message' => 'Lenco payout is not configured (missing LENCO_ACCOUNT_ID).'];
         }
+
+        // ensure accountId is available in payload
+        $payout['accountId'] = $accountId;
 
         $method = strtolower($payout['payout_method'] ?? 'mobile_money');
         $defaultPath = ($method === 'bank_transfer') ? '/transfers/bank-account' : '/transfers/mobile-money';

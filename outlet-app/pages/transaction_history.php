@@ -27,6 +27,20 @@ $txns = $sup->get('payment_transactions', $filter,
     'parcel_id,outlet_id,user_id,' .
     'paid_at,created_at,verified_at,error_message');
 
+// Ensure most recent transactions are on top, by paid_at then created_at
+usort($txns, function ($a, $b) {
+    $aPaid = !empty($a['paid_at']) ? strtotime($a['paid_at']) : strtotime($a['created_at'] ?? '1970-01-01');
+    $bPaid = !empty($b['paid_at']) ? strtotime($b['paid_at']) : strtotime($b['created_at'] ?? '1970-01-01');
+
+    if ($aPaid === $bPaid) {
+        $aCreated = !empty($a['created_at']) ? strtotime($a['created_at']) : 0;
+        $bCreated = !empty($b['created_at']) ? strtotime($b['created_at']) : 0;
+        return $bCreated <=> $aCreated;
+    }
+
+    return $bPaid <=> $aPaid;
+});
+
 // gather user ids to resolve names
 $userIds = array_filter(array_column($txns, 'user_id'));
 $profileMap = [];
@@ -35,6 +49,25 @@ if (!empty($userIds)) {
     $profiles = $sup->get('profiles', "id=in.($in)", 'id,full_name');
     foreach ($profiles as $p) {
         $profileMap[$p['id']] = $p['full_name'];
+    }
+}
+
+// gather parcel details by parcel_id (for payment status track link)
+$parcelMap = [];
+$parcelIds = array_filter(array_column($txns, 'parcel_id'));
+if (!empty($parcelIds)) {
+    $uniqueParcelIds = array_unique($parcelIds);
+    $inParcels = implode(',', array_map('urlencode', $uniqueParcelIds));
+    $parcelRows = $sup->get('parcels', "id=in.($inParcels)", 'id,track_number,payment_status,status');
+
+    foreach ($parcelRows as $parcel) {
+        if (!empty($parcel['id'])) {
+            $parcelMap[$parcel['id']] = [
+                'track_number' => $parcel['track_number'] ?? '',
+                'payment_status' => $parcel['payment_status'] ?? '',
+                'status' => $parcel['status'] ?? ''
+            ];
+        }
     }
 }
 
@@ -176,11 +209,13 @@ if (!empty($userIds)) {
                             <tr>
                                 <th>Date / Time</th>
                                 <th>Reference</th>
+                                <th>Parcel</th>
                                 <th>Amount</th>
                                 <th>Method</th>
                                 <th>Network</th>
                                 <th>Phone</th>
-                                <th>Status</th>
+                                <th>Txn Status</th>
+                                <th>Parcel Payment</th>
                                 <th>By</th>
                                 <th>Customer</th>
                             </tr>
@@ -225,6 +260,17 @@ if (!empty($userIds)) {
                             <tr class="txn-row" data-txn="<?php echo htmlspecialchars($rowData, ENT_QUOTES); ?>" style="cursor:pointer;" title="Click to view details">
                                 <td><?php echo htmlspecialchars($dt); ?></td>
                                 <td><?php echo htmlspecialchars($t['tx_ref']); ?></td>
+                                <td>
+                                    <?php
+                                        $parcelId = $t['parcel_id'] ?? null;
+                                        $parcelInfo = $parcelId && isset($parcelMap[$parcelId]) ? $parcelMap[$parcelId] : null;
+                                        if ($parcelInfo && !empty($parcelInfo['track_number'])) {
+                                            echo '<a href="../pages/parcel_management.php?parcel=' . urlencode($parcelId) . '" style="color:#4A1C40;font-weight:600;">' . htmlspecialchars($parcelInfo['track_number']) . '</a>';
+                                        } else {
+                                            echo '-';
+                                        }
+                                    ?>
+                                </td>
                                 <td><?php echo ($t['currency'] ?? 'ZMW') . ' ' . number_format($t['amount'],2); ?></td>
                                 <td><?php echo htmlspecialchars($t['payment_method']); ?></td>
                                 <td><?php echo htmlspecialchars($t['mobile_network'] ?? '-'); ?></td>
@@ -235,6 +281,15 @@ if (!empty($userIds)) {
                                 ?>
                                 <span class="status-badge <?php echo htmlspecialchars($class); ?>"><?php echo htmlspecialchars($stat); ?></span>
                                 </td>
+                                <td><?php
+                                      $parcelPaymentStatus = $parcelInfo['payment_status'] ?? '-';
+                                      $paymentClass = strtolower(str_replace([' ', '_'], '-', $parcelPaymentStatus));
+                                      if (!empty($parcelPaymentStatus)) {
+                                          echo '<span class="status-badge ' . htmlspecialchars($paymentClass) . '">' . htmlspecialchars($parcelPaymentStatus) . '</span>';
+                                      } else {
+                                          echo '-';
+                                      }
+                                  ?></td>
                                 <td><?php echo htmlspecialchars($by); ?></td>
                                 <td><?php echo $cust; ?></td>
                             </tr>

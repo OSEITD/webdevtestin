@@ -262,13 +262,56 @@ class CompanyWalletManager {
         try {
             $client = new SupabaseClient();
             $endpoint = "wallet_transactions?company_id=eq." . urlencode($companyId) . "&order=created_at.desc&limit={$limit}";
-            error_log("WalletManager: fetching transactions with endpoint: {$endpoint}");
+            error_log("WalletManager: fetching existing wallet transactions with endpoint: {$endpoint}");
             $response = $client->getRecord($endpoint, true);
             $data = static::extractData($response) ?: [];
-            error_log("WalletManager: fetched " . count($data) . " transaction(s) for company {$companyId}");
+
+            // If fewer than 5 wallet transactions exist, supplement with successful payment transactions.
+            if (count($data) < 5) {
+                $paymentTxns = self::getPaymentTransactions($companyId, $limit);
+                foreach ($paymentTxns as $txn) {
+                    $data[] = [
+                        'created_at' => $txn['paid_at'] ?: $txn['created_at'],
+                        'description' => 'Gateway payment (' . ($txn['payment_method'] ?? 'unknown') . ')',
+                        'amount' => floatval($txn['amount'] ?? 0),
+                        'type' => 'payment_credit',
+                        'reference' => $txn['tx_ref'] ?? '',
+                        'status' => $txn['status'] ?? ''
+                    ];
+                }
+            }
+
+            usort($data, function($a, $b) {
+                $aTime = strtotime($a['created_at'] ?? '1970-01-01 00:00:00');
+                $bTime = strtotime($b['created_at'] ?? '1970-01-01 00:00:00');
+                return $bTime <=> $aTime;
+            });
+
+            $data = array_slice($data, 0, $limit);
+            error_log("WalletManager: returned " . count($data) . " transaction(s) for company {$companyId}");
             return $data;
         } catch (Exception $e) {
             error_log("Error getting transactions for company {$companyId}: " . $e->getMessage());
+        }
+        return [];
+    }
+
+    /**
+     * Fetch successful payment transactions for company to include in wallet history.
+     * @param string $companyId
+     * @param int $limit
+     * @return array
+     */
+    public static function getPaymentTransactions($companyId, $limit = 50) {
+        try {
+            $client = new SupabaseClient();
+            $endpoint = "payment_transactions?company_id=eq." . urlencode($companyId) . "&status=eq.successful&order=paid_at.desc,created_at.desc&limit={$limit}";
+            error_log("WalletManager: fetching payment transactions with endpoint: {$endpoint}");
+            $response = $client->getRecord($endpoint, true);
+            $data = static::extractData($response) ?: [];
+            return $data;
+        } catch (Exception $e) {
+            error_log("Error getting payment transactions for company {$companyId}: " . $e->getMessage());
         }
         return [];
     }

@@ -128,6 +128,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $userId = $authData['user']['id'] ?? null;
     }
 
+    // Fallback: if Supabase /token did not include user payload, get user from auth endpoint
+    if (!$userId && $accessToken) {
+      $userUrl = "$supabaseUrl/auth/v1/user";
+      $chUser = curl_init($userUrl);
+      curl_setopt($chUser, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($chUser, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer $accessToken",
+        "apikey: $supabaseKey",
+        "Content-Type: application/json"
+      ]);
+      curl_setopt($chUser, CURLOPT_CONNECTTIMEOUT, 10);
+      curl_setopt($chUser, CURLOPT_TIMEOUT, 30);
+      $userResponse = curl_exec($chUser);
+      $userCurlError = curl_error($chUser);
+      curl_close($chUser);
+
+      if (!$userCurlError && $userResponse) {
+        $userData = json_decode($userResponse, true);
+        if (is_array($userData) && isset($userData['id'])) {
+          $userId = $userData['id'];
+          error_log("Fallback user lookup success (auth/v1/user) - User ID: $userId");
+        }
+      } else {
+        error_log("Fallback user lookup failed: " . ($userCurlError ?: 'empty response'));
+      }
+    }
+
+    // Second fallback: use profile lookup by email when still missing userId
+    if (!$userId && !empty($email)) {
+      $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id&email=eq." . urlencode($email);
+      $profileContext = stream_context_create([
+        'http' => [
+          'method' => 'GET',
+          'header' => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
+        ]
+      ]);
+      $profileData = @file_get_contents($profileUrl, false, $profileContext);
+      if ($profileData) {
+        $profiles = json_decode($profileData, true);
+        if (!empty($profiles) && !empty($profiles[0]['id'])) {
+          $userId = $profiles[0]['id'];
+          error_log("Fallback profile lookup success by email: $userId");
+        }
+      }
+    }
+
     // Avoid passing null into substr (PHP 8.1+ deprecation)
     error_log("Auth successful - Access Token: " . ($accessToken ? substr($accessToken, 0, 20) . "..." : 'NULL'));
     error_log("User ID: " . ($userId ?? 'NULL'));

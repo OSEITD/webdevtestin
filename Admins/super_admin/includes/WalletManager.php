@@ -51,10 +51,7 @@ class WalletManager {
         }
     }
 
-    /**
-     * Get the latest running_balance from the ledger for a company.
-     * Returns null if no ledger rows exist.
-     */
+   
     private static function getLastLedgerRunningBalance($companyId) {
         try {
             $resp = callSupabaseWithServiceKey("wallet_transactions?company_id=eq.{$companyId}&order=created_at.desc,id.desc&limit=1", 'GET');
@@ -68,13 +65,11 @@ class WalletManager {
     }
 
     /**
-     * Process a successfully received payment
-     * Parses gross amount, deducts platform commission, updates running wallet and ledger.
-     * 
-     * @param string $companyId The company handling the parcel
-     * @param float $totalAmount Total amount paid by customer
-     * @param float $commissionRate The platform commission rate percentage (0-100)
-     * @param string $paymentTransactionId ID from payment_transactions
+
+     * @param string $companyId 
+     * @param float $totalAmount 
+     * @param float $commissionRate 
+     * @param string $paymentTransactionId 
      * @return bool
      */
     public static function processPaymentReceived($companyId, $totalAmount, $commissionRate, $paymentTransactionId = null) {
@@ -96,27 +91,24 @@ class WalletManager {
         $runningBalance = $availableBalance + $totalAmount;
         self::logTransaction($companyId, $paymentTransactionId, null, 'payment_credit', $totalAmount, $runningBalance, "Payment received");
 
-        // 2. Debiting the commission if applicable
+    
         if ($commissionAmount > 0) {
             $runningBalance -= $commissionAmount;
             self::logTransaction($companyId, $paymentTransactionId, null, 'commission_debit', $commissionAmount, $runningBalance, "Platform commission deduction ({$commissionRate}%)");
         }
 
-        // Wallet balance updates should be driven by the wallet_transactions ledger.
-        // The database is configured to reject direct updates to company_wallets.
+        
         return true;
     }
 
     /**
      * 
-     * Moves available balance to pending balance.
-     * 
      * @param string $companyId
      * @param float $amount
-     * @param string $payoutMethod (bank_transfer, mobile_money, etc)
-     * @param array $details ['bank_name' => '', 'account_number' => '', 'account_name' => '', 'mobile_number' => '']
-     * @param string $userId The user requesting
-     * @return array ['success' => bool, 'message' => string]
+     * @param string $payoutMethod 
+     * @param array $details 
+     * @param string $userId
+     * @return array 
      */
     public static function requestPayout($companyId, $amount, $payoutMethod, $details = [], $userId = null) {
         if (floatval($amount) <= 0) {
@@ -158,10 +150,6 @@ class WalletManager {
                 $payoutId = $payoutResult['id'];
             }
 
-            //  Adjusting wallet balances is handled by the wallet_transactions ledger.
-            //  Direct updates to company_wallets are intentionally blocked by the DB trigger.
-
-            // 3. Log ledger transaction (use ledger's last running balance to avoid drift)
             $lastRunning = self::getLastLedgerRunningBalance($companyId);
             $runningBalance = $lastRunning !== null ? ($lastRunning - $amount) : $newAvailable;
             self::logTransaction($companyId, null, $payoutId, 'payout_debit', floatval($amount), $runningBalance, "Payout requested", $userId);
@@ -174,14 +162,13 @@ class WalletManager {
     }
 
     /**
-     * Processing an existing payout (e.g. approve, complete, or reject/cancel)
+     * Processing an existing payout 
      * @param string $payoutId 
      * @param string $companyId
-     * @param string $status 'completed', 'failed', 'cancelled', 'approved', 'processing'
-     * @param string $userId Admin Processing
-     * @param string $notes Optional notes
-     * @param string $reference External reference number
-     * @return bool
+     * @param string $status 
+     * @param string $userId 
+     * @param string $notes 
+     * @param string $reference 
      */
     public static function resolvePayout($payoutId, $companyId, $status, $userId, $notes = "", $reference = "") {
         $validStatuses = ['completed', 'failed', 'cancelled', 'approved', 'processing'];
@@ -222,7 +209,6 @@ class WalletManager {
 
                 $payoutResult = LencoPayoutService::executePayout($payout, $company, $userId);
 
-                // Treat duplicate reference as a successful payout (it indicates the transfer already happened).
                 $duplicateReference = false;
                 if (!$payoutResult['success']) {
                     $msg = strtolower($payoutResult['message'] ?? '');
@@ -235,7 +221,7 @@ class WalletManager {
                 }
 
                 if (!$payoutResult['success'] && !$duplicateReference) {
-                    // Treat as a payout failure and fall through to the refund logic below.
+                 
                     $payoutFailed = true;
                     $status = 'failed';
                     $payoutUpdateData['status'] = 'failed';
@@ -280,8 +266,6 @@ class WalletManager {
                     $payoutUpdateData['failure_reason'] = $reason ?: 'Lenco payout failed';
                     $payoutUpdateData['updated_at'] = gmdate('Y-m-d\TH:i:sP');
                 }
-
-                // If Lenco says the reference is duplicate, assume the payout already happened.
                 if ($duplicateReference) {
                     $payoutFailed = false;
                     $status = 'completed';
@@ -290,7 +274,7 @@ class WalletManager {
                     $payoutUpdateData['updated_at'] = gmdate('Y-m-d\TH:i:sP');
                 }
 
-                // Only apply payout completion effects when the payout truly succeeded.
+                
                 if (!$payoutFailed) {
                     $walletUpdateData['pending_balance'] = max(0, (float)$wallet['pending_balance'] - $amount);
                     $walletUpdateData['total_paid_out'] = (float)$wallet['total_paid_out'] + $amount;
@@ -302,7 +286,7 @@ class WalletManager {
                     $rawData = $payoutResult['raw']['data'] ?? $payoutResult['raw'];
                     $payoutUpdateData['external_reference'] = $rawData['lencoReference'] ?? $rawData['id'] ?? $rawData['reference'] ?? $reference;
 
-                    // Ensure there is a corresponding payout_debit ledger entry for auditing.
+                   
                     $existingLedger = callSupabaseWithServiceKey(
                         "wallet_transactions?company_id=eq.{$companyId}&payout_id=eq.{$payoutId}&transaction_type=eq.payout_debit",
                         'GET'
@@ -323,7 +307,6 @@ class WalletManager {
                         );
                     }
 
-                    // Keep wallet snapshot in sync with the ledger's latest running balance.
                     $lastRunningAfter = self::getLastLedgerRunningBalance($companyId);
                     if ($lastRunningAfter !== null) {
                         $walletUpdateData['available_balance'] = $lastRunningAfter;
@@ -338,8 +321,6 @@ class WalletManager {
                 return false;
             }
         }
-
-        // Failed or cancelled payouts should restore the funds to the wallet and record an adjustment.
         if ($payoutFailed || in_array($status, ['failed', 'cancelled'])) {
             $walletUpdateData['pending_balance'] = max(0, (float)$wallet['pending_balance'] - $amount);
 
@@ -348,7 +329,7 @@ class WalletManager {
             $runningBalance = $lastRunning !== null ? ($lastRunning + $amount) : ((float)$wallet['available_balance'] + $amount);
             self::logTransaction($companyId, null, $payoutId, 'adjustment_credit', $amount, $runningBalance, "Payout {$status} - Funds restored", $userId);
 
-            // Keep wallet snapshot in sync with ledger.
+         
             $lastRunningAfter = self::getLastLedgerRunningBalance($companyId);
             if ($lastRunningAfter !== null) {
                 $walletUpdateData['available_balance'] = $lastRunningAfter;
@@ -357,7 +338,7 @@ class WalletManager {
             }
         }
         elseif ($status === 'approved') {
-            // Intermediate state
+        
             $payoutUpdateData['approved_at'] = gmdate('Y-m-d\TH:i:sP');
             $payoutUpdateData['approved_by'] = $userId;
         }
@@ -367,23 +348,22 @@ class WalletManager {
                 callSupabaseWithServiceKey("company_payouts?id=eq.{$payoutId}", 'PATCH', $payoutUpdateData);
             } catch (Exception $e) {
                 $msg = $e->getMessage();
-                // Handle common schema-level state transition constraints (e.g. pending -> completed requires intermediate status)
+              
                 if (strpos($msg, 'P0001') !== false || stripos($msg, 'Invalid payout status transition') !== false) {
-                    // Re-load payout row to see current state
+                  
                     $refetch = callSupabaseWithServiceKey("company_payouts?id=eq.{$payoutId}&limit=1", 'GET');
                     $current = is_array($refetch) && isset($refetch[0]) ? $refetch[0] : null;
                     $currentStatus = $current['status'] ?? null;
 
                     if ($currentStatus === 'completed') {
-                        // Already marked completed at the DB level (race condition), treat as success.
+                  
                         if (!empty($walletUpdateData)) {
                             callSupabaseWithServiceKey("company_wallets?id=eq.{$companyId}", 'PATCH', $walletUpdateData);
                         }
                         return true;
                     }
 
-                    // Try a two-step transition: pending -> approved -> completed
-                    // (some triggers enforce a stepping state machine).
+                    
                     $attemptData = [];
                     if ($currentStatus === 'pending') {
                         $attemptData = [
@@ -395,13 +375,12 @@ class WalletManager {
                         try {
                             callSupabaseWithServiceKey("company_payouts?id=eq.{$payoutId}", 'PATCH', $attemptData);
                         } catch (Exception $e2) {
-                            // If this still fails, give up.
+                      
                             error_log("Payout status transition retry failed (pending->approved): " . $e2->getMessage());
                             throw $e;
                         }
                     }
 
-                    // Attempt final completion patch
                     try {
                         callSupabaseWithServiceKey("company_payouts?id=eq.{$payoutId}", 'PATCH', $payoutUpdateData);
                     } catch (Exception $e2) {
@@ -414,8 +393,7 @@ class WalletManager {
             }
 
             if (!empty($walletUpdateData)) {
-                // Persist wallet balance changes so the UI reflects the payout state immediately.
-                // (The ledger should also be maintained via wallet_transactions.)
+              
                 callSupabaseWithServiceKey("company_wallets?id=eq.{$companyId}", 'PATCH', $walletUpdateData);
             }
 

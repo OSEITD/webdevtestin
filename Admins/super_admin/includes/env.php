@@ -30,13 +30,18 @@ class EnvLoader {
                     $value = $matches[1];
                 }
                 
-                self::$variables[$key] = $value;
-                $_ENV[$key] = $value;
-                putenv("$key=$value");
-                $loadedCount++;
-                
-                if ($key === 'SUPABASE_URL') {
-                    error_log("EnvLoader: Set SUPABASE_URL = {$value}");
+                // Do not override a key that has already been loaded by a higher-priority env.
+                if (!array_key_exists($key, self::$variables)) {
+                    self::$variables[$key] = $value;
+                    $_ENV[$key] = $value;
+                    putenv("$key=$value");
+                    $loadedCount++;
+
+                    if ($key === 'SUPABASE_URL') {
+                        error_log("EnvLoader: Set SUPABASE_URL = {$value}");
+                    }
+                } else {
+                    error_log("EnvLoader: Skipped overriding {$key} from {$path}; already set");
                 }
             }
         }
@@ -71,10 +76,13 @@ class EnvLoader {
 
         self::loadFile($path);
 
-        // Load secondary env if exists
+        // Load secondary env only when not in super_admin context
         $outletEnv = dirname(__DIR__, 3) . '/outlet-app/.env';
-        if (file_exists($outletEnv)) {
+        $isSuperAdminContext = (strpos(realpath(__DIR__), DIRECTORY_SEPARATOR . 'Admins' . DIRECTORY_SEPARATOR . 'super_admin') !== false);
+        if (!$isSuperAdminContext && file_exists($outletEnv)) {
             self::loadFile($outletEnv);
+        } elseif ($isSuperAdminContext && file_exists($outletEnv)) {
+            error_log('EnvLoader: super_admin context - skipping outlet-app/.env load');
         }
 
         self::$loaded = true;

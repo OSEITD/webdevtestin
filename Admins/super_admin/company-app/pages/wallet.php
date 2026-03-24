@@ -620,7 +620,10 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
 
         fetch('../api/request_payout.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.getElementById('csrf_token')?.value || ''
+            },
             body: JSON.stringify(payload)
         })
         .then(res => res.json())
