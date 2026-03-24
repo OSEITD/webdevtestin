@@ -1097,101 +1097,30 @@ try {
     }
 
     
-    // Response was already sent earlier; continue background work (notifications, SMS, emails).
+    // Response was already sent earlier; dispatch notifications + SMS + email asynchronously.
+    $backgroundJob = [
+        'parcel_id' => $parcelId,
+        'track_number' => $trackingNumber,
+        'company_id' => $input['companyId'] ?? null,
+        'origin_outlet_id' => $input['originOutletId'] ?? null,
+        'sender_name' => $input['senderName'] ?? null,
+        'receiver_name' => $input['recipientName'] ?? null,
+        'parcel_weight' => (float)($input['parcelWeight'] ?? 0),
+        'user_id' => $_SESSION['user_id'] ?? null,
+        'sender_phone' => $input['senderPhone'] ?? null,
+        'recipient_phone' => $input['recipientPhone'] ?? null,
+        'sender_email' => $input['senderEmail'] ?? null,
+        'recipient_email' => $input['recipientEmail'] ?? null
+    ];
 
-    try {
-        $notificationHelper = new NotificationHelper();
-        
-        
-        $notificationParcelData = [
-            'id' => $parcelId,
-            'track_number' => $trackingNumber,
-            'company_id' => $input['companyId'],
-            'origin_outlet_id' => $input['originOutletId'],
-            'sender_name' => $input['senderName'],
-            'receiver_name' => $input['recipientName'],
-            'parcel_weight' => (float)$input['parcelWeight'],
-            'status' => 'pending'
-        ];
-        
-        
-        $currentUserId = $_SESSION['user_id'] ?? null;
-        if ($currentUserId) {
-            $notificationHelper->createParcelCreatedNotification($notificationParcelData, $currentUserId);
-        }
-        
-    } catch (Exception $e) {
-        
-        error_log("Failed to create notification: " . $e->getMessage());
-    }
+    $workerScript = __DIR__ . '/parcel_postprocess_worker.php';
+    $payload = base64_encode(json_encode($backgroundJob));
+    $cmd = PHP_BINARY . ' ' . escapeshellarg($workerScript) . ' ' . escapeshellarg($payload) . ' > /dev/null 2>&1 &';
+    @exec($cmd);
 
-    
-    try {
-        $smsService = new SMSService();
-        $smsResults = [];
-        
-        
-        if (!empty($input['senderPhone'])) {
-            $senderResult = $smsService->notifySender(
-                $input['senderPhone'],
-                $trackingNumber,
-                $input['recipientName']
-            );
-            $smsResults['sender'] = $senderResult;
-            error_log("SMS to sender: " . json_encode($senderResult));
-        }
-        
-        
-        if (!empty($input['recipientPhone'])) {
-            $receiverResult = $smsService->notifyReceiver(
-                $input['recipientPhone'],
-                $trackingNumber,
-                $input['senderName']
-            );
-            $smsResults['receiver'] = $receiverResult;
-            error_log("SMS to receiver: " . json_encode($receiverResult));
-        }
-        
-        
-        if (!empty($smsResults)) {
-            $response['sms_notifications'] = $smsResults;
-            if (!$smsService->isEnabled()) {
-                $response['sms_status'] = 'SMS notifications will be sent when service is enabled';
-            }
-        }
-        
-    } catch (Exception $e) {
-        
-        error_log("Failed to send SMS notifications: " . $e->getMessage());
-        $response['sms_error'] = 'SMS notification failed but parcel created successfully';
-    }
+    // End the main request after dispatch; postprocessing runs separately.
+    exit;
 
-    // Send parcel creation emails to sender and receiver (if email addresses are provided)
-    try {
-        $emailHelper = new EmailHelper();
-        $senderEmail = $input['senderEmail'] ?? '';
-        $receiverEmail = $input['recipientEmail'] ?? '';
-
-        $emailResults = $emailHelper->notifyParcelCreated([
-            'track_number' => $trackingNumber,
-            'sender_name' => $input['senderName'] ?? '',
-            'receiver_name' => $input['recipientName'] ?? '',
-            'sender_email' => $senderEmail,
-            'receiver_email' => $receiverEmail
-        ]);
-
-        $response['email_attempted'] = true;
-        $response['email_addresses'] = [
-            'sender' => $senderEmail,
-            'receiver' => $receiverEmail
-        ];
-        $response['email_notifications'] = $emailResults;
-
-        error_log('Email send results: ' . json_encode($emailResults));
-    } catch (Exception $e) {
-        error_log("Failed to send parcel creation emails: " . $e->getMessage());
-        $response['email_error'] = 'Email notification failed but parcel created successfully';
-    }
 
     exit;
 
