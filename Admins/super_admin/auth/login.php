@@ -120,13 +120,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $error = "Unable to connect to the server. Please check your internet connection and try again.";
     $errorType = 'connection';
   } elseif (isset($authData['error'])) {
-    error_log("Login Error: " . ($authData['error_description'] ?? 'Unknown error'));
-    $rawError = $authData['error_description'] ?? $authData['error'] ?? '';
-    if (stripos($rawError, 'Invalid login credentials') !== false) {
+    $loginError = $authData['error'] ?? 'Unknown error';
+    $rawError = $authData['error_description'] ?? $loginError;
+    error_log("Login Error: " . $rawError);
+
+    // Friendly feedback plus useful debug hint for hosted env
+    if (stripos($rawError, 'Invalid login credentials') !== false || stripos($rawError, 'invalid email or password') !== false) {
       $error = "Invalid email or password. Please check your credentials and try again.";
       $errorType = 'credentials';
+    } elseif (stripos($rawError, 'invalid API key') !== false || stripos($rawError, 'invalid credentials for api key') !== false) {
+      $error = "Authentication failed due to invalid Supabase API key. Please check your environment config (SUPABASE_KEY) and redeploy.";
+      $errorType = 'config';
     } else {
-      $error = "Invalid email or password. Please check your credentials and try again.";
+      $error = "Login failed: " . $rawError . ". Please check credentials and system configuration.";
       $errorType = 'credentials';
     }
   } else {
@@ -332,8 +338,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $profiles = json_decode($profileData, true);
 
       if (empty($profiles)) {
-        $error = "No account found with this email address. Please check your email or contact your administrator.";
-        $errorType = 'not_found';
+        // Fallback: request user record from Supabase admin users endpoint, in case profiles table is not yet populated
+        $adminKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_KEY');
+        if (!empty($adminKey)) {
+            $adminUserUrl = "$supabaseUrl/auth/v1/admin/users?email=eq." . urlencode($email);
+            $adminUserResp = supabaseGetJson($adminUserUrl, null, $adminKey);
+            if (!empty($adminUserResp['data']) && is_array($adminUserResp['data']) && !empty($adminUserResp['data'][0])) {
+                $adminUser = $adminUserResp['data'][0];
+                $adminRole = $adminUser['app_metadata']['role'] ?? $adminUser['user_metadata']['role'] ?? 'super_admin';
+
+                $profile = [
+                    'id' => $userId,
+                    'full_name' => $adminUser['user_metadata']['full_name'] ?? $email,
+                    'role' => $adminRole,
+                    'status' => 'Active',
+                    'company_id' => null,
+                ];
+
+                error_log("Fallback profile created from admin users endpoint for email: $email, role: $adminRole");
+            }
+        }
+
+        if (empty($profile)) {
+            $error = "No account found with this email address. Please check your email or contact your administrator.";
+            $errorType = 'not_found';
+        }
       } else {
 
       $profile = $profiles[0];
