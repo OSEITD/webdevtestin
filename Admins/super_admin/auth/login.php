@@ -57,7 +57,6 @@ error_log('DEBUG login: supabaseKey source=' . (getenv('SUPABASE_SERVICE_ROLE_KE
 
 $error = '';
 $errorType = '';
-$debugInfo = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $host = $_SERVER['HTTP_HOST'];
@@ -617,12 +616,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     <?php endif; ?>
 
-    <?php if (!empty($debugInfo)): ?>
-        <div class="toast-notification info" id="debugToast" style="background: #1d2a42; color: #fff;">
-            <i class="fas fa-info-circle"></i>
-            <span>Debug: <?= htmlspecialchars($debugInfo) ?></span>
-        </div>
-    <?php endif; ?>
+    <!-- Debug toast removed in cleanup -->
 
     <div class="auth-wrapper">
         <div class="auth-card">

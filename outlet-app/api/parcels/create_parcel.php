@@ -716,11 +716,11 @@ try {
         ]);
         exit;
     }
-    
-    
+
+
     $parcelId = $parcelResult['parcel']['id'] ?? null;
     $deliveryEventId = $parcelResult['delivery']['id'] ?? null;
-    
+
     if (!$parcelId || !$deliveryEventId) {
         http_response_code(500);
         echo json_encode([
@@ -731,7 +731,31 @@ try {
         exit;
     }
 
-    
+    // Prepare an immediate response for the client (tracking number and ids)
+    $response = [
+        "success" => true,
+        "trackingNumber" => $trackingNumber ?? '',
+        "track_number" => $trackingNumber ?? '',
+        "parcel_id" => $parcelId,
+        "delivery_id" => $deliveryEventId,
+        "parcel_status" => "pending",
+        "delivery_status" => "pending",
+        "delivery_created" => true,
+        "uploaded_photos" => 0,
+        "photo_urls" => [],
+        "barcode_url" => null,
+        "barcode_generated" => false,
+        "trip_assigned" => false,
+        "parcel" => [
+            "id" => $parcelId,
+            "track_number" => $trackingNumber ?? '',
+        ],
+        "message" => "Parcel and delivery records created successfully. Background tasks are continuing.",
+    ];
+
+    // Send the response immediately so the client doesn't wait for post-processing
+    sendEarlyResponse($response);
+
     $barcodeUrl = null;
     $barcodeError = null;
     try {
@@ -1073,8 +1097,7 @@ try {
     }
 
     
-    // Send success response immediately so the user is not waiting on slower notifications.
-    sendEarlyResponse($response);
+    // Response was already sent earlier; continue background work (notifications, SMS, emails).
 
     try {
         $notificationHelper = new NotificationHelper();
