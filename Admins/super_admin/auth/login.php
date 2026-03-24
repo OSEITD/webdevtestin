@@ -29,8 +29,6 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-// Clear session on direct GET visit to login page (not POST)
-// This allows users to intentionally visit login.php to see the login form
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
   error_log("GET request to login page detected. Clearing session to allow fresh login.");
   session_unset();
@@ -155,6 +153,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
+
+    // New fallback: decode access token JWT to extract user ID (sub claim)
+    function getUserIdFromJwtToken($token) {
+        if (empty($token) || substr_count($token, '.') !== 2) {
+            return null;
+        }
+        list(, $payload, ) = explode('.', $token);
+        $payload = str_replace(['-', '_'], ['+', '/'], $payload);
+        $payload .= str_repeat('=', (4 - strlen($payload) % 4) % 4);
+        $decoded = base64_decode($payload);
+        if ($decoded === false) {
+            return null;
+        }
+        $data = json_decode($decoded, true);
+        return is_array($data) ? ($data['sub'] ?? null) : null;
+    }
+
     // Second fallback: use profile lookup by email when still missing userId
     if (!$userId && !empty($email)) {
       $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id&email=eq." . urlencode($email);
@@ -174,13 +189,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
+    // Third fallback: decode `sub` from JWT access token
+    if (!$userId && !empty($accessToken)) {
+      $decodedSub = getUserIdFromJwtToken($accessToken);
+      if (!empty($decodedSub)) {
+          $userId = $decodedSub;
+          error_log("Fallback from JWT token sub claim success: $userId");
+      }
+    }
+
     // Avoid passing null into substr (PHP 8.1+ deprecation)
     error_log("Auth successful - Access Token: " . ($accessToken ? substr($accessToken, 0, 20) . "..." : 'NULL'));
     error_log("User ID: " . ($userId ?? 'NULL'));
 
     if (!$userId) {
-      error_log("No user ID in response");
-      $error = "Login succeeded, but user ID was not returned.";
+      error_log("No user ID in response; using fallback anonymous user handling.");
+      // do not force fail right away when user is likely authenticated; attempt to proceed with email-based profile
+      $error = null;
+    }
+
+    // If we still don't have userId, we continue to profile query by email below
+    if (!$userId && !empty($email)) {
+      $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&email=eq." . urlencode($email);
+      $contextFallback = stream_context_create([
+          'http' => [
+              'method' => 'GET',
+              'header' => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
+          ]
+      ]);
+      $profileByEmail = @file_get_contents($profileUrl, false, $contextFallback);
+      if ($profileByEmail) {
+          $profileList = json_decode($profileByEmail, true);
+          if (!empty($profileList[0]['id'])) {
+              $userId = $profileList[0]['id'];
+              $profile = $profileList[0];
+              error_log("Fallback extended profile lookup success by email: $userId");
+          }
+      }
+    }
+
+    if (!$userId) {
+      $error = $error ?: "Login succeeded, but user ID was not returned.";
+    }
+
+    if (!$userId) {
+      // still no user id after all fallback attempts, show the login error
     } else {
       // Getting the user's profile
       $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&id=eq.$userId";
