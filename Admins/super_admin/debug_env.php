@@ -7,7 +7,26 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once __DIR__ . '/../api/supabase-client.php';
+// Attempt to include the supabase client from the local api folder.
+// This file may be deployed from different docroots; try a couple of likely locations and fail gracefully.
+$clientPaths = [
+    __DIR__ . '/api/supabase-client.php',            // Admins/super_admin/api
+    __DIR__ . '/../super_admin/api/supabase-client.php', // in case docroot shifted
+    __DIR__ . '/../api/supabase-client.php'          // older layout
+];
+$included = false;
+foreach ($clientPaths as $p) {
+    if (file_exists($p)) {
+        require_once $p;
+        $included = true;
+        break;
+    }
+}
+if (!$included) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'supabase-client.php not found', 'checked_paths' => $clientPaths], JSON_PRETTY_PRINT);
+    exit(1);
+}
 
 function mask_val($v) {
     if ($v === null || $v === '') return 'NULL';
