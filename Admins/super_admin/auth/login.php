@@ -47,9 +47,13 @@ require_once __DIR__ . '/../includes/env.php';
 error_log("Session state at login: " . print_r($_SESSION, true));
 error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
 
-// Supabase config - loaded from .env
-$supabaseUrl = EnvLoader::get('SUPABASE_URL');
-$supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
+// Supabase config - loaded from env or .env
+$supabaseUrl = getenv('SUPABASE_URL') ?: EnvLoader::get('SUPABASE_URL');
+$supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: getenv('SUPABASE_ANON_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
+
+error_log('DEBUG login: supabaseUrl=' . ($supabaseUrl ?: '[missing]'));
+error_log('DEBUG login: supabaseKey source=' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY' : 'ANON_KEY')));
+
 
 $error = '';
 $errorType = '';
