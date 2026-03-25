@@ -541,10 +541,10 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
                 confirmButtonColor: '#3498db'
             });
             return;
-        <?php elseif ($availableBalance <= 0): ?>
+        <?php elseif ($gatewayEligibleBalance <= 0): ?>
             Swal.fire({
-                title: 'Insufficient Balance',
-                text: 'You do not have any available balance to withdraw.',
+                title: 'Insufficient Online Balance',
+                text: 'You do not have any online eligible balance to withdraw.',
                 icon: 'warning',
                 confirmButtonColor: '#3498db'
             });
@@ -646,7 +646,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
         });
     }
 
-    // Initialize form state
+   
     document.addEventListener('DOMContentLoaded', () => {
         updatePayoutFieldsVisibility();
         filterWalletRows();
@@ -657,7 +657,6 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
         }
     });
 
-    // Sidebar toggling (same behavior across company-app pages)
     (function() {
         const menuBtn = document.getElementById('menuBtn');
         const closeMenu = document.getElementById('closeMenu');
@@ -688,8 +687,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
 </script>
 
 <?php
-// We don't necessarily have a footer, some files use closing body.
-// If header.php doesn't close body and html, we can do it here.
+
 ?>
     </body>
 </html>

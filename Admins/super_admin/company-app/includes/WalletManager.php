@@ -9,7 +9,7 @@ require_once __DIR__ . '/../api/supabase-client.php';
 class CompanyWalletManager {
 
     /**
-     * Get wallet for a company
+     * Getting wallet for a company
      * @param string $companyId
      * @return array|null
      */
@@ -29,7 +29,7 @@ class CompanyWalletManager {
     }
 
     /**
-     * Request a payout
+     * Requesting a payout
      * @param string $companyId
      * @param float $amount
      * @param string $payoutMethod
@@ -49,35 +49,34 @@ class CompanyWalletManager {
                 ];
             }
 
-            // 1. Get current wallet
+           
             $wallet = self::getWallet($companyId);
             if (!$wallet) {
                 return ['success' => false, 'message' => 'Wallet not found'];
             }
 
-            // 2. Validate amount
             if (floatval($amount) <= 0) {
                 return ['success' => false, 'message' => 'Invalid amount'];
             }
-            if (floatval($amount) > floatval($wallet['available_balance'])) {
-                return ['success' => false, 'message' => 'Insufficient available balance'];
-            }
 
-            // 3. Enforce gateway-eligible balance rules (only allow payout from gateway-derived funds)
             $gatewayEligible = self::getGatewayEligibleBalance($companyId);
-            if (floatval($amount) > $gatewayEligible) {
-                return ['success' => false, 'message' => 'Requested amount exceeds gateway-eligible balance.'];
+            if ($gatewayEligible <= 0) {
+                return ['success' => false, 'message' => 'No gateway-eligible balance available for payout.'];
             }
 
-            // 4. Calculate new balances (withdraw from available balance)
-            $newAvailable = floatval($wallet['available_balance']) - floatval($amount);
+            if (floatval($amount) > $gatewayEligible) {
+                return ['success' => false, 'message' => 'Requested amount exceeds your online eligible balance.'];
+            }
+
+            $walletAvailable = floatval($wallet['available_balance']);
+            if ($walletAvailable < $amount) {
+                error_log("WalletManager: available_balance ({$walletAvailable}) is less than requested amount ({$amount}), using gatewayEligible ({$gatewayEligible}) for payout calculation.");
+                $walletAvailable = $gatewayEligible;
+            }
+
+            $newAvailable = max(0.0, $walletAvailable - floatval($amount));
             $newPending = floatval($wallet['pending_balance']) + floatval($amount);
 
-            // 5. Update wallet balances
-            // NOTE: Direct updates to company_wallets are blocked by a DB trigger to ensure ledger integrity.
-            // Wallet balances should be updated via wallet_transactions instead.
-
-            // 5. Create payout record
             $payoutData = [
                 'company_id' => $companyId,
                 'amount' => floatval($amount),
@@ -103,7 +102,6 @@ class CompanyWalletManager {
                 $payoutId = $payoutRecord[0]['id'] ?? null;
             }
 
-            // 5b. Persist payout destination into the company record so subsequent requests can prefill.
             try {
                 $companyUpdate = ['payout_method' => $payoutMethod];
                 if ($payoutMethod === 'bank_transfer') {
@@ -115,11 +113,10 @@ class CompanyWalletManager {
                 }
                 $client->put("companies?id=eq.{$companyId}", $companyUpdate);
             } catch (Exception $ignore) {
-                // Non-blocking, just log for visibility
+              
                 error_log('Unable to persist payout destination on company record: ' . $ignore->getMessage());
             }
 
-            // 6. Record transaction
             $transactionData = [
                 'company_id' => $companyId,
                 'amount' => floatval($amount),
@@ -134,13 +131,11 @@ class CompanyWalletManager {
             $txResp = $client->post('wallet_transactions', $transactionData, true);
             $txData = static::extractData($txResp);
             if (empty($txData) || count($txData) === 0) {
-                // If the ledger entry failed, don't hide the failure behind a successful payout request.
+               
                 return ['success' => false, 'message' => 'Unable to record payout transaction. Please try again or contact support.'];
             }
 
-            // 7. Update the wallet balances (so Pending Withdrawals and Available Balance reflect the payout request)
-            // Note: the system is designed so the ledger drives the wallet balances, but we must also keep the
-            // wallet row in sync when a payout is requested.
+        
             $walletUpdate = [
                 'available_balance' => $newAvailable,
                 'pending_balance' => $newPending,
@@ -156,25 +151,15 @@ class CompanyWalletManager {
         }
     }
 
-    /**
-     * Determine whether the company has any successful payment transactions from a gateway.
-     * This helps ensure payouts are only requested when real gateway funds have been received.
-     */
+    
     public static function hasGatewayPayments($companyId) {
         return self::getGatewayEligibleBalance($companyId) > 0;
     }
 
-    /**
-     * Returns the balance that is eligible for payout (i.e. funds originating from gateway payments).
-     * This is computed as the net of gateway payment credits minus commissions and prior payout debits.
-     */
     public static function getGatewayEligibleBalance($companyId) {
         try {
             $client = new SupabaseClient();
 
-            // Find gateway payment transaction IDs (successful payments only).
-            // Only include actual gateway methods (bank transfer and mobile money) and ignore cash/COD.
-            // The `payment_type` field may also be set in some flows, so we check both columns.
             $gatewayMethods = ['mobile_money', 'bank_transfer'];
             $gatewayMethodsList = implode(',', $gatewayMethods);
             $gatewayResp = $client->getRecord(
@@ -183,7 +168,7 @@ class CompanyWalletManager {
             );
             $gatewayData = static::extractData($gatewayResp);
             if (empty($gatewayData)) {
-                // Debug: log some recent payment transactions so we can see why none match the filter
+               
                 try {
                     $debugResp = $client->getRecord(
                         "payment_transactions?company_id=eq.{$companyId}&select=id,status,payment_method,amount&limit=10&order=created_at.desc",
@@ -223,8 +208,6 @@ class CompanyWalletManager {
                 }
             }
 
-            // Include any manual adjustment/refund credits (not tied to a specific payment transaction)
-            // so corrections show up in the available payout balance.
             $adjustResp = $client->getRecord(
                 "wallet_transactions?company_id=eq.{$companyId}&transaction_type=in.(adjustment_credit,refund_credit)",
                 true
@@ -234,8 +217,7 @@ class CompanyWalletManager {
                 $netGateway += floatval($tx['amount'] ?? 0);
             }
 
-            // Subtract payout debits (money already paid out) so the balance reflects remaining
-            // gateway-derived funds available for future payouts.
+       
             $payoutResp = $client->getRecord(
                 "wallet_transactions?company_id=eq.{$companyId}&transaction_type=eq.payout_debit",
                 true
@@ -255,9 +237,7 @@ class CompanyWalletManager {
         return 0.0;
     }
 
-    /**
-     * Get recent transactions for a company
-     */
+   
     public static function getTransactions($companyId, $limit = 50) {
         try {
             $client = new SupabaseClient();
@@ -266,7 +246,6 @@ class CompanyWalletManager {
             $response = $client->getRecord($endpoint, true);
             $data = static::extractData($response) ?: [];
 
-            // If fewer than 5 wallet transactions exist, supplement with successful payment transactions.
             if (count($data) < 5) {
                 $paymentTxns = self::getPaymentTransactions($companyId, $limit);
                 foreach ($paymentTxns as $txn) {
@@ -297,7 +276,7 @@ class CompanyWalletManager {
     }
 
     /**
-     * Fetch successful payment transactions for company to include in wallet history.
+     * Fetching successful payment transactions for company to include in wallet history.
      * @param string $companyId
      * @param int $limit
      * @return array
@@ -316,9 +295,7 @@ class CompanyWalletManager {
         return [];
     }
 
-    /**
-     * Get payouts for a company
-     */
+    /**  payouts for a company*/
     public static function getPayouts($companyId, $limit = 50) {
         try {
             $client = new SupabaseClient();
@@ -330,10 +307,7 @@ class CompanyWalletManager {
         return [];
     }
 
-    /**
-     * Compute pending withdrawals based on payout requests that are not completed/failed/cancelled.
-     * This is used to show the pending withdrawal amount when the wallet row isn't being updated.
-     */
+    
     public static function applyPayoutStatusUpdate($companyId, $amount, $status) {
         try {
             $wallet = self::getWallet($companyId);
@@ -391,7 +365,7 @@ class CompanyWalletManager {
      */
     private static function extractData($response) {
         if (is_array($response)) {
-            // Unwrapped array
+            
             return $response;
         } elseif (is_object($response) && isset($response->data)) {
             return is_array($response->data) ? $response->data : (array)$response->data;

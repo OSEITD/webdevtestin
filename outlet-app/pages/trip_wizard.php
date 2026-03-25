@@ -1025,15 +1025,25 @@ $current_user = getCurrentUser();
             
             if (Array.isArray(drivers)) {
                 drivers.forEach(driver => {
-                    if (driver && driver.status === 'available') {
+                    if (driver && driver.id) {
                         const option = document.createElement('option');
                         option.value = driver.id;
-                        
+
                         const driverName = driver.driver_name || 'Driver';
                         const driverPhone = driver.driver_phone || 'No Phone';
                         const driverEmail = driver.driver_email ? ` - ${driver.driver_email.substring(0, 20)}...` : '';
                         const driverId = driver.id ? ` [${driver.id.substring(0, 8)}...]` : '';
-                        option.textContent = `${driverName} (${driverPhone})${driverEmail}${driverId}`;
+
+                        const status = (driver.status || 'unavailable').toLowerCase();
+                        const isAvailable = status === 'available';
+
+                        option.textContent = `${driverName} (${driverPhone})${driverEmail}${driverId}` + (isAvailable ? '' : ' (Unavailable)');
+
+                        if (!isAvailable) {
+                            option.disabled = true;
+                            option.style.color = '#85919e';
+                        }
+
                         select.appendChild(option);
                     }
                 });

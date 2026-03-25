@@ -4801,6 +4801,13 @@ class DriverDashboard {
         if (confirmBtn) {
             confirmBtn.addEventListener('click', () => this.confirmTripCompletion(confirmBtn));
         }
+
+        // Auto-refresh when trip is fully completed to reflect final state.
+        if (allCompleted) {
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000); // 2 seconds delay to allow user to see completed status.
+        }
     }
 
     async confirmTripCompletion(buttonElement = null) {
