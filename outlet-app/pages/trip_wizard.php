@@ -562,7 +562,9 @@ $current_user = getCurrentUser();
             }
 
             .content-container {
-                margin: 10px 0;
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
                 padding: 0;
                 box-shadow: none;
                 border-radius: 0;

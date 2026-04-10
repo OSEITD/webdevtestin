@@ -4802,11 +4802,16 @@ class DriverDashboard {
             confirmBtn.addEventListener('click', () => this.confirmTripCompletion(confirmBtn));
         }
 
-        // Auto-refresh when trip is fully completed to reflect final state.
+        // Refresh once when trip is fully completed to avoid reload loops.
         if (allCompleted) {
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000); // 2 seconds delay to allow user to see completed status.
+            const tripId = (stops[0] && stops[0].trip_id) || (this.lastDashboardData && this.lastDashboardData.active_trips && this.lastDashboardData.active_trips[0] ? this.lastDashboardData.active_trips[0].id : 'current');
+            const refreshKey = `driver_trip_completed_refresh_${tripId}`;
+            if (!sessionStorage.getItem(refreshKey)) {
+                sessionStorage.setItem(refreshKey, '1');
+                setTimeout(() => {
+                    this.loadDashboardData(true);
+                }, 2000);
+            }
         }
     }
 
