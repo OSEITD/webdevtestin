@@ -540,7 +540,21 @@ header('Content-Type: text/html; charset=UTF-8');
         @media (max-width: 768px) {
             .company-header {
                 padding: 1rem;
-                margin: -1rem -1rem 1.5rem -1rem;
+                margin: 0 0 1.5rem 0;
+                border-radius: 0.85rem;
+            }
+
+            .main-content {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .dashboard-content {
+                width: 100%;
+            }
+
+            .collapsible-section {
+                padding: 0.75rem;
             }
 
             .company-header-content {
