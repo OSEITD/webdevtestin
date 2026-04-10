@@ -138,6 +138,47 @@ $current_user = getCurrentUser();
             margin-bottom: 2rem;
         }
 
+        .stats-section {
+            margin-bottom: 2rem;
+        }
+
+        .stats-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stats-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #2E0D2A;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-toggle {
+            border: 1px solid rgba(46, 13, 42, 0.15);
+            background: #fff;
+            color: #2E0D2A;
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            cursor: pointer;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stats-toggle:hover {
+            background: #f8f9fa;
+            box-shadow: 0 2px 8px rgba(46, 13, 42, 0.12);
+        }
+
+        .stats-section.is-collapsed .stats-grid {
+            display: none;
+        }
+
         .stat-card {
             background: white;
             padding: 1.5rem;
@@ -212,6 +253,100 @@ $current_user = getCurrentUser();
         .parcels-table td {
             padding: 1rem;
             vertical-align: middle;
+        }
+
+        .parcels-cards {
+            display: none;
+            gap: 0.75rem;
+        }
+
+        .parcel-card {
+            background: #fff;
+            border: 1px solid rgba(46, 13, 42, 0.12);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .parcel-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .parcel-card-title {
+            font-weight: 700;
+            color: #2E0D2A;
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+
+        .parcel-card-meta {
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+
+        .parcel-card-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .parcel-card-toggle {
+            background: #f8f9fa;
+            border: 1px solid rgba(46, 13, 42, 0.12);
+            border-radius: 8px;
+            padding: 0.35rem 0.55rem;
+            cursor: pointer;
+            color: #2E0D2A;
+        }
+
+        .parcel-card-toggle i {
+            transition: transform 0.2s ease;
+        }
+
+        .parcel-card-body {
+            display: none;
+            margin-top: 0.9rem;
+            border-top: 1px solid rgba(46, 13, 42, 0.08);
+            padding-top: 0.9rem;
+        }
+
+        .parcel-card.is-open .parcel-card-body {
+            display: block;
+        }
+
+        .parcel-card.is-open .parcel-card-toggle i {
+            transform: rotate(180deg);
+        }
+
+        .parcel-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .parcel-card-item .label {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6c757d;
+            margin-bottom: 0.2rem;
+            font-weight: 600;
+        }
+
+        .parcel-card-item .value {
+            font-size: 0.95rem;
+            color: #2E0D2A;
+            font-weight: 500;
+        }
+
+        .parcel-card-actions {
+            margin-top: 0.9rem;
+            display: flex;
+            justify-content: flex-end;
         }
 
         .track-number {
@@ -353,65 +488,20 @@ $current_user = getCurrentUser();
                 justify-content: center;
             }
 
-            /* Keep horizontal scroll as a fallback, but provide a stacked mobile layout for better UX */
             .parcels-table-container {
-                overflow-x: auto;
+                background: transparent;
+                border: none;
+                box-shadow: none;
+                overflow: visible;
             }
 
-            /* Remove fixed min-width and make rows stack on small screens */
             .parcels-table {
-                width: 100%;
-                border: 0;
+                display: none;
             }
 
-            .parcels-table thead {
-                display: none; /* hide header on small screens */
-            }
-
-            .parcels-table, .parcels-table tbody, .parcels-table tr, .parcels-table td {
-                display: block;
-                width: 100%;
-            }
-
-            .parcels-table tbody tr {
-                margin-bottom: 0.75rem;
-                border-radius: 8px;
-                border: 1px solid rgba(0,0,0,0.04);
-                box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-                padding: 0.75rem 0.75rem;
-                background: #fff;
-            }
-
-            .parcels-table td {
-                padding: 0.5rem 0.75rem;
-                text-align: right;
-                position: relative;
-                border: 0;
-                vertical-align: top;
-                font-size: 0.95rem;
-            }
-
-            .parcels-table td::before {
-                content: attr(data-label);
-                position: absolute;
-                left: 0.75rem;
-                top: 50%;
-                transform: translateY(-50%);
-                font-weight: 600;
-                color: #6c757d;
-                text-transform: uppercase;
-                font-size: 0.72rem;
-                white-space: nowrap;
-            }
-
-            /* Make action column align to the right without the label overlay */
-            .parcels-table td:last-child {
-                text-align: right;
-                padding-left: 0.75rem;
-            }
-
-            .track-number, .status-badge, .priority-badge {
-                display: inline-block;
+            .parcels-cards {
+                display: grid;
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -430,7 +520,14 @@ $current_user = getCurrentUser();
                     <p class="subtitle">Manage all parcels associated with your outlet</p>
                 </div>
 
-                <div class="stats-grid" id="statsGrid">
+                <div class="stats-section is-collapsed" id="statsSection">
+                    <div class="stats-header">
+                        <h2 class="stats-title"><i class="fas fa-chart-pie"></i> Parcel Summary</h2>
+                        <button class="stats-toggle" type="button" aria-expanded="false" aria-controls="statsGrid">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="stats-grid" id="statsGrid">
                     <div class="stat-card">
                         <div class="stat-icon" style="background: rgba(46, 13, 42, 0.1); color: #2E0D2A;">
                             <i class="fas fa-boxes"></i>
@@ -458,6 +555,7 @@ $current_user = getCurrentUser();
                         </div>
                         <div class="stat-value" id="inTransitParcels">-</div>
                         <div class="stat-label">In Transit</div>
+                    </div>
                     </div>
                 </div>
 
@@ -515,6 +613,7 @@ $current_user = getCurrentUser();
                 </div>
 
                 <div class="parcels-table-container">
+                    <div class="parcels-cards" id="parcelsCards"></div>
                     <table class="parcels-table">
                         <thead>
                             <tr>
@@ -667,6 +766,21 @@ $current_user = getCurrentUser();
                 loadParcels();
             });
 
+            const statsToggle = document.querySelector('.stats-toggle');
+            const statsSection = document.getElementById('statsSection');
+
+            if (statsToggle && statsSection) {
+                statsToggle.addEventListener('click', function() {
+                    const isCollapsed = statsSection.classList.toggle('is-collapsed');
+                    statsToggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+
+                    const icon = statsToggle.querySelector('i');
+                    if (icon) {
+                        icon.className = isCollapsed ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+                    }
+                });
+            }
+
             document.getElementById('resetFilters').addEventListener('click', function() {
                 document.getElementById('filterForm').reset();
                 currentFilters = {};
@@ -744,6 +858,7 @@ $current_user = getCurrentUser();
 
         function renderParcelsTable(parcels) {
             const tbody = document.getElementById('parcelsTableBody');
+            const cardsContainer = document.getElementById('parcelsCards');
 
             if (!parcels || parcels.length === 0) {
                 tbody.innerHTML = `
@@ -754,6 +869,14 @@ $current_user = getCurrentUser();
                         </td>
                     </tr>
                 `;
+                if (cardsContainer) {
+                    cardsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-box-open"></i>
+                            <div>No parcels found matching your criteria</div>
+                        </div>
+                    `;
+                }
                 return;
             }
 
@@ -793,6 +916,50 @@ $current_user = getCurrentUser();
                     </td>
                 </tr>
             `).join('');
+
+            if (cardsContainer) {
+                cardsContainer.innerHTML = parcels.map(parcel => `
+                    <div class="parcel-card" data-parcel-id="${parcel.id}">
+                        <div class="parcel-card-header">
+                            <div>
+                                <div class="parcel-card-title">${escapeHtml(parcel.track_number || 'Unknown')}</div>
+                                <div class="parcel-card-meta">${formatDate(parcel.created_at)}</div>
+                            </div>
+                            <div class="parcel-card-header-right">
+                                <span class="status-badge status-${parcel.status || 'unknown'}">${formatStatus(parcel.status)}</span>
+                                <button class="parcel-card-toggle" type="button" aria-expanded="false" aria-label="Toggle parcel details">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="parcel-card-body">
+                            <div class="parcel-card-grid">
+                                <div class="parcel-card-item">
+                                    <span class="label">Sender</span>
+                                    <span class="value">${escapeHtml(parcel.sender_name || 'Unknown')}${parcel.sender_phone ? ` (${escapeHtml(parcel.sender_phone)})` : ''}</span>
+                                </div>
+                                <div class="parcel-card-item">
+                                    <span class="label">Receiver</span>
+                                    <span class="value">${escapeHtml(parcel.receiver_name || 'Unknown')}${parcel.receiver_phone ? ` (${escapeHtml(parcel.receiver_phone)})` : ''}</span>
+                                </div>
+                                <div class="parcel-card-item">
+                                    <span class="label">Relation</span>
+                                    <span class="value">${formatRelationType(parcel)}</span>
+                                </div>
+                                <div class="parcel-card-item">
+                                    <span class="label">Weight</span>
+                                    <span class="value">${parcel.parcel_weight || 0} kg</span>
+                                </div>
+                            </div>
+                            <div class="parcel-card-actions">
+                                <button class="btn btn-secondary" onclick="viewParcelDetails('${parcel.id}')" title="View Details">
+                                    <i class="fas fa-eye"></i> View Details
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
         }
 
         function renderPagination(pagination) {
@@ -910,6 +1077,15 @@ $current_user = getCurrentUser();
                     </td>
                 </tr>
             `;
+
+            const cardsContainer = document.getElementById('parcelsCards');
+            if (cardsContainer) {
+                cardsContainer.innerHTML = `
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i> Loading parcels...
+                    </div>
+                `;
+            }
         }
 
         function showError(message) {
@@ -921,7 +1097,28 @@ $current_user = getCurrentUser();
                     </td>
                 </tr>
             `;
+
+            const cardsContainer = document.getElementById('parcelsCards');
+            if (cardsContainer) {
+                cardsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+                        <div style="color: #dc3545;">${escapeHtml(message)}</div>
+                    </div>
+                `;
+            }
         }
+
+        document.addEventListener('click', function(event) {
+            const toggleButton = event.target.closest('.parcel-card-toggle');
+            if (!toggleButton) return;
+
+            const card = toggleButton.closest('.parcel-card');
+            if (!card) return;
+
+            const isOpen = card.classList.toggle('is-open');
+            toggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
 
         function viewParcelDetails(parcelId) {
             // Show modal

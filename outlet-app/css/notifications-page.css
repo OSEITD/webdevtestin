@@ -123,6 +123,46 @@ body {
     gap: 28px;
 }
 
+.notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 22px 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(46, 13, 42, 0.08);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.notifications-header-text h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-primary);
+}
+
+.notifications-header-text h1 i {
+    color: var(--primary-color);
+}
+
+.notifications-header-text p {
+    margin: 6px 0 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.notifications-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
 /* Wrapper for wide tables/lists to allow horizontal scroll on small screens */
 .notifications-shell .table-wrapper {
     overflow-x: auto;
@@ -274,15 +314,15 @@ body {
 }
 
 .auto-refresh-off {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: rgba(255, 255, 255, 0.6) !important;
-    opacity: 0.8;
+    background: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    box-shadow: none !important;
 }
 
 .auto-refresh-off:hover {
-    opacity: 1;
-    color: rgba(255, 255, 255, 0.85) !important;
+    background: #e2e8f0 !important;
+    color: #64748b !important;
 }
 
 .notifications-toolbar {

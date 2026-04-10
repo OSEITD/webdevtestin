@@ -86,7 +86,7 @@ $lencoEnv = LENCO_ENV;
                     <!-- Left Column -->
                     <div class="form-column-left">
                         <!-- Sender Information -->
-                        <div class="form-section">
+                        <div class="form-section section-sender">
                             <h3><i class="fas fa-user"></i> Sender Information</h3>
                             
                             <!-- Sender NRC (First Field) -->
@@ -118,7 +118,7 @@ $lencoEnv = LENCO_ENV;
                         </div>
 
                         <!-- Parcel Details -->
-                        <div class="form-section">
+                        <div class="form-section section-parcel">
                             <h3><i class="fas fa-box"></i> Parcel Details</h3>
                             
                             <div class="form-group">
@@ -160,7 +160,7 @@ $lencoEnv = LENCO_ENV;
                         </div>
 
                         <!-- Photo Upload & Submit - Full Width -->
-                        <div class="form-section photo-upload-section">
+                        <div class="form-section photo-upload-section section-photos">
                             <h3><i class="fas fa-camera"></i> Parcel Photos & Submit</h3>
                             
                             <div class="photo-upload-grid">
@@ -190,7 +190,7 @@ $lencoEnv = LENCO_ENV;
                     <!-- Right Column -->
                     <div class="form-column-right">
                         <!-- Recipient Information -->
-                        <div class="form-section">
+                        <div class="form-section section-recipient">
                             <h3><i class="fas fa-user-check"></i> Recipient Information</h3>
                             
                             <!-- Recipient NRC (First Field) -->
@@ -298,7 +298,7 @@ $lencoEnv = LENCO_ENV;
                             window.COMPANY_COMMISSION = <?php echo json_encode($companyCommission); ?>;
                         </script>
 
-                        <div class="form-section collapsible">
+                        <div class="form-section collapsible section-financial">
                             <h3><i class="fas fa-dollar-sign"></i> Financial Information <i class="fas fa-chevron-down toggle-icon"></i></h3>
                             <div class="section-content">
                             
@@ -603,7 +603,7 @@ $lencoEnv = LENCO_ENV;
                         
                         <!-- Trip Assignment -->
                         <!-- Trip Assignment -->
-                        <div class="trip-assignment-container" id="tripAssignmentSection">
+                        <div class="trip-assignment-container section-trip" id="tripAssignmentSection">
                             <h3><i class="fas fa-route"></i> Trip Assignment <span class="optional-badge">(Optional)</span></h3>
                             
                             <!-- Instruction Message (shown when destination not selected) -->

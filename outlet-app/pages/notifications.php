@@ -33,27 +33,21 @@ $company_id = $_SESSION['company_id'];
 
         <main class="main-content">
             <div class="content-container notifications-wide">
-                <a href="outlet_dashboard.php" class="back-button">
-                    <i class="fas fa-arrow-left"></i>
-                    Back to Dashboard
-                </a>
-
                 <section class="notifications-shell">
-                    <header class="notifications-hero">
-                        <div class="notifications-hero-text">
-                            <span class="notifications-hero-eyebrow">Outlet Alerts Centre</span>
+                    <header class="notifications-header">
+                        <div class="notifications-header-text">
                             <h1>
                                 <i class="fas fa-bell"></i>
                                 Notifications
                             </h1>
                             <p>Stay on top of parcel updates, driver alerts, and system messages with real-time insights designed for outlet teams.</p>
                         </div>
-                        <div class="notifications-hero-actions">
-                            <button type="button" class="hero-btn" id="autoRefreshBtn" onclick="notificationsPage.toggleAutoRefresh()">
+                        <div class="notifications-header-actions">
+                            <button type="button" class="toolbar-btn" id="autoRefreshBtn" onclick="notificationsPage.toggleAutoRefresh()">
                                 <i class="fas fa-sync-alt"></i>
                                 <span id="autoRefreshLabel">Auto-refresh on</span>
                             </button>
-                            <button type="button" class="hero-btn hero-btn-primary" onclick="notificationsPage.markAllAsRead()">
+                            <button type="button" class="toolbar-btn toolbar-btn-refresh" onclick="notificationsPage.markAllAsRead()">
                                 <i class="fas fa-check-double"></i>
                                 Mark all as read
                             </button>

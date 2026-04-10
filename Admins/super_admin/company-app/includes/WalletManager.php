@@ -40,12 +40,11 @@ class CompanyWalletManager {
         try {
             $client = new SupabaseClient();
 
-            // Only allow payouts when the company has at least one successful payment transaction.
-            // This includes cash, mobile money, card, and bank transfer payments.
+            // Only allow payouts when the company has at least one successful online payment transaction (gateway).
             if (!self::hasGatewayPayments($companyId)) {
                 return [
                     'success' => false,
-                    'message' => 'Payouts are only allowed after at least one successful payment transaction (e.g., cash, mobile money, or card).'
+                    'message' => 'Payouts are only allowed after at least one successful online payment (card, mobile money, or bank transfer).'
                 ];
             }
 
@@ -59,6 +58,10 @@ class CompanyWalletManager {
                 return ['success' => false, 'message' => 'Invalid amount'];
             }
 
+            if (floatval($amount) < 5) {
+                return ['success' => false, 'message' => 'Payouts must be at least 5 Kwacha.'];
+            }
+
             $gatewayEligible = self::getGatewayEligibleBalance($companyId);
             if ($gatewayEligible <= 0) {
                 return ['success' => false, 'message' => 'No gateway-eligible balance available for payout.'];
@@ -68,7 +71,7 @@ class CompanyWalletManager {
                 return ['success' => false, 'message' => 'Requested amount exceeds your online eligible balance.'];
             }
 
-            $walletAvailable = floatval($wallet['available_balance']);
+            $walletAvailable = min(floatval($wallet['available_balance']), $gatewayEligible);
             if ($walletAvailable < $amount) {
                 error_log("WalletManager: available_balance ({$walletAvailable}) is less than requested amount ({$amount}), using gatewayEligible ({$gatewayEligible}) for payout calculation.");
                 $walletAvailable = $gatewayEligible;
@@ -151,46 +154,54 @@ class CompanyWalletManager {
         }
     }
 
-    
+    public static function getGatewayPaymentMethods(): array {
+        return ['card', 'mobile_money', 'bank_transfer'];
+    }
+
+    public static function getGatewayPaymentFilter(): string {
+        $methods = self::getGatewayPaymentMethods();
+        $methodsList = implode(',', $methods);
+        return "or=(payment_method.in.({$methodsList}),payment_type.in.({$methodsList}))";
+    }
+
     public static function hasGatewayPayments($companyId) {
-        return self::getGatewayEligibleBalance($companyId) > 0;
+        $summary = self::getGatewaySummary($companyId);
+        return ($summary['gateway_received'] ?? 0) > 0;
     }
 
     public static function getGatewayEligibleBalance($companyId) {
+        $summary = self::getGatewaySummary($companyId);
+        return $summary['eligible'] ?? 0.0;
+    }
+
+    /**
+     * Gateway-only financial summary (excludes COD/cash).
+     * Returns: ['eligible' => float, 'gateway_received' => float, 'payout_total' => float, 'payment_transaction_ids' => array]
+     */
+    public static function getGatewaySummary($companyId): array {
+        $summary = [
+            'eligible' => 0.0,
+            'gateway_received' => 0.0,
+            'payout_total' => 0.0,
+            'payment_transaction_ids' => [],
+        ];
+
         try {
             $client = new SupabaseClient();
 
-            $gatewayMethods = ['mobile_money', 'bank_transfer'];
-            $gatewayMethodsList = implode(',', $gatewayMethods);
             $gatewayResp = $client->getRecord(
-                "payment_transactions?company_id=eq." . urlencode($companyId) . "&status=eq.successful&or=(payment_method.in.({$gatewayMethodsList}),payment_type.in.({$gatewayMethodsList}))&select=id",
+                "payment_transactions?company_id=eq." . urlencode($companyId) . "&status=eq.successful&" . self::getGatewayPaymentFilter() . "&select=id",
                 true
             );
-            $gatewayData = static::extractData($gatewayResp);
-            if (empty($gatewayData)) {
-               
-                try {
-                    $debugResp = $client->getRecord(
-                        "payment_transactions?company_id=eq.{$companyId}&select=id,status,payment_method,amount&limit=10&order=created_at.desc",
-                        true
-                    );
-                    $debugData = static::extractData($debugResp) ?: [];
-                    error_log('WalletManager: gateway payment filter returned none; sample recent payment_transactions: ' . json_encode($debugData));
-                } catch (Exception $e) {
-                    error_log('WalletManager: failed to fetch payment_transactions debug sample: ' . $e->getMessage());
-                }
-                return 0.0;
-            }
-
-            $ids = array_map(function ($row) { return $row['id'] ?? null; }, $gatewayData);
-            $ids = array_filter($ids);
+            $gatewayData = static::extractData($gatewayResp) ?: [];
+            $ids = array_values(array_filter(array_map(function ($row) { return $row['id'] ?? null; }, $gatewayData)));
             if (empty($ids)) {
-                return 0.0;
+                return $summary;
             }
 
+            $summary['payment_transaction_ids'] = $ids;
             $encodedIds = implode(',', array_map('urlencode', $ids));
 
-            // Sum gateway-derived wallet transactions
             $walletResp = $client->getRecord(
                 "wallet_transactions?company_id=eq." . urlencode($companyId) . "&payment_transaction_id=in.({$encodedIds})",
                 true
@@ -217,7 +228,6 @@ class CompanyWalletManager {
                 $netGateway += floatval($tx['amount'] ?? 0);
             }
 
-       
             $payoutResp = $client->getRecord(
                 "wallet_transactions?company_id=eq.{$companyId}&transaction_type=eq.payout_debit",
                 true
@@ -228,13 +238,98 @@ class CompanyWalletManager {
                 $payoutTotal += floatval($tx['amount'] ?? 0);
             }
 
-            $eligible = $netGateway - $payoutTotal;
-            return max(0.0, $eligible);
+            $eligible = round(max(0.0, $netGateway - $payoutTotal), 2);
+
+            $summary['eligible'] = $eligible;
+            $summary['gateway_received'] = round($netGateway, 2);
+            $summary['payout_total'] = round($payoutTotal, 2);
+            return $summary;
 
         } catch (Exception $e) {
-            error_log("Error calculating gateway-eligible balance for company {$companyId}: " . $e->getMessage());
+            error_log("Error calculating gateway summary for company {$companyId}: " . $e->getMessage());
         }
-        return 0.0;
+
+        return $summary;
+    }
+
+    /**
+     * Gateway-only transactions for UI (excludes COD/cash).
+     */
+    public static function getGatewayTransactions($companyId, $limit = 50) {
+        $rows = [];
+        try {
+            $summary = self::getGatewaySummary($companyId);
+            $ids = $summary['payment_transaction_ids'] ?? [];
+
+            if (empty($ids)) {
+                return [];
+            }
+
+            $client = new SupabaseClient();
+            $encodedIds = implode(',', array_map('urlencode', $ids));
+
+            // Fetch gateway payments (successful only)
+            $paymentResp = $client->getRecord(
+                "payment_transactions?id=in.({$encodedIds})&order=paid_at.desc,created_at.desc&limit={$limit}",
+                true
+            );
+            $payments = static::extractData($paymentResp) ?: [];
+            foreach ($payments as $txn) {
+                $rows[] = [
+                    'created_at' => $txn['paid_at'] ?: $txn['created_at'],
+                    'description' => 'Gateway payment (' . ($txn['payment_method'] ?? 'online') . ')',
+                    'amount' => floatval($txn['amount'] ?? $txn['total_amount'] ?? 0),
+                    'transaction_type' => 'payment_credit',
+                    'type' => 'payment_credit',
+                    'reference' => $txn['tx_ref'] ?? '',
+                ];
+            }
+
+            // Include commission debits tied to these transactions
+            $walletResp = $client->getRecord(
+                "wallet_transactions?company_id=eq." . urlencode($companyId) . "&payment_transaction_id=in.({$encodedIds})&transaction_type=eq.commission_debit",
+                true
+            );
+            $walletRows = static::extractData($walletResp) ?: [];
+            foreach ($walletRows as $tx) {
+                $rows[] = [
+                    'created_at' => $tx['created_at'] ?? null,
+                    'description' => 'Commission debit',
+                    'amount' => floatval($tx['amount'] ?? 0) * -1,
+                    'transaction_type' => 'commission_debit',
+                    'type' => 'commission_debit',
+                    'reference' => $tx['reference'] ?? '',
+                ];
+            }
+
+            // Include payouts (they draw from the gateway pool)
+            $payoutResp = $client->getRecord(
+                "wallet_transactions?company_id=eq." . urlencode($companyId) . "&transaction_type=eq.payout_debit",
+                true
+            );
+            $payoutRows = static::extractData($payoutResp) ?: [];
+            foreach ($payoutRows as $tx) {
+                $rows[] = [
+                    'created_at' => $tx['created_at'] ?? null,
+                    'description' => 'Payout request',
+                    'amount' => floatval($tx['amount'] ?? 0) * -1,
+                    'transaction_type' => 'payout_debit',
+                    'type' => 'payout_debit',
+                    'reference' => $tx['reference'] ?? '',
+                ];
+            }
+
+            usort($rows, function($a, $b) {
+                $aTime = strtotime($a['created_at'] ?? '1970-01-01 00:00:00');
+                $bTime = strtotime($b['created_at'] ?? '1970-01-01 00:00:00');
+                return $bTime <=> $aTime;
+            });
+
+            return array_slice($rows, 0, $limit);
+        } catch (Exception $e) {
+            error_log("Error getting gateway transactions for company {$companyId}: " . $e->getMessage());
+        }
+        return [];
     }
 
    

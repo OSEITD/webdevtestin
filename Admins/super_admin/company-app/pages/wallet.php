@@ -9,27 +9,20 @@ if (!$companyId) {
     die("<div class='container mt-5'><h3>Unauthorized access. Please log in properly.</h3></div>");
 }
 
-$wallet = CompanyWalletManager::getWallet($companyId);
-$availableBalance = $wallet ? floatval($wallet['available_balance']) : 0.00;
-$pendingBalance = 0.00;
-if ($wallet) {
-    $pendingBalance = floatval($wallet['pending_balance']);
-}
+$gatewaySummary = CompanyWalletManager::getGatewaySummary($companyId);
+$gatewayEligibleBalance = $gatewaySummary['eligible'] ?? 0.00;
+$totalGatewayEarned = $gatewaySummary['gateway_received'] ?? 0.00;
+$gatewayPaidOut = $gatewaySummary['payout_total'] ?? 0.00;
 
-// If the wallet row isn't being updated properly on payout request, compute pending from payout requests.
-$pendingWithdrawalComputed = CompanyWalletManager::getPendingWithdrawals($companyId);
-if ($pendingWithdrawalComputed > $pendingBalance) {
-    $pendingBalance = $pendingWithdrawalComputed;
-}
-
-$totalEarned = $wallet ? floatval($wallet['total_earned']) : 0.00;
-$gatewayEligibleBalance = CompanyWalletManager::getGatewayEligibleBalance($companyId);
+// Compute pending from payout requests to stay consistent with gateway pool.
+$pendingBalance = CompanyWalletManager::getPendingWithdrawals($companyId);
 
 $payouts = CompanyWalletManager::getPayouts($companyId, 20);
-$transactions = CompanyWalletManager::getTransactions($companyId, 30);
+$transactions = CompanyWalletManager::getGatewayTransactions($companyId, 30);
 $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
 
     //  payout method / saved payout details from the company record.
+    $companyRecord = [];
     $defaultPayoutMethod = 'bank_transfer';
     $defaultBankName = '';
     $defaultBankAccountNumber = '';
@@ -81,7 +74,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
     }
     
     .request-payout-btn {
-        background-color: #27ae60;
+        background-color: var(--primary-color);
         color: #fff;
         border: none;
         padding: 0.6rem 1.2rem;
@@ -95,7 +88,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
     }
     
     .request-payout-btn:hover {
-        background-color: #219653;
+        background-color: var(--primary-light);
     }
     
     .balances-grid {
@@ -289,7 +282,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
     .btn-cancel:hover { background: #e2e8f0; }
     
     .btn-submit {
-        background: #3498db;
+            background: var(--primary-color);
         color: white;
         border: none;
         padding: 0.6rem 1.2rem;
@@ -298,7 +291,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
         font-weight: 500;
         transition: 0.2s;
     }
-    .btn-submit:hover { background: #2980b9; }
+        .btn-submit:hover { background: var(--primary-light); }
 
     .help-text {
         font-size: 0.85rem;
@@ -319,7 +312,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
                 </button>
                 <?php if (!$hasGatewayPayments): ?>
                     <div style="font-size:0.9rem; color:#64748b; text-align:right; max-width:360px;">
-                        Payouts can only be requested after your company has received at least one successful bank transfer or mobile money payment.
+                        Payouts can only be requested after your company has received at least one successful online payment (card, mobile money, or bank transfer).
                     </div>
                 <?php endif; ?>
             </div>
@@ -328,21 +321,21 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
         <!-- Balances Grid -->
         <div class="balances-grid">
             <div class="balance-card">
-                <div class="label">Available Balance</div>
-                <div class="amount available"><?php echo $currencyStr; ?><?php echo number_format($availableBalance, 2); ?></div>
-            </div>
-            <div class="balance-card">
-                <div class="label">Online Balance</div>
+                <div class="label">Online Balance (Gateway)</div>
                 <div class="amount"><?php echo $currencyStr; ?><?php echo number_format($gatewayEligibleBalance, 2); ?></div>
-                <small style="color:#64748b; margin-top:0.5rem; display:block;">Funds eligible for payout (bank transfer or mobile money)</small>
+                <small style="color:#64748b; margin-top:0.5rem; display:block;">Funds eligible for payout (card, mobile money, or bank transfer)</small>
             </div>
             <div class="balance-card">
                 <div class="label">Pending Withdrawals</div>
                 <div class="amount"><?php echo $currencyStr; ?><?php echo number_format($pendingBalance, 2); ?></div>
             </div>
             <div class="balance-card">
-                <div class="label">Total Earned</div>
-                <div class="amount"><?php echo $currencyStr; ?><?php echo number_format($totalEarned, 2); ?></div>
+                <div class="label">Online Payouts Sent</div>
+                <div class="amount"><?php echo $currencyStr; ?><?php echo number_format($gatewayPaidOut, 2); ?></div>
+            </div>
+            <div class="balance-card">
+                <div class="label">Total Online Payments Received</div>
+                <div class="amount"><?php echo $currencyStr; ?><?php echo number_format($totalGatewayEarned, 2); ?></div>
             </div>
         </div>
 
@@ -353,7 +346,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
             </div>
         </div>
         <div class="wallet-tabs">
-            <div class="wallet-tab active" onclick="switchThemeTab(event, 'transactions')">Recent Transactions</div>
+            <div class="wallet-tab active" onclick="switchThemeTab(event, 'transactions')">Gateway Transactions</div>
             <div class="wallet-tab" onclick="switchThemeTab(event, 'payouts')">Payout History</div>
         </div>
 
@@ -456,7 +449,8 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
 
         <div class="form-group">
             <label for="payoutAmount">Amount (<?php echo $currencyStr; ?>)</label>
-            <input type="number" id="payoutAmount" min="100" max="<?php echo $gatewayEligibleBalance; ?>" step="0.01" placeholder="Enter amount..." required>
+            <input type="number" id="payoutAmount" min="5" max="<?php echo $gatewayEligibleBalance; ?>" step="0.01" placeholder="Enter amount..." required>
+            <span class="help-text">Minimum payout is 5 <?php echo $currencyStr; ?>.</span>
         </div>
 
         <div class="form-group">
@@ -538,7 +532,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
                 title: 'Payout Not Available',
                 text: 'Payouts can only be requested after you have received at least one successful payment through the configured payment gateway.',
                 icon: 'info',
-                confirmButtonColor: '#3498db'
+                confirmButtonColor: '#2E0D2A'
             });
             return;
         <?php elseif ($gatewayEligibleBalance <= 0): ?>
@@ -546,7 +540,7 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
                 title: 'Insufficient Online Balance',
                 text: 'You do not have any online eligible balance to withdraw.',
                 icon: 'warning',
-                confirmButtonColor: '#3498db'
+                confirmButtonColor: '#2E0D2A'
             });
             return;
         <?php endif; ?>
@@ -582,18 +576,25 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
         const method = document.getElementById('payoutMethod').value;
         const maxAmount = <?php echo $gatewayEligibleBalance; ?>; // only gateway funds are eligible for payout
         
-        if (!amount || amount <= 0) {
+        const numericAmount = parseFloat(amount);
+
+        if (!numericAmount || numericAmount <= 0) {
             Swal.fire('Error', 'Please enter a valid amount.', 'error');
             return;
         }
+
+        if (numericAmount < 5) {
+            Swal.fire('Error', 'Minimum payout is 5 <?php echo $currencyStr; ?>.', 'error');
+            return;
+        }
         
-        if (parseFloat(amount) > maxAmount) {
+        if (numericAmount > maxAmount) {
             Swal.fire('Error', 'Amount exceeds Gateway Eligible Balance.', 'error');
             return;
         }
 
         const payload = {
-            amount: parseFloat(amount),
+            amount: numericAmount,
             payout_method: method
         };
 

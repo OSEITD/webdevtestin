@@ -89,7 +89,7 @@ if (!empty($parcelIds)) {
         color: white;
         padding: 2rem;
         border-radius: 1rem;
-        margin: 20px auto;
+        margin: 0 auto 20px;
         box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
         max-width: 1400px;
         text-align: center;
@@ -100,6 +100,10 @@ if (!empty($parcelIds)) {
 
     /* widen main content container */
     .content-container { max-width: 1400px; }
+
+    .transaction-history-page .content-container {
+        margin-top: 0;
+    }
 
     /* custom table styling for transaction history */
     #transactionTableWrapper {
@@ -170,7 +174,7 @@ if (!empty($parcelIds)) {
     .status-refunded { background-color: #17A2B8; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen transaction-history-page">
     <?php include '../includes/navbar.php'; ?>
     <?php include '../includes/sidebar.php'; ?>
 
@@ -258,9 +262,9 @@ if (!empty($parcelIds)) {
     ]);
 ?>
                             <tr class="txn-row" data-txn="<?php echo htmlspecialchars($rowData, ENT_QUOTES); ?>" style="cursor:pointer;" title="Click to view details">
-                                <td><?php echo htmlspecialchars($dt); ?></td>
-                                <td><?php echo htmlspecialchars($t['tx_ref']); ?></td>
-                                <td>
+                                <td data-label="Date / Time"><?php echo htmlspecialchars($dt); ?></td>
+                                <td data-label="Reference"><?php echo htmlspecialchars($t['tx_ref']); ?></td>
+                                <td data-label="Parcel">
                                     <?php
                                         $parcelId = $t['parcel_id'] ?? null;
                                         $parcelInfo = $parcelId && isset($parcelMap[$parcelId]) ? $parcelMap[$parcelId] : null;
@@ -271,17 +275,17 @@ if (!empty($parcelIds)) {
                                         }
                                     ?>
                                 </td>
-                                <td><?php echo ($t['currency'] ?? 'ZMW') . ' ' . number_format($t['amount'],2); ?></td>
-                                <td><?php echo htmlspecialchars($t['payment_method']); ?></td>
-                                <td><?php echo htmlspecialchars($t['mobile_network'] ?? '-'); ?></td>
-                                <td><?php echo htmlspecialchars($t['mobile_number'] ?? '-'); ?></td>
-                                <td><?php 
+                                <td data-label="Amount"><?php echo ($t['currency'] ?? 'ZMW') . ' ' . number_format($t['amount'],2); ?></td>
+                                <td data-label="Method"><?php echo htmlspecialchars($t['payment_method']); ?></td>
+                                <td data-label="Network"><?php echo htmlspecialchars($t['mobile_network'] ?? '-'); ?></td>
+                                <td data-label="Phone"><?php echo htmlspecialchars($t['mobile_number'] ?? '-'); ?></td>
+                                <td data-label="Txn Status"><?php 
                                     $stat = $t['status'] ?? '';
                                     $class = strtolower(str_replace([' ', '_'], '-', $stat));
                                 ?>
                                 <span class="status-badge <?php echo htmlspecialchars($class); ?>"><?php echo htmlspecialchars($stat); ?></span>
                                 </td>
-                                <td><?php
+                                <td data-label="Parcel Payment"><?php
                                       $parcelPaymentStatus = $parcelInfo['payment_status'] ?? '-';
                                       $paymentClass = strtolower(str_replace([' ', '_'], '-', $parcelPaymentStatus));
                                       if (!empty($parcelPaymentStatus)) {
@@ -290,8 +294,8 @@ if (!empty($parcelIds)) {
                                           echo '-';
                                       }
                                   ?></td>
-                                <td><?php echo htmlspecialchars($by); ?></td>
-                                <td><?php echo $cust; ?></td>
+                                <td data-label="By"><?php echo htmlspecialchars($by); ?></td>
+                                <td data-label="Customer"><?php echo $cust; ?></td>
                             </tr>
 <?php endforeach; ?>
                         </tbody>
@@ -314,6 +318,78 @@ if (!empty($parcelIds)) {
             position: sticky;
             top: 0;
             z-index: 3;
+        }
+        @media (max-width: 768px) {
+            #transactionTableWrapper {
+                max-height: none;
+                padding: 12px;
+            }
+
+            #transactionTableWrapper table {
+                min-width: 0 !important;
+                table-layout: auto;
+                white-space: normal !important;
+            }
+
+            #transactionTableWrapper thead {
+                display: none;
+            }
+
+            #transactionTableWrapper table,
+            #transactionTableWrapper tbody,
+            #transactionTableWrapper tr,
+            #transactionTableWrapper td {
+                display: block;
+                width: 100%;
+            }
+
+            #transactionTableWrapper tbody tr {
+                margin-bottom: 12px;
+                border-radius: 10px;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+                background: #fff;
+                padding: 8px 12px;
+            }
+
+            #transactionTableWrapper td {
+                white-space: normal;
+                text-overflow: initial;
+                overflow: visible;
+                padding: 8px 0;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                align-items: flex-start;
+                text-align: left;
+                word-break: break-word;
+                position: static;
+                padding-left: 0;
+            }
+
+            #transactionTableWrapper td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #6c757d;
+                text-transform: uppercase;
+                font-size: 0.7rem;
+                letter-spacing: 0.05em;
+                position: static;
+                width: auto;
+                padding-right: 0;
+                white-space: normal;
+                display: block;
+                margin-bottom: 2px;
+            }
+
+            #transactionTableWrapper table td {
+                max-width: none !important;
+                white-space: normal !important;
+            }
+
+            #transactionTableWrapper a {
+                word-break: break-word;
+            }
         }
     </style>
 

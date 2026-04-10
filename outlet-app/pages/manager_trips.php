@@ -1099,13 +1099,6 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 grid-template-columns: 1fr;
             }
 
-            .trips-summary {
-                flex-direction: column;
-            }
-
-            .summary-card {
-                min-width: 100%;
-            }
         }
     </style>
 </head>

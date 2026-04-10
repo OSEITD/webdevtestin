@@ -90,12 +90,31 @@ curl_close($ch);
 $parcelData = json_decode($parcelResponse, true);
 $oldStatus = !empty($parcelData) ? $parcelData[0]['status'] : 'Unknown';
 
-$updateUrl = "$supabaseUrl/rest/v1/parcels?track_number=eq.$track_number";
+// Avoid creating noisy no-op updates/notifications.
+if (strtolower((string)$oldStatus) === strtolower((string)$mapped_status)) {
+    echo json_encode([
+        'success' => true,
+        'data' => $parcelData,
+        'old_status' => $oldStatus,
+        'new_status' => $mapped_status,
+        'message' => 'Parcel status is already set to this value.'
+    ]);
+    exit;
+}
 
-$payload = json_encode([
+$updateUrl = "$supabaseUrl/rest/v1/parcels?track_number=eq.$track_number&company_id=eq." . $_SESSION['company_id'];
+
+$isDeliveredAction = in_array(strtolower((string)$new_status), ['mark-delivered', 'mark_delivered', 'delivered'], true);
+$payloadData = [
     'status' => $mapped_status,
-    'updated_at' => date('c') 
-]);
+    'updated_at' => date('c')
+];
+
+if ($isDeliveredAction) {
+    $payloadData['delivered_at'] = date('c');
+}
+
+$payload = json_encode($payloadData);
 
 $ch = curl_init($updateUrl);
 curl_setopt_array($ch, [
@@ -125,7 +144,11 @@ if ($http_code >= 200 && $http_code < 300) {
         try {
             error_log("Creating notification for parcel {$parcel['track_number']} status change: {$oldStatus} -> {$mapped_status}");
             $notificationHelper = new NotificationHelper();
-            $result = $notificationHelper->createParcelStatusNotification($parcel, $oldStatus, $mapped_status);
+
+            // notifications.recipient_id is required and must reference profiles.id.
+            // Use the current outlet user as a safe recipient fallback.
+            $recipientId = $_SESSION['user_id'] ?? null;
+            $result = $notificationHelper->createParcelStatusNotification($parcel, $oldStatus, $mapped_status, $recipientId);
             error_log("Notification creation result: " . json_encode($result));
         } catch (Exception $e) {
             

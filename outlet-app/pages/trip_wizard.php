@@ -537,6 +537,7 @@ $current_user = getCurrentUser();
         @media (max-width: 768px) {
             .wizard-steps {
                 flex-direction: column;
+                gap: 10px;
             }
             
             .form-row {
@@ -546,6 +547,12 @@ $current_user = getCurrentUser();
             .wizard-actions {
                 flex-direction: column;
                 gap: 10px;
+                align-items: stretch;
+            }
+
+            .wizard-actions .btn {
+                width: 100%;
+                justify-content: center;
             }
 
             .main-content {
@@ -585,6 +592,31 @@ $current_user = getCurrentUser();
 
             .wizard-step {
                 padding: 15px 10px;
+            }
+
+            .wizard-step div {
+                font-size: 0.9rem;
+                line-height: 1.2;
+            }
+
+            .form-section {
+                padding: 18px;
+            }
+
+            .selected-parcels-list {
+                grid-template-columns: 1fr;
+            }
+
+            .selected-parcel-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .stop-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
             }
         }
     </style>

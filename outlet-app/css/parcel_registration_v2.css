@@ -1315,6 +1315,44 @@ textarea.error {
         grid-template-columns: 1fr !important;
         max-width: 720px !important;
     }
+
+    #newParcelForm {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .form-column-left,
+    .form-column-right {
+        display: contents !important;
+    }
+
+    .section-sender {
+        order: 1;
+    }
+
+    .section-recipient {
+        order: 2;
+    }
+
+    .section-parcel {
+        order: 3;
+    }
+
+    .section-financial {
+        order: 4;
+    }
+
+    .section-trip {
+        order: 5;
+    }
+
+    .section-photos {
+        order: 6;
+    }
+
+    .submit-area-outside-card {
+        order: 7;
+    }
     
     .page-header h1 {
         font-size: var(--font-size-2xl) !important;
