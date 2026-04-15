@@ -572,6 +572,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
   </style>
+    <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="login-body">
     <!-- Toast Notifications at Top -->

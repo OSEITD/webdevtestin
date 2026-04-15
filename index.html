@@ -3,114 +3,364 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WD Parcel Apps Launcher</title>
+    <title>WD Parcel Send Receiver System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            color-scheme: light;
+            --ink: #0b1220;
+            --muted: #5b6b85;
+            --accent: #1fb6a6;
+            --accent-dark: #118477;
+            --accent-2: #f3b94a;
+            --surface: #f4f6f9;
+            --card: #ffffff;
+            --line: #e2e8f0;
+            --shadow: 0 22px 60px rgba(15, 23, 42, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
-            padding: 40px;
+            font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 20% 10%, rgba(31, 182, 166, 0.18), transparent 45%),
+                radial-gradient(circle at 85% 20%, rgba(243, 185, 74, 0.2), transparent 40%),
+                linear-gradient(160deg, #eef2f7 0%, #f9f1e7 100%);
             min-height: 100vh;
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 48px 24px 80px;
+            position: relative;
+        }
+
+        .page::before {
+            content: "";
+            position: absolute;
+            inset: 24px 12px auto auto;
+            width: 240px;
+            height: 240px;
+            border-radius: 40px;
+            background: linear-gradient(140deg, rgba(31, 182, 166, 0.25), rgba(17, 132, 119, 0));
+            filter: blur(0.5px);
+            z-index: 0;
+        }
+
+        header {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 36px 42px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(226, 232, 240, 0.7);
+            display: grid;
+            gap: 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 16px;
         }
-        .container {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            max-width: 600px;
-            width: 100%;
+
+        .logo {
+            width: 160px;
+            height: auto;
         }
+
+        .kicker {
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 12px;
+            color: var(--accent-dark);
+            font-weight: 600;
+        }
+
         h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
+            font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+            font-size: 34px;
+            margin: 8px 0 12px;
+            letter-spacing: -0.02em;
         }
+
+        .lead {
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0;
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pill {
+            background: rgba(31, 182, 166, 0.12);
+            color: var(--accent-dark);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .section-title {
+            font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+            font-size: 22px;
+            margin: 40px 0 16px;
+        }
+
         .app-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 20px;
-            margin-top: 30px;
         }
+
         .app-card {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 2px solid transparent;
+            background: var(--card);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid var(--line);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            display: grid;
+            gap: 16px;
         }
-        .app-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            border-color: #667eea;
-        }
+
         .app-card h3 {
-            color: #2d3748;
-            margin-bottom: 15px;
+            margin: 0;
+            font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+            font-size: 20px;
         }
+
         .app-card p {
-            color: #718096;
-            margin-bottom: 20px;
-            font-size: 14px;
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
         }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--ink);
+            background: var(--surface);
+            padding: 6px 12px;
+            border-radius: 10px;
+        }
+
+        .cta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 25px;
-            border-radius: 8px;
+            background: var(--ink);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 12px;
             text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-            text-decoration: none;
-            color: white;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
         }
-        .status {
+
+        .btn.secondary {
+            background: #fff;
+            color: var(--ink);
+            border: 1px solid var(--line);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .info-card {
+            padding: 20px;
+            border-radius: 16px;
+            background: var(--surface);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .info-card h4 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        .info-card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .contact {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid var(--line);
+            display: grid;
+            gap: 16px;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .contact h4 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        .contact p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        footer {
+            margin-top: 36px;
+            color: var(--muted);
+            font-size: 13px;
             text-align: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: #f0fff4;
-            border: 1px solid #9ae6b4;
-            border-radius: 8px;
-            color: #2f855a;
+        }
+
+        @media (max-width: 720px) {
+            header {
+                padding: 28px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .logo {
+                width: 130px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🚚 WD Parcel Send Receiver PWA</h1>
-        <p style="text-align: center; color: #718096;">Select the application you want to access:</p>
-        
-        <div class="app-grid">
-            <div class="app-card">
-                <h3>📦 Customer App</h3>
-                <p>Track your parcels, view delivery history, and manage your shipments.</p>
-                <a href="customer-app/" class="btn">Launch Customer App</a>
+    <div class="page">
+        <header>
+            <div class="brand">
+                <img class="logo" src="Admins/super_admin/assets/img/Logo.png" alt="WebDev Technologies logo">
+                <div>
+                    <div class="kicker">WebDev Technologies</div>
+                    <h1>WD Parcel Send Receiver System</h1>
+                    <p class="lead">
+                        A complete parcel logistics platform that connects customers, outlets, and administrators.
+                        Track shipments in real time, manage delivery assignments, and monitor operational performance
+                        from one unified system.
+                    </p>
+                </div>
             </div>
-            
-            <div class="app-card">
-                <h3>🏪 Outlet App</h3>
-                <p>Manage outlet operations, handle deliveries, and track drivers.</p>
-                <a href="outlet-app/login.php" class="btn">Login to Outlet App</a>
+            <div class="hero-meta">
+                <span class="pill">Multi-app ecosystem</span>
+                <span class="pill">Parcel tracking and dispatch</span>
+                <span class="pill">Operations and analytics</span>
             </div>
-            
-            <div class="app-card">
-                <h3>🏢 Admin Dashboard</h3>
-                <p>Monitor company operations, view analytics, and manage system settings.</p>
-                <a href="Admins/super_admin/auth/login.php" class="btn">Login to Admin Dashboard</a>
+        </header>
+
+        <section>
+            <h2 class="section-title">Choose your workspace</h2>
+            <div class="app-grid">
+                <article class="app-card">
+                    <span class="chip">Customer Experience</span>
+                    <h3>Customer App</h3>
+                    <p>Track parcels, view delivery progress, and stay updated on shipment status and delivery history.</p>
+                    <div class="cta-row">
+                        <a href="https://customer.nex-er.com/secure_tracking.html" class="btn">Launch Customer App</a>
+                    </div>
+                </article>
+
+                <article class="app-card">
+                    <span class="chip">Outlet Operations</span>
+                    <h3>Outlet App</h3>
+                    <p>Handle incoming parcels, assign drivers, manage deliveries, and monitor outlet activity.</p>
+                    <div class="cta-row">
+                        <a href="https://outlet.nex-er.com/login.php" class="btn">Login to Outlet App</a>
+                    </div>
+                </article>
+
+                <article class="app-card">
+                    <span class="chip">Admin Control</span>
+                    <h3>Admin Dashboard</h3>
+                    <p>Oversee company performance, manage system settings, and access analytics and reporting.</p>
+                    <div class="cta-row">
+                        <a href="https://admins.nex-er.com/Admins/super_admin/auth/login.php" class="btn">Login to Admin Dashboard</a>
+                    </div>
+                </article>
             </div>
-        </div>
-        
-        <div class="status">
-            ✅ All applications are ready to use without login requirements
-        </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">System at a glance</h2>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>End-to-end visibility</h4>
+                    <p>Follow every parcel from intake to delivery with status updates and tracking history.</p>
+                </div>
+                <div class="info-card">
+                    <h4>Role-based workflows</h4>
+                    <p>Dedicated experiences for customers, outlet teams, and administrators.</p>
+                </div>
+                <div class="info-card">
+                    <h4>Operational insight</h4>
+                    <p>Dashboards and reports that highlight delivery performance and service efficiency.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">Contact details</h2>
+            <div class="contact">
+                <div class="contact-grid">
+                    <div>
+                        <h4>Office address</h4>
+                        <p>
+                            Plot 13/18/20<br>
+                            Corner of Kabelenga Avenue and Shinde Street (Boss Building)<br>
+                            Town Center<br>
+                            Ndola - Zambia
+                        </p>
+                    </div>
+                    <div>
+                        <h4>Reach us</h4>
+                        <p>Mobile: +260 960 911672</p>
+                        <p>Email: info@webdevzm.tech</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            WD Parcel Send Receiver System powered by WebDev Technologies
+        </footer>
     </div>
 </body>
 </html>

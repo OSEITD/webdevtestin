@@ -310,7 +310,7 @@ class NotificationManager {
 
     async loadUnreadCount() {
         try {
-            const response = await fetch('../../api/notifications.php?action=unread_count');
+            const response = await fetch('../api/notifications.php?action=unread_count');
             const data = await response.json();
 
             if (data.success) {
@@ -364,7 +364,7 @@ class NotificationManager {
         container.innerHTML = '<div class="notification-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
 
         try {
-            const response = await fetch('../../api/notifications.php?action=list&limit=20');
+            const response = await fetch('../api/notifications.php?action=list&limit=20');
             const data = await response.json();
 
             if (data.success) {
@@ -501,7 +501,7 @@ class NotificationManager {
             const formData = new FormData();
             formData.append('notification_id', notificationId);
 
-            const response = await fetch('../../api/notifications.php?action=mark_read', {
+            const response = await fetch('../api/notifications.php?action=mark_read', {
                 method: 'POST',
                 body: formData
             });
@@ -522,7 +522,7 @@ class NotificationManager {
 
     async markAllAsRead() {
         try {
-            const response = await fetch('../../api/notifications.php?action=mark_all_read', {
+            const response = await fetch('../api/notifications.php?action=mark_all_read', {
                 method: 'POST'
             });
 
@@ -544,7 +544,7 @@ class NotificationManager {
             const formData = new FormData();
             formData.append('notification_id', notificationId);
 
-            const response = await fetch('../../api/notifications.php?action=dismiss', {
+            const response = await fetch('../api/notifications.php?action=dismiss', {
                 method: 'POST',
                 body: formData
             });

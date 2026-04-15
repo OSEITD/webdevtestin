@@ -19,16 +19,21 @@ class DashboardChartAPI {
     public function handleRequest() {
         try {
             // session cookie params
-            $isLocalhost = in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']);
-            $cookieParams = ['lifetime'=>0,'path'=>'/','httponly'=>true,'samesite'=>'Lax'];
-            if (!$isLocalhost) { $cookieParams['secure'] = true; $cookieParams['domain'] = '.' . $_SERVER['HTTP_HOST']; }
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $isLocalhost = in_array($host, ['localhost', '127.0.0.1']);
+            $cookieParams = [
+                'lifetime' => 86400,
+                'path' => '/',
+                'httponly' => true,
+                'samesite' => 'Lax',
+                'secure' => !$isLocalhost
+            ];
             session_set_cookie_params($cookieParams);
             if (session_status() === PHP_SESSION_NONE) session_start();
 
             if ($_SERVER['REQUEST_METHOD'] !== 'GET') throw new Exception('Method not allowed', 405);
-            if (!isset($_SESSION['id'])) throw new Exception('Company ID not found in session', 401);
-
-            $companyId = $_SESSION['id'];
+            $companyId = $_SESSION['id'] ?? $_SESSION['company_id'] ?? null;
+            if (!$companyId) throw new Exception('Company ID not found in session', 401);
             $accessToken = $_SESSION['access_token'] ?? null;
             $refreshToken = $_SESSION['refresh_token'] ?? null;
 

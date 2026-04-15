@@ -38,14 +38,12 @@ body {
 
 .main-content {
     flex: 1;
-    padding: 0;
-    margin-left: 0;
     background: #f1f5f9;
-    min-height: calc(100vh - 70px);
-    padding-top: 90px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    min-height: 100vh;
+    padding: 80px 20px 20px;
+    margin: 0 auto;
+    max-width: 1400px;
+    width: 100%;
 }
 
 .content-container {
@@ -69,6 +67,12 @@ body {
 @media (min-width: 769px) {
     .content-container.notifications-wide {
         padding: 24px 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 80px 0.5rem 20px;
     }
 }
 
@@ -1269,7 +1273,8 @@ body {
 /* Desktop Layout */
 @media (min-width: 769px) {
     .main-content {
-        margin-left: 250px;
+        margin: 0 auto;
+        width: 100%;
         padding-top: 80px;
         display: flex;
         justify-content: center;

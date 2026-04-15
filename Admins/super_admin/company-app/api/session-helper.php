@@ -31,20 +31,12 @@ class SessionHelper {
 
         // Configure secure session cookie parameters
         $cookieParams = [
-            'lifetime' => $lifetime,      // Session expires after 1 hour of inactivity
+            'lifetime' => max(86400, (int)$lifetime),
             'path' => '/',
-            'httponly' => true,           // No JavaScript access (prevents XSS token theft)
-            'samesite' => 'Strict',       // Prevent CSRF via cross-site requests
-            'secure' => $isProduction     // HTTPS only in production
+            'httponly' => true,
+            'samesite' => 'Lax',
+            'secure' => $isProduction
         ];
-
-        // Only set domain in production
-        if ($isProduction) {
-            $host = $_SERVER['HTTP_HOST'] ?? '';
-            if ($host && strpos($host, ':') === false) {  // Skip if port included
-                $cookieParams['domain'] = '.' . $host;
-            }
-        }
 
         // Apply cookie parameters before session_start()
         session_set_cookie_params($cookieParams);
@@ -73,10 +65,7 @@ class SessionHelper {
      * @return bool
      */
     public static function isAuthenticated() {
-        return isset($_SESSION['id']) && 
-               isset($_SESSION['access_token']) && 
-               !empty($_SESSION['id']) && 
-               !empty($_SESSION['access_token']);
+        return (!empty($_SESSION['id']) || !empty($_SESSION['company_id']) || !empty($_SESSION['user_id']));
     }
 
     /**
@@ -98,7 +87,7 @@ class SessionHelper {
      * @return string|null
      */
     public static function getCompanyId() {
-        return $_SESSION['id'] ?? null;
+        return $_SESSION['id'] ?? $_SESSION['company_id'] ?? null;
     }
 
     /**

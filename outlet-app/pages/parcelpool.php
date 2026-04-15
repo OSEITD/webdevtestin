@@ -25,7 +25,9 @@ $current_user = getCurrentUser();
         .parcel-pool-container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 1.5rem;
+            padding: 24px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .pool-header {
@@ -463,6 +465,8 @@ $current_user = getCurrentUser();
                 padding-left: 0.5rem;
                 padding-right: 0.5rem;
                 max-width: 100%;
+                padding-top: 65px;
+                padding-bottom: 1rem;
             }
 
             .content-container {
@@ -472,7 +476,21 @@ $current_user = getCurrentUser();
             }
 
             .parcel-pool-container {
-                padding: 1rem 0.5rem;
+                padding: 0.75rem;
+            }
+
+            .pool-header {
+                padding: 1.5rem 1rem;
+                margin-top: 0;
+            }
+
+            .pool-header h1 {
+                font-size: 1.25rem;
+                line-height: 1.3;
+            }
+
+            .pool-header .subtitle {
+                font-size: 0.875rem;
             }
 
             .filter-grid {
@@ -502,6 +520,26 @@ $current_user = getCurrentUser();
             .parcels-cards {
                 display: grid;
                 grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                padding-top: 60px;
+                padding-bottom: 0.75rem;
+            }
+
+            .pool-header {
+                padding: 1.25rem 0.75rem;
+                margin-top: 0;
+            }
+
+            .pool-header h1 {
+                font-size: 1.125rem;
+            }
+
+            .pool-header .subtitle {
+                font-size: 0.875rem;
             }
         }
     </style>

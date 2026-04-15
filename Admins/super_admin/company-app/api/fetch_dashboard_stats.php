@@ -19,17 +19,15 @@ class DashboardStatsAPI {
     public function handleRequest() {
         try {
             // Set session cookie params similar to other endpoints
-            $isLocalhost = in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']);
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $isLocalhost = in_array($host, ['localhost', '127.0.0.1']);
             $cookieParams = [
-                'lifetime' => 0,
+                'lifetime' => 86400,
                 'path' => '/',
                 'httponly' => true,
-                'samesite' => 'Lax'
+                'samesite' => 'Lax',
+                'secure' => !$isLocalhost
             ];
-            if (!$isLocalhost) {
-                $cookieParams['secure'] = true;
-                $cookieParams['domain'] = '.' . $_SERVER['HTTP_HOST'];
-            }
             session_set_cookie_params($cookieParams);
             if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -37,11 +35,10 @@ class DashboardStatsAPI {
                 throw new Exception('Method not allowed', 405);
             }
 
-            if (!isset($_SESSION['id'])) {
+            $companyId = $_SESSION['id'] ?? $_SESSION['company_id'] ?? null;
+            if (!$companyId) {
                 throw new Exception('Company ID not found in session', 401);
             }
-
-            $companyId = $_SESSION['id'];
             $accessToken = $_SESSION['access_token'] ?? null;
             $refreshToken = $_SESSION['refresh_token'] ?? null;
 
@@ -97,8 +94,9 @@ class DashboardStatsAPI {
                 }
             }
 
+            $useServiceRole = false;
             if (!$accessToken) {
-                throw new Exception('Access token not found or expired', 401);
+                $useServiceRole = true;
             }
 
             // Helper to attempt a Supabase call and retry once after refreshing token on 401/JWT expired
@@ -130,25 +128,29 @@ class DashboardStatsAPI {
                 }
             };
 
-            // Fetch outlets and drivers (with retry logic).
-            // If user's token is expired and refresh fails, fall back to service-role queries.
-            try {
-                $outlets = $attemptSupabaseCall(function($token) use ($companyId) {
-                    return $this->supabase->getCompanyOutlets($companyId, $token);
-                });
-                $drivers = $attemptSupabaseCall(function($token) use ($companyId) {
-                    return $this->supabase->getCompanyDrivers($companyId, $token);
-                });
+            // Fetch outlets, drivers, and parcels.
+            // If user's token is missing/expired, fall back to service-role queries.
+            if (!$useServiceRole) {
+                try {
+                    $outlets = $attemptSupabaseCall(function($token) use ($companyId) {
+                        return $this->supabase->getCompanyOutlets($companyId, $token);
+                    });
+                    $drivers = $attemptSupabaseCall(function($token) use ($companyId) {
+                        return $this->supabase->getCompanyDrivers($companyId, $token);
+                    });
 
-                // Fetch parcels (deliveries) for the company
-                $parcels = $attemptSupabaseCall(function($token) use ($companyId) {
-                    return $this->supabase->getParcels($companyId, $token, []);
-                });
-            } catch (Exception $e) {
-                // If the error indicates session expiry, attempt service-role fallback
-                $msg = $e->getMessage();
-                error_log('Authenticated fetch failed for dashboard stats: ' . $msg);
-                // Use service role (if available) through getRecord with useServiceRole=true
+                    // Fetch parcels (deliveries) for the company
+                    $parcels = $attemptSupabaseCall(function($token) use ($companyId) {
+                        return $this->supabase->getParcels($companyId, $token, []);
+                    });
+                } catch (Exception $e) {
+                    $msg = $e->getMessage();
+                    error_log('Authenticated fetch failed for dashboard stats: ' . $msg);
+                    $useServiceRole = true;
+                }
+            }
+
+            if ($useServiceRole) {
                 try {
                     // Fetch only minimal fields to reduce payload
                     $outletsResult = $this->supabase->getRecord("outlets?company_id=eq.{$companyId}&deleted_at=is.null&select=id", true);

@@ -1,20 +1,21 @@
 {
   "name": "WD Parcel Send Receiver",
   "short_name": "WDParcel",
-  "start_url": "./dashboard.php",
+  "start_url": "./secure_tracking.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#2e0b3f",
   "theme_color": "#2e0b3f",
   "description": "Send and receive parcels with Webdev Technologies.",
   "icons": [
     {
-      "src": "/favicon.png",
+      "src": "./assets/img/app-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.png",
+      "src": "./assets/img/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

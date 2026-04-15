@@ -110,6 +110,10 @@ if (!empty($parcelIds)) {
         overflow-x: auto;
         overflow-y: auto;
         max-height: calc(100vh - 320px);
+        max-width: 1200px;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
         -webkit-overflow-scrolling: touch;
         background: #fff;
         border-radius: 8px;
@@ -172,6 +176,28 @@ if (!empty($parcelIds)) {
     .status-paid, .status-completed, .status-success { background-color: #28A745; }
     .status-failed, .status-cancelled, .status-error { background-color: #DC3545; }
     .status-refunded { background-color: #17A2B8; }
+
+    @media (max-width: 768px) {
+        .content-container {
+            padding: 0 0.5rem;
+        }
+
+        #transactionTableWrapper {
+            padding: 12px;
+            margin-top: 16px;
+            max-width: 100%;
+        }
+
+        #transactionTableWrapper table {
+            min-width: 720px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        #transactionTableWrapper table {
+            min-width: 640px;
+        }
+    }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen transaction-history-page">

@@ -150,6 +150,39 @@ if (!$parcel) {
     header('Location: secure_tracking.html');
     exit();
 }
+
+$statusLabels = [
+    'pending'          => 'Pending',
+    'assigned'         => 'Assigned to Trip',
+    'in_transit'       => 'In Transit',
+    'at_outlet'        => 'Ready for Pickup',
+    'completed'        => 'Delivered',
+    'delivered'        => 'Delivered',
+    'cancelled'        => 'Cancelled',
+    'out_for_delivery' => 'Out for Delivery',
+];
+$rawStatus = $parcel['status'] ?? 'unknown';
+$statusLabel = $statusLabels[$rawStatus] ?? ucwords(str_replace('_', ' ', $rawStatus));
+$statusClass = 'status-' . strtolower(str_replace([' ', '_'], '-', $rawStatus));
+$etaDate = $parcel['delivery_date'] ?? $parcel['estimated_delivery_date'] ?? null;
+$etaLabel = $etaDate ? date('M j, Y', strtotime($etaDate)) : '—';
+
+$latestTimestamp = null;
+if (!empty($parcel['delivery_events'][0]['timestamp'])) {
+    $latestTimestamp = $parcel['delivery_events'][0]['timestamp'];
+} elseif (!empty($parcel['updated_at'])) {
+    $latestTimestamp = $parcel['updated_at'];
+} elseif (!empty($parcel['created_at'])) {
+    $latestTimestamp = $parcel['created_at'];
+}
+$lastUpdateLabel = $latestTimestamp ? date('M j, Y g:i A', strtotime($latestTimestamp)) : '—';
+
+$originName = $parcel['origin_outlet']['outlet_name'] ?? null;
+$destinationName = $parcel['destination_outlet']['outlet_name'] ?? null;
+$routeLabel = null;
+if ($originName || $destinationName) {
+    $routeLabel = ($originName ?: 'Origin') . ' -> ' . ($destinationName ?: 'Destination');
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -374,16 +407,6 @@ if (!$parcel) {
                     </div>
                 </div>
             </div>
-            
-            <div class="customer-info-section">
-                <div class="customer-info">
-                    <i class="fas fa-user-circle"></i>
-                    <span><?php echo htmlspecialchars($customerName); ?></span>
-                </div>
-                <span class="customer-role-badge">
-                    <i class="fas fa-tag"></i> <?php echo ucfirst($customerRole); ?>
-                </span>
-            </div>
         </div>
     </div>
     
@@ -402,15 +425,35 @@ if (!$parcel) {
     </header>
 
     <main class="main-content">
-        <div style="max-width: 1200px; margin: 2rem auto; padding: 0 2rem;">
-            <h2 style="font-size: 1.8rem; font-weight: 600; color: #1e293b; margin: 0 0 0.5rem 0;">
-                Welcome, <?php echo htmlspecialchars($customerName); ?>
-            </h2>
-            <p style="color: #64748b; font-size: 1rem; margin: 0;">
-                <i class="fas fa-shield-check" style="color: #10b981;"></i>
-                Your identity has been verified as the <strong><?php echo ucfirst($customerRole); ?></strong>
-            </p>
-        </div>
+        <section class="page-hero">
+            <div class="hero-main">
+                <span class="hero-kicker">Secure Tracking</span>
+                <h2 class="hero-title">Welcome, <?php echo htmlspecialchars($customerName); ?></h2>
+                <p class="hero-subtitle">
+                    <i class="fas fa-shield-check"></i>
+                    Your identity has been verified as the <strong><?php echo ucfirst($customerRole); ?></strong>
+                    <?php if ($companyName): ?>
+                        <span class="hero-note">Company: <?php echo htmlspecialchars($companyName); ?></span>
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-card">
+                    <span class="hero-label">Tracking Number</span>
+                    <span class="hero-value hero-mono"><?php echo htmlspecialchars($parcel['track_number']); ?></span>
+                </div>
+                <div class="hero-card">
+                    <span class="hero-label">Current Status</span>
+                    <span class="status-badge <?php echo htmlspecialchars($statusClass); ?> hero-status">
+                        <?php echo htmlspecialchars($statusLabel); ?>
+                    </span>
+                </div>
+                <div class="hero-card">
+                    <span class="hero-label">Estimated Delivery</span>
+                    <span class="hero-value"><?php echo htmlspecialchars($etaLabel); ?></span>
+                </div>
+            </div>
+        </section>
         <div class="verified-notice" style="display: none;">
             <i class="fas fa-check-circle icon"></i>
             <div>
@@ -425,33 +468,20 @@ if (!$parcel) {
 
         <div class="tracking-card">
             <div class="card-header">
-                <div class="tracking-number">
-                    <?php echo htmlspecialchars($parcel['track_number']); ?>
-                </div>
-                <?php
-                $statusLabels = [
-                    'pending'          => 'Pending',
-                    'assigned'         => 'Assigned to Trip',
-                    'in_transit'       => 'In Transit',
-                    'at_outlet'        => 'Ready for Pickup',
-                    'completed'        => 'Delivered',
-                    'delivered'        => 'Delivered',
-                    'cancelled'        => 'Cancelled',
-                    'out_for_delivery' => 'Out for Delivery',
-                ];
-                $rawStatus   = $parcel['status'] ?? 'unknown';
-                $statusLabel = $statusLabels[$rawStatus] ?? ucwords(str_replace('_', ' ', $rawStatus));
-                $statusClass = 'status-' . strtolower(str_replace([' ', '_'], '-', $rawStatus));
-                ?>
-                <div class="status-display">
-                    <span class="status-badge <?php echo htmlspecialchars($statusClass); ?>">
-                        <?php echo htmlspecialchars($statusLabel); ?>
-                    </span>
-                    <?php if (!empty($parcel['delivery_date'])): ?>
-                        <span class="text-success">
-                            <i class="fas fa-calendar-check"></i>
-                            Delivered: <?php echo date('M j, Y', strtotime($parcel['delivery_date'])); ?>
-                        </span>
+                <div class="card-header-content">
+                    <div class="card-title-group">
+                        <p class="card-kicker">Parcel Overview</p>
+                        <h3 class="card-title">Journey Details</h3>
+                        <p class="card-subtitle">
+                            Last update: <?php echo htmlspecialchars($lastUpdateLabel); ?>
+                            | Viewing as <?php echo ucfirst($customerRole); ?>
+                        </p>
+                    </div>
+                    <?php if (!empty($routeLabel)): ?>
+                        <div class="card-route">
+                            <i class="fas fa-route"></i>
+                            <span><?php echo htmlspecialchars($routeLabel); ?></span>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -508,6 +538,33 @@ if (!$parcel) {
                     <?php endif; ?>
                 </div>
 
+                <?php 
+                $showGPSButton = false;
+                $gpsButtonText = 'Live GPS Tracking';
+                $gpsButtonClass = 'btn-gps';
+                
+                if (!empty($parcel['driver_info']['gps_status'])) {
+                    $gpsStatus = $parcel['driver_info']['gps_status']['status'];
+                    if (in_array($gpsStatus, ['live', 'recent', 'stale'])) {
+                        $showGPSButton = true;
+                        if ($gpsStatus === 'live') {
+                            $gpsButtonText = '🔴 Live GPS Tracking';
+                        } elseif ($gpsStatus === 'recent') {
+                            $gpsButtonText = '🟡 Recent GPS Location';
+                        } else {
+                            $gpsButtonText = '🟠 View Last GPS Location';
+                            $gpsButtonClass = 'btn-secondary';
+                        }
+                    }
+                } elseif (!empty($parcel['driver_info']['gps_available']) && $parcel['driver_info']['gps_available']) {
+                    $showGPSButton = true;
+                } elseif (in_array(($parcel['status'] ?? ''), ['in_transit', 'assigned'])) {
+                    $showGPSButton = true;
+                    $gpsButtonText = ($parcel['status'] ?? '') === 'assigned'
+                        ? ' Track Driver'
+                        : ' Live GPS Tracking';
+                }
+                ?>
                 <div class="details-grid">
                     <div class="detail-section">
                         <h4><i class="fas fa-box"></i> Parcel Details</h4>
@@ -686,6 +743,14 @@ if (!$parcel) {
                                 <?php endif; ?>
                             </span>
                         </div>
+                        <?php if ($showGPSButton): ?>
+                            <div class="detail-item detail-item-fullwidth" style="margin-top: 16px;">
+                                <button class="btn <?php echo $gpsButtonClass; ?>" onclick="openGPSTracking()">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <?php echo $gpsButtonText; ?>
+                                </button>
+                            </div>
+                        <?php endif; ?>
                         <?php endif; ?>
                         
                         <?php if (!empty($parcel['estimated_delivery_date'])): ?>
@@ -854,13 +919,6 @@ if (!$parcel) {
             }
             ?>
             
-            <?php if ($showGPSButton): ?>
-            <button class="btn <?php echo $gpsButtonClass; ?>" onclick="openGPSTracking()">
-                <i class="fas fa-map-marker-alt"></i>
-                <?php echo $gpsButtonText; ?>
-            </button>
-            <?php endif; ?>
-            
             <button class="btn btn-primary" onclick="getTrackingHistory()">
                 <i class="fas fa-history"></i>
                 View Tracking History
@@ -925,7 +983,7 @@ if (!$parcel) {
             const parcelId = <?php echo json_encode($parcel['id']); ?>;
             const gpsUrl = `gps_tracking.html?parcel_id=${parcelId}`;
             
-            window.open(gpsUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            window.location.href = gpsUrl;
         }
 
         async function getTrackingHistory() {

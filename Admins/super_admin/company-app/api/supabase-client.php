@@ -63,6 +63,24 @@ class SupabaseClient {
         return $response;
     }
 
+    private function resolveAuthKey($accessToken = null): string {
+        if (!empty($accessToken)) {
+            return $accessToken;
+        }
+        if (!empty($this->serviceRoleKey)) {
+            return $this->serviceRoleKey;
+        }
+        return $this->supabaseKey;
+    }
+
+    private function closeCurlHandle(&$handle): void {
+        if (!is_resource($handle) && !is_object($handle)) {
+            return;
+        }
+        // Avoid calling curl_close to prevent PHP 8.5+ deprecation warnings.
+        $handle = null;
+    }
+
     /**
      * Authenticate user with email and password
      */
@@ -82,7 +100,8 @@ class SupabaseClient {
      */
     public function getProfile($userId, $accessToken) {
         $url = "{$this->supabaseUrl}/rest/v1/profiles?select=*&id=eq.{$userId}";
-        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        $authKey = $this->resolveAuthKey($accessToken);
+        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
         
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -93,7 +112,8 @@ class SupabaseClient {
      */
     public function getCompany($companyId, $accessToken) {
         $url = "{$this->supabaseUrl}/rest/v1/companies?id=eq.{$companyId}";
-        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        $authKey = $this->resolveAuthKey($accessToken);
+        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
         
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -104,7 +124,8 @@ class SupabaseClient {
      */
     public function getCompanyOutlets($companyId, $accessToken) {
         $url = "{$this->supabaseUrl}/rest/v1/outlets?company_id=eq.{$companyId}&deleted_at=is.null&select=*";
-        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        $authKey = $this->resolveAuthKey($accessToken);
+        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
         
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -115,7 +136,8 @@ class SupabaseClient {
      */
     public function getCompanyDrivers($companyId, $accessToken) {
         $url = "{$this->supabaseUrl}/rest/v1/drivers?company_id=eq.{$companyId}&deleted_at=is.null&select=*";
-        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        $authKey = $this->resolveAuthKey($accessToken);
+        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
         
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -167,7 +189,8 @@ class SupabaseClient {
         }
 
         $url = "{$this->supabaseUrl}/rest/v1/deliveries?{$query}&deleted_at=is.null&select=*";
-        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        $authKey = $this->resolveAuthKey($accessToken);
+        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
         
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -220,7 +243,8 @@ class SupabaseClient {
         }
 
         $url = "{$this->supabaseUrl}/rest/v1/parcels?{$query}&deleted_at=is.null&select=*";
-        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        $authKey = $this->resolveAuthKey($accessToken);
+        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
 
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -278,7 +302,8 @@ class SupabaseClient {
      */
     public function getNotifications($companyId, $accessToken, $limit = 20) {
         $url = "{$this->supabaseUrl}/rest/v1/notifications?company_id=eq.{$companyId}&order=created_at.desc&limit={$limit}";
-        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
+        $authKey = $this->resolveAuthKey($accessToken);
+        $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $authKey]);
         
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -519,8 +544,9 @@ class SupabaseClient {
    
     public function getWithToken($endpoint, $accessToken) {
         $url = "{$this->supabaseUrl}/rest/v1/{$endpoint}";
+        $authKey = $this->resolveAuthKey($accessToken);
         $headers = array_merge($this->defaultHeaders, [
-            'Authorization: Bearer ' . $accessToken
+            'Authorization: Bearer ' . $authKey
         ]);
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
@@ -571,7 +597,7 @@ class SupabaseClient {
             error_log("=== CURL Exec Failed ===\n" . $verboseLog);
             fclose($verbose);
             $errMsg = $error ?: 'Unknown cURL error';
-            curl_close($ch);
+            $this->closeCurlHandle($ch);
             throw new Exception("cURL exec failed: {$errMsg}");
         }
 
@@ -579,7 +605,7 @@ class SupabaseClient {
         $responseHeaders = substr($response, 0, $headerSize);
         $responseBody = substr($response, $headerSize);
 
-        curl_close($ch);
+        $this->closeCurlHandle($ch);
 
         error_log("=== Response Information ===");
         error_log("Status Code: " . $statusCode);
@@ -622,7 +648,7 @@ class SupabaseClient {
                             }
                         }
                         // Retry once with refreshed token
-                        curl_close($ch);
+                        $this->closeCurlHandle($ch);
                         return $this->makeRequest($method, $url, $data, $finalHeaders, false);
                     }
                 } catch (Exception $refreshEx) {

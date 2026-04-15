@@ -2,8 +2,6 @@
 // Include the header (which also handles session and authentication)
 require_once __DIR__ . '/../includes/header.php';
 ?>
-    <body>class="bg-gray-100 min-h-screen">
-    <div class="mobile-dashboard">
         <!-- Main Content Area for Company Dashboard -->
         <main class="main-content">
             <div class="content-header">

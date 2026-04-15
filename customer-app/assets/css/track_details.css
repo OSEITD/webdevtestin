@@ -68,10 +68,96 @@ body {
     padding: 28px 20px 48px;
 }
 
-/* ── Welcome strip ──────────────────────────────────── */
-.main-content > div[style*="Welcome"],
-.main-content > div:first-child {
+/* ── Hero section ───────────────────────────────────── */
+.page-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: center;
+    background: white;
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
     margin-bottom: 24px;
+}
+
+.hero-main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hero-kicker {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.hero-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.hero-subtitle {
+    font-size: 14px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.hero-subtitle i {
+    color: var(--accent-color);
+}
+
+.hero-note {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.hero-card {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hero-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.hero-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.hero-mono {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+}
+
+.hero-status {
+    align-self: flex-start;
 }
 
 /* ── Verified notice ────────────────────────────────── */
@@ -115,26 +201,61 @@ body {
     background: rgba(255,255,255,0.05);
     pointer-events: none;
 }
-.tracking-number {
-    font-size: 26px;
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 12px;
-    letter-spacing: 0.5px;
-    font-family: 'Courier New', monospace;
-}
-.status-display {
+.card-header-content {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+}
+
+.card-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.card-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+.card-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.card-subtitle {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+}
+
+.card-route {
+    display: inline-flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 10px 20px rgba(46, 13, 42, 0.25);
+    backdrop-filter: blur(6px);
 }
-.status-display .text-success {
-    color: #a7f3d0;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+
+.card-route i {
+    font-size: 14px;
 }
 
 /* Status badges */
@@ -456,7 +577,16 @@ body {
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 768px) {
     .main-content { padding: 20px 14px 40px; }
+    .page-hero {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+    .hero-title { font-size: 20px; }
+    .hero-subtitle { font-size: 13px; }
     .card-header { padding: 22px 18px 18px; }
+    .card-header-content { gap: 12px; }
+    .card-title { font-size: 19px; }
+    .card-route { width: 100%; justify-content: center; }
     .card-body { padding: 18px; }
     .tracking-number { font-size: 20px; }
     .header-content {

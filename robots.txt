@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /Admins/
+Disallow: /outlet-app/
+Disallow: /customer-app/
+Disallow: /super_admin/
+Disallow: /vendor/
+Disallow: /shared/
+Disallow: /sql/
+
+Disallow: /api/
+Disallow: /auth/
+Disallow: /cache/
+Disallow: /config/
+Disallow: /logs/
+Disallow: /sessions/
+Disallow: /includes/
+
+Sitemap: https://nex-er.com/sitemap.xml

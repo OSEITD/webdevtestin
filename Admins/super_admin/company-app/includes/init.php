@@ -30,6 +30,14 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Ensure company session identifiers are aligned for legacy/new usage.
+if (!empty($_SESSION['company_id']) && empty($_SESSION['id'])) {
+    $_SESSION['id'] = $_SESSION['company_id'];
+}
+if (!empty($_SESSION['id']) && empty($_SESSION['company_id'])) {
+    $_SESSION['company_id'] = $_SESSION['id'];
+}
+
 // Basic session validation used by company-app pages. If invalid, clear and redirect to login.
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     error_log("Invalid or missing session data in init.php");

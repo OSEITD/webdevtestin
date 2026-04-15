@@ -30,5 +30,16 @@
 Options -Indexes
 
 # Disable PHP error display for all files (only log, never show)
-php_flag  display_errors  off
-php_flag  log_errors      on
+# Guard php_flag usage so it does not break when PHP runs via FPM.
+<IfModule mod_php.c>
+    php_flag  display_errors  off
+    php_flag  log_errors      on
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag  display_errors  off
+    php_flag  log_errors      on
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag  display_errors  off
+    php_flag  log_errors      on
+</IfModule>

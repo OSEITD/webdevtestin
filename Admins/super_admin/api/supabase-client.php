@@ -218,6 +218,18 @@ class SupabaseClient {
         return $jsonPart;
     }
 
+    private function closeCurlHandle(&$handle) {
+        if (!is_resource($handle) && !is_object($handle)) {
+            return;
+        }
+
+        if (defined('PHP_VERSION_ID') && PHP_VERSION_ID < 80500) {
+            curl_close($handle);
+        }
+
+        $handle = null;
+    }
+
     public function makeRequest($endpoint, $method = 'GET', $data = null, $customHeaders = []) {
         try {
             if (strpos($endpoint, 'auth/') === 0) {
@@ -286,7 +298,7 @@ class SupabaseClient {
             
             if ($response === false) {
                 $error = curl_error($ch);
-                curl_close($ch);
+                $this->closeCurlHandle($ch);
                 throw new Exception("cURL error: " . $error);
             }
 
@@ -295,7 +307,7 @@ class SupabaseClient {
             error_log("Raw response: " . substr($response, 0, 1000)); 
 
             if ($httpCode >= 400) {
-                curl_close($ch);
+                $this->closeCurlHandle($ch);
 
                
                 $message = "HTTP error {$httpCode}: {$response}";
@@ -311,7 +323,7 @@ class SupabaseClient {
                 throw new Exception($message);
             }
 
-            curl_close($ch);
+            $this->closeCurlHandle($ch);
 
          
             if (!empty($response)) {

@@ -5,6 +5,9 @@ initSession();
 
 require_once __DIR__ . '/includes/env.php';
 require_once __DIR__ . '/includes/security_headers.php';
+// Extra security headers
+header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; connect-src 'self';");
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/rate_limiter.php';
 
@@ -111,8 +114,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-decoration: underline;
         }
     </style>
+        <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="login-body">
+        <div style="background:#fff3cd;color:#856404;padding:10px 20px;border-radius:6px;margin:16px auto;max-width:500px;text-align:center;font-size:1rem;">
+          <strong>Security Notice:</strong> For your protection, only enter your email on this official site. This page is not indexed by search engines.
+        </div>
     <div class="auth-wrapper">
         <div class="auth-card">
             <div class="brand-panel">

@@ -7,19 +7,15 @@ $supabase = new SupabaseClient();
 
 try {
     // Detect environment and set cookie params accordingly
-    $isLocalhost = in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']);
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    $isLocalhost = in_array($host, ['localhost', '127.0.0.1']);
     $cookieParams = [
-        'lifetime' => 0,
+        'lifetime' => 86400,
         'path' => '/',
         'httponly' => true,
-        'samesite' => 'Lax'
+        'samesite' => 'Lax',
+        'secure' => !$isLocalhost
     ];
-
-    // Only set secure flag and domain in production
-    if (!$isLocalhost) {
-        $cookieParams['secure'] = true;
-        $cookieParams['domain'] = '.' . $_SERVER['HTTP_HOST'];
-    }
 
     session_set_cookie_params($cookieParams);
     session_start();
@@ -36,20 +32,11 @@ try {
         throw new Exception('Session is not active', 500);
     }
 
-    // Validate session values
-    if (!isset($_SESSION['id'])) {
+    $companyId = $_SESSION['id'] ?? $_SESSION['company_id'] ?? null;
+    $accessToken = $_SESSION['access_token'] ?? null;
+
+    if (!$companyId) {
         throw new Exception('Company ID not found in session', 401);
-    }
-    if (!isset($_SESSION['access_token'])) {
-        throw new Exception('Access token not found in session', 401);
-    }
-
-    $companyId = $_SESSION['id']; // company id from companies table
-    $accessToken = $_SESSION['access_token'];
-    $refreshToken = $_SESSION['refresh_token'] ?? null;
-
-    if (!$companyId || !$accessToken) {
-        throw new Exception('Not authenticated', 401);
     }
 
     // Initialize Supabase client
@@ -70,7 +57,6 @@ try {
     $filters = "company_id=eq.{$companyId}&deleted_at=is.null&order=created_at.desc&select=id,company_id,outlet_name,address,contact_person,contact_email,contact_phone,status";
     $urlPath = "outlets?{$filters}";
 
-    error_log("Fetching outlets via SupabaseClient for URL path: {$urlPath}");
     $response = $supabase->getWithToken($urlPath, $accessToken);
 
     if (is_array($response) && isset($response['error'])) {
