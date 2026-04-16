@@ -27,6 +27,8 @@ $adminBaseUrl = '..';
     <link rel="stylesheet" href="<?php echo $adminBaseUrl; ?>/assets/css/dashboard-improvements.css">
     <link rel="stylesheet" href="<?php echo $adminBaseUrl; ?>/assets/css/view-details.css">
     <link rel="stylesheet" href="<?php echo $adminBaseUrl; ?>/assets/css/form-validation.css">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="shortcut icon" href="/favicon.png" type="image/png">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="<?php echo $adminBaseUrl; ?>/manifest.json">

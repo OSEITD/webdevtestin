@@ -190,6 +190,8 @@ if ($originName || $destinationName) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WD Parcel Services - Tracking Details</title>
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="shortcut icon" href="/favicon.png" type="image/png">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -248,7 +250,51 @@ if ($originName || $destinationName) {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
+
+        .notification-prompt-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .notification-prompt-content {
+            background: #ffffff;
+            border-radius: 20px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+            padding: 28px;
+            text-align: left;
+        }
+
+        .notification-prompt-content h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 22px;
+        }
+
+        .notification-prompt-content p {
+            margin: 0 0 20px;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .notification-prompt-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .notification-prompt-actions .btn {
+            min-width: 130px;
+        }
+
         @media (max-width: 768px) {
             .notification-subscription-card > div {
                 padding: 20px !important;
@@ -889,6 +935,26 @@ if ($originName || $destinationName) {
             </div>
         </div>
 
+        <div id="notificationPromptModal" class="notification-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="notificationPromptTitle">
+            <div class="notification-prompt-content">
+                <h3 id="notificationPromptTitle"><i class="fas fa-bell"></i> Enable Parcel Notifications</h3>
+                <p>Enable notifications to receive instant parcel updates and keep your cloud subscription current. This also ensures your push subscription is synced with the server.</p>
+                <div class="notification-prompt-actions">
+                    <button id="notificationPromptEnableBtn" class="btn btn-primary">
+                        <i class="fas fa-check"></i>
+                        Enable Notifications
+                    </button>
+                    <button id="notificationPromptSyncBtn" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i>
+                        Update Cloud Subscription
+                    </button>
+                    <button id="notificationPromptLaterBtn" class="btn btn-link" style="color:#475569;">
+                        Maybe Later
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="actions-section">
             <?php 
             $showGPSButton = false;
@@ -1068,6 +1134,32 @@ if ($originName || $destinationName) {
             });
         }
 
+        document.addEventListener('DOMContentLoaded', function() {
+            const promptEnableBtn = document.getElementById('notificationPromptEnableBtn');
+            const promptSyncBtn = document.getElementById('notificationPromptSyncBtn');
+            const promptLaterBtn = document.getElementById('notificationPromptLaterBtn');
+
+            if (promptEnableBtn) {
+                promptEnableBtn.addEventListener('click', async function() {
+                    hideNotificationPrompt();
+                    await subscribeToPushNotifications();
+                });
+            }
+
+            if (promptSyncBtn) {
+                promptSyncBtn.addEventListener('click', async function() {
+                    hideNotificationPrompt();
+                    await syncPushSubscription();
+                });
+            }
+
+            if (promptLaterBtn) {
+                promptLaterBtn.addEventListener('click', function() {
+                    hideNotificationPrompt();
+                });
+            }
+        });
+
         function enableAutoRefresh() {
             setInterval(async function() {
                 try {
@@ -1117,14 +1209,18 @@ if ($originName || $destinationName) {
                     notificationToggle.checked = true;
                     updateNotificationStatus(' Notifications enabled for this parcel', '#10b981');
                 } else if (Notification.permission === 'granted') {
-                    
                     if (notificationEnabled) {
-                    
                         await subscribeToPushNotifications();
+                    } else {
+                        showNotificationPrompt();
+                        subscribeBtn.style.display = 'inline-flex';
                     }
                 } else if (Notification.permission === 'denied') {
                     updateNotificationStatus('Notifications blocked. Enable in browser settings.', '#ef4444');
                     notificationToggle.disabled = true;
+                } else {
+                    showNotificationPrompt();
+                    subscribeBtn.style.display = 'inline-flex';
                 }
             } catch (error) {
                 console.error('Error initializing notifications:', error);
@@ -1138,8 +1234,55 @@ if ($originName || $destinationName) {
                     await unsubscribeFromPushNotifications();
                 }
             });
+
+            subscribeBtn.addEventListener('click', function() {
+                showNotificationPrompt();
+            });
         }
         
+        function showNotificationPrompt() {
+            const modal = document.getElementById('notificationPromptModal');
+            modal.style.display = 'flex';
+        }
+
+        function hideNotificationPrompt() {
+            const modal = document.getElementById('notificationPromptModal');
+            modal.style.display = 'none';
+        }
+
+        async function syncPushSubscription() {
+            if (!pushSubscription) {
+                await subscribeToPushNotifications();
+                return;
+            }
+            const notificationToggle = document.getElementById('enableNotifications');
+            try {
+                updateNotificationStatus('🔄 Updating cloud subscription...', '#0ea5b6');
+                const response = await fetch('api/save_push_subscription.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subscription: pushSubscription.toJSON(),
+                        tracking_number: TRACKING_NUMBER,
+                        user_role: USER_ROLE
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    notificationToggle.checked = true;
+                    updateNotificationStatus('Cloud subscription updated successfully.', '#10b981');
+                } else {
+                    throw new Error(result.error || 'Failed to sync subscription');
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                updateNotificationStatus('❌ Error syncing subscription: ' + error.message, '#ef4444');
+                notificationToggle.checked = false;
+            }
+        }
+
         async function subscribeToPushNotifications() {
             const notificationToggle = document.getElementById('enableNotifications');
             

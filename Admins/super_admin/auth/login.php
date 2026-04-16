@@ -600,7 +600,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' font-family='Arial' fill='%232e0b3f'>A</text></svg>" type="image/svg+xml">
+  <link rel="icon" href="/favicon.png" type="image/png" />
+  <link rel="shortcut icon" href="/favicon.png" type="image/png" />
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#2e0b3f">
   <link rel="stylesheet" href="../../../outlet-app/css/login-styles.css">

@@ -9,6 +9,18 @@ $allowedOrigins = [
     'http://localhost:5500',
     'http://localhost:3000'
 ];
+
+if (file_exists(__DIR__ . '/../../includes/env.php')) {
+    require_once __DIR__ . '/../../includes/env.php';
+    if (class_exists('EnvLoader')) {
+        EnvLoader::load();
+        $baseUrl = EnvLoader::get('BASE_URL') ?: EnvLoader::get('APP_URL');
+        if (!empty($baseUrl)) {
+            $allowedOrigins[] = rtrim($baseUrl, '/');
+        }
+    }
+}
+
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowedOrigins, true)) {
     header("Access-Control-Allow-Origin: {$origin}");

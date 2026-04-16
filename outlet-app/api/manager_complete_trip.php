@@ -220,7 +220,7 @@ try {
             $pushData = [
                 'type' => 'trip_completed',
                 'trip_id' => $tripId,
-                'url' => 'http://acme.localhost/drivers/dashboard.php',
+                'url' => '/drivers/dashboard.php',
                 'timestamp' => time(),
                 'actions' => [
                     ['action' => 'view_dashboard', 'title' => ' View Dashboard'],

@@ -336,7 +336,20 @@ class SMSService {
     
     
     private function getTrackingUrl($trackingNumber) {
-        
+        $baseUrl = null;
+        if (!class_exists('EnvLoader')) {
+            require_once __DIR__ . '/env.php';
+        }
+
+        if (class_exists('EnvLoader')) {
+            EnvLoader::load();
+            $baseUrl = EnvLoader::get('BASE_URL');
+        }
+
+        if ($baseUrl) {
+            return rtrim($baseUrl, '/') . '/customer-app/track_parcel.php?track=' . urlencode($trackingNumber);
+        }
+
         $domain = $_SERVER['HTTP_HOST'] ?? 'yourdomain.com';
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
         return "{$protocol}://{$domain}/customer-app/track_parcel.php?track=" . urlencode($trackingNumber);

@@ -16,6 +16,11 @@ class EmailHelper {
         }
         EnvLoader::load();
 
+        // Load URL helper for customer routing links
+        if (!function_exists('getCustomerUrl')) {
+            require_once __DIR__ . '/url_helper.php';
+        }
+
         // If Composer autoloader is available, load it to use PHPMailer (recommended)
         $composerAutoload = __DIR__ . '/../../vendor/autoload.php';
         if (file_exists($composerAutoload)) {
@@ -353,9 +358,24 @@ class EmailHelper {
         $senderName = $parcelData['sender_name'] ?? '';
         $receiverName = $parcelData['receiver_name'] ?? '';
 
-        // Track/Support link (best effort based on current host)
-        $host = $_SERVER['HTTP_HOST'] ?? 'wdparcel.com';
-        $trackUrl = "https://{$host}/customer-app/track_parcel.php";
+        // Track/Support link (best effort based on current host or configured base URL)
+        if (function_exists('getCustomerUrl')) {
+            $trackUrl = getCustomerUrl('track_parcel.php?track=' . urlencode($trackingNumber));
+        } else {
+            $trackUrl = '';
+            if (class_exists('EnvLoader')) {
+                $baseUrl = EnvLoader::get('BASE_URL');
+                if ($baseUrl) {
+                    $trackUrl = rtrim($baseUrl, '/') . '/customer-app/track_parcel.php?track=' . urlencode($trackingNumber);
+                }
+            }
+
+            if (empty($trackUrl)) {
+                $host = $_SERVER['HTTP_HOST'] ?? 'yourdomain.com';
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ($_SERVER['SERVER_PORT'] ?? 80) == 443 ? 'https' : 'http';
+                $trackUrl = "{$protocol}://{$host}/customer-app/track_parcel.php?track=" . urlencode($trackingNumber);
+            }
+        }
 
         $senderEmail = $parcelData['sender_email'] ?? '';
         $receiverEmail = $parcelData['receiver_email'] ?? '';

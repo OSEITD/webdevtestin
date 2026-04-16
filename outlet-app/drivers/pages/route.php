@@ -631,7 +631,7 @@ $companyId = $_SESSION['company_id'];
                 <i class="fas fa-route"></i>
                 <span>Routes</span>
             </a>
-            <a href="../profile.php" class="nav-item">
+            <a href="profile.php" class="nav-item">
                 <i class="fas fa-user"></i>
                 <span>Profile</span>
             </a>

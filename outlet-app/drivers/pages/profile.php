@@ -589,7 +589,7 @@ $pageTitle = "Driver Profile"
     <?php include '../includes/navbar.php'; ?>
     
     <div class="profile-container">
-        <a href="../index.php" class="back-button">
+        <a href="../dashboard.php" class="back-button">
             <i class="fas fa-arrow-left"></i>
             Back to Dashboard
         </a>
