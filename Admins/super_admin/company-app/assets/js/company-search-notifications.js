@@ -74,7 +74,7 @@ class GlobalSearch {
         this.currentQuery = query;
 
         try {
-            const response = await fetch(`../api/search.php?q=${encodeURIComponent(query)}&type=all`);
+            const response = await fetch(`../../api/search.php?q=${encodeURIComponent(query)}&type=all`);
             const data = await response.json();
 
             if (data.success) {
