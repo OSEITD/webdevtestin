@@ -150,6 +150,39 @@ if (!$parcel) {
     header('Location: secure_tracking.html');
     exit();
 }
+
+$statusLabels = [
+    'pending'          => 'Pending',
+    'assigned'         => 'Assigned to Trip',
+    'in_transit'       => 'In Transit',
+    'at_outlet'        => 'Ready for Pickup',
+    'completed'        => 'Delivered',
+    'delivered'        => 'Delivered',
+    'cancelled'        => 'Cancelled',
+    'out_for_delivery' => 'Out for Delivery',
+];
+$rawStatus = $parcel['status'] ?? 'unknown';
+$statusLabel = $statusLabels[$rawStatus] ?? ucwords(str_replace('_', ' ', $rawStatus));
+$statusClass = 'status-' . strtolower(str_replace([' ', '_'], '-', $rawStatus));
+$etaDate = $parcel['delivery_date'] ?? $parcel['estimated_delivery_date'] ?? null;
+$etaLabel = $etaDate ? date('M j, Y', strtotime($etaDate)) : '—';
+
+$latestTimestamp = null;
+if (!empty($parcel['delivery_events'][0]['timestamp'])) {
+    $latestTimestamp = $parcel['delivery_events'][0]['timestamp'];
+} elseif (!empty($parcel['updated_at'])) {
+    $latestTimestamp = $parcel['updated_at'];
+} elseif (!empty($parcel['created_at'])) {
+    $latestTimestamp = $parcel['created_at'];
+}
+$lastUpdateLabel = $latestTimestamp ? date('M j, Y g:i A', strtotime($latestTimestamp)) : '—';
+
+$originName = $parcel['origin_outlet']['outlet_name'] ?? null;
+$destinationName = $parcel['destination_outlet']['outlet_name'] ?? null;
+$routeLabel = null;
+if ($originName || $destinationName) {
+    $routeLabel = ($originName ?: 'Origin') . ' -> ' . ($destinationName ?: 'Destination');
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -157,6 +190,8 @@ if (!$parcel) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WD Parcel Services - Tracking Details</title>
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="shortcut icon" href="/favicon.png" type="image/png">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -215,7 +250,51 @@ if (!$parcel) {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
+
+        .notification-prompt-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .notification-prompt-content {
+            background: #ffffff;
+            border-radius: 20px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+            padding: 28px;
+            text-align: left;
+        }
+
+        .notification-prompt-content h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 22px;
+        }
+
+        .notification-prompt-content p {
+            margin: 0 0 20px;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .notification-prompt-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .notification-prompt-actions .btn {
+            min-width: 130px;
+        }
+
         @media (max-width: 768px) {
             .notification-subscription-card > div {
                 padding: 20px !important;
@@ -374,16 +453,6 @@ if (!$parcel) {
                     </div>
                 </div>
             </div>
-            
-            <div class="customer-info-section">
-                <div class="customer-info">
-                    <i class="fas fa-user-circle"></i>
-                    <span><?php echo htmlspecialchars($customerName); ?></span>
-                </div>
-                <span class="customer-role-badge">
-                    <i class="fas fa-tag"></i> <?php echo ucfirst($customerRole); ?>
-                </span>
-            </div>
         </div>
     </div>
     
@@ -402,15 +471,35 @@ if (!$parcel) {
     </header>
 
     <main class="main-content">
-        <div style="max-width: 1200px; margin: 2rem auto; padding: 0 2rem;">
-            <h2 style="font-size: 1.8rem; font-weight: 600; color: #1e293b; margin: 0 0 0.5rem 0;">
-                Welcome, <?php echo htmlspecialchars($customerName); ?>
-            </h2>
-            <p style="color: #64748b; font-size: 1rem; margin: 0;">
-                <i class="fas fa-shield-check" style="color: #10b981;"></i>
-                Your identity has been verified as the <strong><?php echo ucfirst($customerRole); ?></strong>
-            </p>
-        </div>
+        <section class="page-hero">
+            <div class="hero-main">
+                <span class="hero-kicker">Secure Tracking</span>
+                <h2 class="hero-title">Welcome, <?php echo htmlspecialchars($customerName); ?></h2>
+                <p class="hero-subtitle">
+                    <i class="fas fa-shield-check"></i>
+                    Your identity has been verified as the <strong><?php echo ucfirst($customerRole); ?></strong>
+                    <?php if ($companyName): ?>
+                        <span class="hero-note">Company: <?php echo htmlspecialchars($companyName); ?></span>
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-card">
+                    <span class="hero-label">Tracking Number</span>
+                    <span class="hero-value hero-mono"><?php echo htmlspecialchars($parcel['track_number']); ?></span>
+                </div>
+                <div class="hero-card">
+                    <span class="hero-label">Current Status</span>
+                    <span class="status-badge <?php echo htmlspecialchars($statusClass); ?> hero-status">
+                        <?php echo htmlspecialchars($statusLabel); ?>
+                    </span>
+                </div>
+                <div class="hero-card">
+                    <span class="hero-label">Estimated Delivery</span>
+                    <span class="hero-value"><?php echo htmlspecialchars($etaLabel); ?></span>
+                </div>
+            </div>
+        </section>
         <div class="verified-notice" style="display: none;">
             <i class="fas fa-check-circle icon"></i>
             <div>
@@ -425,33 +514,20 @@ if (!$parcel) {
 
         <div class="tracking-card">
             <div class="card-header">
-                <div class="tracking-number">
-                    <?php echo htmlspecialchars($parcel['track_number']); ?>
-                </div>
-                <?php
-                $statusLabels = [
-                    'pending'          => 'Pending',
-                    'assigned'         => 'Assigned to Trip',
-                    'in_transit'       => 'In Transit',
-                    'at_outlet'        => 'Ready for Pickup',
-                    'completed'        => 'Delivered',
-                    'delivered'        => 'Delivered',
-                    'cancelled'        => 'Cancelled',
-                    'out_for_delivery' => 'Out for Delivery',
-                ];
-                $rawStatus   = $parcel['status'] ?? 'unknown';
-                $statusLabel = $statusLabels[$rawStatus] ?? ucwords(str_replace('_', ' ', $rawStatus));
-                $statusClass = 'status-' . strtolower(str_replace([' ', '_'], '-', $rawStatus));
-                ?>
-                <div class="status-display">
-                    <span class="status-badge <?php echo htmlspecialchars($statusClass); ?>">
-                        <?php echo htmlspecialchars($statusLabel); ?>
-                    </span>
-                    <?php if (!empty($parcel['delivery_date'])): ?>
-                        <span class="text-success">
-                            <i class="fas fa-calendar-check"></i>
-                            Delivered: <?php echo date('M j, Y', strtotime($parcel['delivery_date'])); ?>
-                        </span>
+                <div class="card-header-content">
+                    <div class="card-title-group">
+                        <p class="card-kicker">Parcel Overview</p>
+                        <h3 class="card-title">Journey Details</h3>
+                        <p class="card-subtitle">
+                            Last update: <?php echo htmlspecialchars($lastUpdateLabel); ?>
+                            | Viewing as <?php echo ucfirst($customerRole); ?>
+                        </p>
+                    </div>
+                    <?php if (!empty($routeLabel)): ?>
+                        <div class="card-route">
+                            <i class="fas fa-route"></i>
+                            <span><?php echo htmlspecialchars($routeLabel); ?></span>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -508,6 +584,33 @@ if (!$parcel) {
                     <?php endif; ?>
                 </div>
 
+                <?php 
+                $showGPSButton = false;
+                $gpsButtonText = 'Live GPS Tracking';
+                $gpsButtonClass = 'btn-gps';
+                
+                if (!empty($parcel['driver_info']['gps_status'])) {
+                    $gpsStatus = $parcel['driver_info']['gps_status']['status'];
+                    if (in_array($gpsStatus, ['live', 'recent', 'stale'])) {
+                        $showGPSButton = true;
+                        if ($gpsStatus === 'live') {
+                            $gpsButtonText = '🔴 Live GPS Tracking';
+                        } elseif ($gpsStatus === 'recent') {
+                            $gpsButtonText = '🟡 Recent GPS Location';
+                        } else {
+                            $gpsButtonText = '🟠 View Last GPS Location';
+                            $gpsButtonClass = 'btn-secondary';
+                        }
+                    }
+                } elseif (!empty($parcel['driver_info']['gps_available']) && $parcel['driver_info']['gps_available']) {
+                    $showGPSButton = true;
+                } elseif (in_array(($parcel['status'] ?? ''), ['in_transit', 'assigned'])) {
+                    $showGPSButton = true;
+                    $gpsButtonText = ($parcel['status'] ?? '') === 'assigned'
+                        ? ' Track Driver'
+                        : ' Live GPS Tracking';
+                }
+                ?>
                 <div class="details-grid">
                     <div class="detail-section">
                         <h4><i class="fas fa-box"></i> Parcel Details</h4>
@@ -686,6 +789,14 @@ if (!$parcel) {
                                 <?php endif; ?>
                             </span>
                         </div>
+                        <?php if ($showGPSButton): ?>
+                            <div class="detail-item detail-item-fullwidth" style="margin-top: 16px;">
+                                <button class="btn <?php echo $gpsButtonClass; ?>" onclick="openGPSTracking()">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <?php echo $gpsButtonText; ?>
+                                </button>
+                            </div>
+                        <?php endif; ?>
                         <?php endif; ?>
                         
                         <?php if (!empty($parcel['estimated_delivery_date'])): ?>
@@ -824,6 +935,26 @@ if (!$parcel) {
             </div>
         </div>
 
+        <div id="notificationPromptModal" class="notification-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="notificationPromptTitle">
+            <div class="notification-prompt-content">
+                <h3 id="notificationPromptTitle"><i class="fas fa-bell"></i> Enable Parcel Notifications</h3>
+                <p>Enable notifications to receive instant parcel updates and keep your cloud subscription current. This also ensures your push subscription is synced with the server.</p>
+                <div class="notification-prompt-actions">
+                    <button id="notificationPromptEnableBtn" class="btn btn-primary">
+                        <i class="fas fa-check"></i>
+                        Enable Notifications
+                    </button>
+                    <button id="notificationPromptSyncBtn" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i>
+                        Update Cloud Subscription
+                    </button>
+                    <button id="notificationPromptLaterBtn" class="btn btn-link" style="color:#475569;">
+                        Maybe Later
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="actions-section">
             <?php 
             $showGPSButton = false;
@@ -853,13 +984,6 @@ if (!$parcel) {
                     : ' Live GPS Tracking';
             }
             ?>
-            
-            <?php if ($showGPSButton): ?>
-            <button class="btn <?php echo $gpsButtonClass; ?>" onclick="openGPSTracking()">
-                <i class="fas fa-map-marker-alt"></i>
-                <?php echo $gpsButtonText; ?>
-            </button>
-            <?php endif; ?>
             
             <button class="btn btn-primary" onclick="getTrackingHistory()">
                 <i class="fas fa-history"></i>
@@ -925,7 +1049,7 @@ if (!$parcel) {
             const parcelId = <?php echo json_encode($parcel['id']); ?>;
             const gpsUrl = `gps_tracking.html?parcel_id=${parcelId}`;
             
-            window.open(gpsUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            window.location.href = gpsUrl;
         }
 
         async function getTrackingHistory() {
@@ -1010,6 +1134,32 @@ if (!$parcel) {
             });
         }
 
+        document.addEventListener('DOMContentLoaded', function() {
+            const promptEnableBtn = document.getElementById('notificationPromptEnableBtn');
+            const promptSyncBtn = document.getElementById('notificationPromptSyncBtn');
+            const promptLaterBtn = document.getElementById('notificationPromptLaterBtn');
+
+            if (promptEnableBtn) {
+                promptEnableBtn.addEventListener('click', async function() {
+                    hideNotificationPrompt();
+                    await subscribeToPushNotifications();
+                });
+            }
+
+            if (promptSyncBtn) {
+                promptSyncBtn.addEventListener('click', async function() {
+                    hideNotificationPrompt();
+                    await syncPushSubscription();
+                });
+            }
+
+            if (promptLaterBtn) {
+                promptLaterBtn.addEventListener('click', function() {
+                    hideNotificationPrompt();
+                });
+            }
+        });
+
         function enableAutoRefresh() {
             setInterval(async function() {
                 try {
@@ -1059,14 +1209,18 @@ if (!$parcel) {
                     notificationToggle.checked = true;
                     updateNotificationStatus(' Notifications enabled for this parcel', '#10b981');
                 } else if (Notification.permission === 'granted') {
-                    
                     if (notificationEnabled) {
-                    
                         await subscribeToPushNotifications();
+                    } else {
+                        showNotificationPrompt();
+                        subscribeBtn.style.display = 'inline-flex';
                     }
                 } else if (Notification.permission === 'denied') {
                     updateNotificationStatus('Notifications blocked. Enable in browser settings.', '#ef4444');
                     notificationToggle.disabled = true;
+                } else {
+                    showNotificationPrompt();
+                    subscribeBtn.style.display = 'inline-flex';
                 }
             } catch (error) {
                 console.error('Error initializing notifications:', error);
@@ -1080,8 +1234,55 @@ if (!$parcel) {
                     await unsubscribeFromPushNotifications();
                 }
             });
+
+            subscribeBtn.addEventListener('click', function() {
+                showNotificationPrompt();
+            });
         }
         
+        function showNotificationPrompt() {
+            const modal = document.getElementById('notificationPromptModal');
+            modal.style.display = 'flex';
+        }
+
+        function hideNotificationPrompt() {
+            const modal = document.getElementById('notificationPromptModal');
+            modal.style.display = 'none';
+        }
+
+        async function syncPushSubscription() {
+            if (!pushSubscription) {
+                await subscribeToPushNotifications();
+                return;
+            }
+            const notificationToggle = document.getElementById('enableNotifications');
+            try {
+                updateNotificationStatus('🔄 Updating cloud subscription...', '#0ea5b6');
+                const response = await fetch('api/save_push_subscription.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subscription: pushSubscription.toJSON(),
+                        tracking_number: TRACKING_NUMBER,
+                        user_role: USER_ROLE
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    notificationToggle.checked = true;
+                    updateNotificationStatus('Cloud subscription updated successfully.', '#10b981');
+                } else {
+                    throw new Error(result.error || 'Failed to sync subscription');
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                updateNotificationStatus('❌ Error syncing subscription: ' + error.message, '#ef4444');
+                notificationToggle.checked = false;
+            }
+        }
+
         async function subscribeToPushNotifications() {
             const notificationToggle = document.getElementById('enableNotifications');
             

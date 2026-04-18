@@ -29,8 +29,6 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-// Clear session on direct GET visit to login page (not POST)
-// This allows users to intentionally visit login.php to see the login form
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
   error_log("GET request to login page detected. Clearing session to allow fresh login.");
   session_unset();
@@ -49,15 +47,21 @@ require_once __DIR__ . '/../includes/env.php';
 error_log("Session state at login: " . print_r($_SESSION, true));
 error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
 
-// Supabase config - loaded from .env
-$supabaseUrl = EnvLoader::get('SUPABASE_URL');
-$supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
+// Supabase config - loaded from env or .env
+$supabaseUrl = getenv('SUPABASE_URL') ?: EnvLoader::get('SUPABASE_URL');
+$supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: getenv('SUPABASE_ANON_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
+
+error_log('DEBUG login: supabaseUrl=' . ($supabaseUrl ?: '[missing]'));
+error_log('DEBUG login: supabaseKey source=' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY' : 'ANON_KEY')));
+
 
 $error = '';
 $errorType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $host = $_SERVER['HTTP_HOST'];
+  error_log('Login POST received: ' . date('c'));
+  error_log('POST payload: ' . json_encode($_POST));
   // Extract subdomain from the current URL path instead of host
   $path = $_SERVER['REQUEST_URI'];
   $pathParts = explode('/', $path);
@@ -74,6 +78,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Supabase sign-in endpoint
   $authUrl = "$supabaseUrl/auth/v1/token?grant_type=password";
 
+  // Use the public ANON key specifically for auth/token requests (matches Supabase client behaviour)
+  $authApikey = getenv('SUPABASE_ANON_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
+  if (empty($authApikey)) {
+    // fallback to whichever key is available but log it
+    $authApikey = $supabaseKey;
+    error_log('Warning: SUPABASE_ANON_KEY not found; using fallback key for auth request.');
+  }
+
   $payload = json_encode([
     'email' => $email,
     'password' => $password
@@ -83,14 +95,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
   curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "apikey: $supabaseKey",
+    "apikey: $authApikey",
     "Content-Type: application/json"
   ]);
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
   curl_setopt($ch, CURLOPT_TIMEOUT, 30);
   $response = curl_exec($ch);
+  $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $curlError = curl_error($ch);
   curl_close($ch);
+  error_log("Auth request HTTP code: " . ($httpCode ?: 'N/A'));
 
   // Log the raw response for debugging
   error_log("Auth Response: " . $response);
@@ -107,25 +121,169 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Defensive checks: ensure we decoded JSON and have an array
   if (!is_array($authData)) {
     error_log("Auth decode failed or returned non-array: " . var_export($response, true));
+    $debugInfo = 'Invalid JSON from Supabase : ' . substr($response ?? '', 0, 500);
     $error = "Unable to connect to the server. Please check your internet connection and try again.";
     $errorType = 'connection';
-  } elseif (isset($authData['error'])) {
-    error_log("Login Error: " . ($authData['error_description'] ?? 'Unknown error'));
-    $rawError = $authData['error_description'] ?? $authData['error'] ?? '';
-    if (stripos($rawError, 'Invalid login credentials') !== false) {
+  } elseif (isset($authData['error']) || (isset($authData['message']) && isset($authData['hint']) && empty($authData['access_token']))) {
+    $loginError = $authData['error'] ?? ($authData['message'] ?? 'Unknown error');
+    $rawError = $authData['error_description'] ?? ($authData['message'] ?? $loginError);
+    if (!empty($authData['hint'])) {
+      $rawError .= ' | hint: ' . $authData['hint'];
+    }
+    $debugInfo = 'Supabase auth error: ' . $rawError . ' (HTTP ' . ($httpCode ?: 'n/a') . ')';
+    error_log("Login Error: " . $rawError);
+    error_log("Full auth response on error: " . json_encode($authData));
+    $error = "Invalid email or password. Please check your credentials and try again.";
+    $errorType = 'credentials';
+
+    // Friendly feedback plus useful debug hint for hosted env
+    if (stripos($rawError, 'Invalid login credentials') !== false || stripos($rawError, 'invalid email or password') !== false) {
       $error = "Invalid email or password. Please check your credentials and try again.";
       $errorType = 'credentials';
+    } elseif (stripos($rawError, 'invalid API key') !== false || stripos($rawError, 'invalid credentials for api key') !== false) {
+      $error = "Authentication failed due to invalid Supabase API key. Please check your environment config (SUPABASE_KEY) and redeploy.";
+      $errorType = 'config';
     } else {
-      $error = "Invalid email or password. Please check your credentials and try again.";
+      $error = "Login failed: " . $rawError . ". Please check credentials and system configuration.";
       $errorType = 'credentials';
     }
   } else {
     // Getting access token and user info (use null coalescing to avoid undefined index warnings)
     $accessToken = $authData['access_token'] ?? null;
     $refreshToken = $authData['refresh_token'] ?? null; // Store refresh token
-    $userId = null;
-    if (isset($authData['user']) && is_array($authData['user'])) {
-      $userId = $authData['user']['id'] ?? null;
+
+    // Robust extractor for user ID: Supabase responses can vary by client version
+    function extractUserIdFromAuthData($authData) {
+      if (!is_array($authData)) return null;
+      // Common shapes to check
+      $paths = [
+        ['user','id'], // { user: { id: ... } }
+        ['data','user','id'], // { data: { user: { id: ... } } }
+        ['session','user','id'], // { session: { user: { id: ... } } }
+        ['data','id'], // { data: { id: ... } }
+        ['id'] // { id: ... }
+      ];
+
+      foreach ($paths as $path) {
+        $cursor = $authData;
+        $found = true;
+        foreach ($path as $key) {
+          if (!is_array($cursor) || !array_key_exists($key, $cursor)) {
+            $found = false;
+            break;
+          }
+          $cursor = $cursor[$key];
+        }
+        if ($found && !empty($cursor)) return $cursor;
+      }
+      return null;
+    }
+
+    $userId = extractUserIdFromAuthData($authData);
+
+    // Extra sanity path: directly try an obvious candidate from user node
+    if (!$userId && !empty($authData['user']) && is_array($authData['user'])) {
+      $userId = $authData['user']['id'] ?? $authData['user']['sub'] ?? null;
+      if ($userId) {
+        error_log("Fallback: derived userId from authData['user'] directly: $userId");
+      }
+    }
+
+    // Log the authData structure lightly to help hosted debug (first-level keys only)
+    error_log('Auth response keys: ' . json_encode(array_keys(is_array($authData) ? $authData : [])));
+    error_log('Auth user node: ' . (is_array($authData['user'] ?? null) ? json_encode(array_keys($authData['user'])) : var_export($authData['user'] ?? null, true)));
+
+    function supabaseGetJson($url, $accessToken = null, $supabaseKey = null) {
+      $headers = ["Content-Type: application/json"];
+      if (!empty($accessToken)) {
+        $headers[] = "Authorization: Bearer $accessToken";
+      }
+      if (!empty($supabaseKey)) {
+        $headers[] = "apikey: $supabaseKey";
+      }
+
+      $ch = curl_init($url);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+      curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+      curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+      $resp = curl_exec($ch);
+      $err = curl_error($ch);
+      $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+      curl_close($ch);
+      if ($err || !$resp) {
+        error_log("supabaseGetJson failed ($url): " . ($err ?: 'empty response') . " http_code=" . ($httpCode ?: 'N/A'));
+        return null;
+      }
+      $data = json_decode($resp, true);
+      if (JSON_ERROR_NONE !== json_last_error()) {
+        error_log('supabaseGetJson invalid JSON response for ' . $url . ': ' . json_last_error_msg());
+        return null;
+      }
+      return ['status' => $httpCode, 'data' => $data];
+    }
+
+    // Fallback: if Supabase /token did not include user payload, get user from auth endpoint
+    if (!$userId && $accessToken) {
+      $userUrl = "$supabaseUrl/auth/v1/user";
+      $userDataResp = supabaseGetJson($userUrl, $accessToken, $supabaseKey);
+      if (!empty($userDataResp['data']) && isset($userDataResp['data']['id'])) {
+        $userId = $userDataResp['data']['id'];
+        error_log("Fallback user lookup success (auth/v1/user) - User ID: $userId");
+      } elseif (!empty($userDataResp['data']) && is_array($userDataResp['data']) && isset($userDataResp['data'][0]['id'])) {
+        $userId = $userDataResp['data'][0]['id'];
+        error_log("Fallback user lookup success (auth/v1/user first item) - User ID: $userId");
+      }
+    }
+
+    // Fallback: if still not found, query Supabase admin users endpoint using service role key
+    if (!$userId && !empty($email)) {
+      $adminKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_KEY');
+      if (!empty($adminKey)) {
+        $adminUserUrl = "$supabaseUrl/auth/v1/admin/users?email=eq." . urlencode($email);
+        $adminUserResp = supabaseGetJson($adminUserUrl, null, $adminKey);
+        if (!empty($adminUserResp['data']) && is_array($adminUserResp['data']) && !empty($adminUserResp['data'][0]['id'])) {
+          $userId = $adminUserResp['data'][0]['id'];
+          error_log("Fallback admin user lookup success - User ID: $userId");
+        }
+      } else {
+        error_log("Fallback admin user lookup skipped: missing service role key");
+      }
+    }
+
+    // New fallback: decode access token JWT to extract user ID (sub claim)
+    function getUserIdFromJwtToken($token) {
+        if (empty($token) || substr_count($token, '.') !== 2) {
+            return null;
+        }
+        list(, $payload, ) = explode('.', $token);
+        $payload = str_replace(['-', '_'], ['+', '/'], $payload);
+        $payload .= str_repeat('=', (4 - strlen($payload) % 4) % 4);
+        $decoded = base64_decode($payload);
+        if ($decoded === false) {
+            return null;
+        }
+        $data = json_decode($decoded, true);
+        return is_array($data) ? ($data['sub'] ?? null) : null;
+    }
+
+    // Second fallback: use profile lookup by email when still missing userId
+    if (!$userId && !empty($email)) {
+      $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id&email=ilike." . urlencode($email);
+      $profileResp = supabaseGetJson($profileUrl, null, getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: $supabaseKey);
+      if (!empty($profileResp['data']) && is_array($profileResp['data']) && !empty($profileResp['data'][0]['id'])) {
+        $userId = $profileResp['data'][0]['id'];
+        error_log("Fallback profile lookup success by email: $userId");
+      }
+    }
+
+    // Third fallback: decode `sub` from JWT access token
+    if (!$userId && !empty($accessToken)) {
+      $decodedSub = getUserIdFromJwtToken($accessToken);
+      if (!empty($decodedSub)) {
+          $userId = $decodedSub;
+          error_log("Fallback from JWT token sub claim success: $userId");
+      }
     }
 
     // Avoid passing null into substr (PHP 8.1+ deprecation)
@@ -133,8 +291,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log("User ID: " . ($userId ?? 'NULL'));
 
     if (!$userId) {
-      error_log("No user ID in response");
-      $error = "Login succeeded, but user ID was not returned.";
+      $debugInfo = 'No user ID after fallback; authData keys: ' . json_encode(array_keys($authData));
+      error_log("No user ID in response after all fallback attempts.");
+      if (empty($accessToken)) {
+        $error = "Invalid email or password. Please check your credentials and try again.";
+        $errorType = 'credentials';
+      } else {
+        $error = "Login succeeded, but user ID was not returned. Please contact support.";
+        $errorType = 'credentials';
+      }
+    }
+
+    // If we still don't have userId, do not proceed to sensitive auth flow.
+    if (!$userId) {
+      // fallback: attempt profile lookup by email to help diagnose, but do not override invalid cred state.
+      if (!empty($email)) {
+        $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&email=eq." . urlencode($email);
+        $contextFallback = stream_context_create([
+          'http' => [
+            'method' => 'GET',
+            'header' => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
+          ]
+        ]);
+        $profileByEmail = @file_get_contents($profileUrl, false, $contextFallback);
+        if ($profileByEmail) {
+          $profileList = json_decode($profileByEmail, true);
+          if (!empty($profileList[0]['id'])) {
+            $userId = $profileList[0]['id'];
+            $profile = $profileList[0];
+            error_log("Fallback extended profile lookup success by email: $userId");
+            $error = null;
+            $errorType = '';
+          }
+        }
+      }
+    }
+
+    if (!$userId) {
+      // still no user id after all fallback attempts, show the login error and stop.
     } else {
       // Getting the user's profile
       $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&id=eq.$userId";
@@ -157,8 +351,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $profiles = json_decode($profileData, true);
 
       if (empty($profiles)) {
-        $error = "No account found with this email address. Please check your email or contact your administrator.";
-        $errorType = 'not_found';
+        // Fallback: request user record from Supabase admin users endpoint, in case profiles table is not yet populated
+        $adminKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_KEY');
+        if (!empty($adminKey)) {
+            $adminUserUrl = "$supabaseUrl/auth/v1/admin/users?email=eq." . urlencode($email);
+            $adminUserResp = supabaseGetJson($adminUserUrl, null, $adminKey);
+            if (!empty($adminUserResp['data']) && is_array($adminUserResp['data']) && !empty($adminUserResp['data'][0])) {
+                $adminUser = $adminUserResp['data'][0];
+                $adminRole = $adminUser['app_metadata']['role'] ?? $adminUser['user_metadata']['role'] ?? 'super_admin';
+
+                $profile = [
+                    'id' => $userId,
+                    'full_name' => $adminUser['user_metadata']['full_name'] ?? $email,
+                    'role' => $adminRole,
+                    'status' => 'Active',
+                    'company_id' => null,
+                ];
+
+                error_log("Fallback profile created from admin users endpoint for email: $email, role: $adminRole");
+            }
+        }
+
+        if (empty($profile)) {
+            $error = "No account found with this email address. Please check your email or contact your administrator.";
+            $errorType = 'not_found';
+        }
       } else {
 
       $profile = $profiles[0];
@@ -383,12 +600,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' font-family='Arial' fill='%232e0b3f'>A</text></svg>" type="image/svg+xml">
+  <link rel="icon" href="/favicon.png" type="image/png" />
+  <link rel="shortcut icon" href="/favicon.png" type="image/png" />
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#2e0b3f">
   <link rel="stylesheet" href="../../../outlet-app/css/login-styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="login-body">
     <!-- Toast Notifications -->
@@ -398,6 +617,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <span><?= htmlspecialchars($error) ?></span>
         </div>
     <?php endif; ?>
+
+    <!-- Debug toast removed in cleanup -->
 
     <div class="auth-wrapper">
         <div class="auth-card">

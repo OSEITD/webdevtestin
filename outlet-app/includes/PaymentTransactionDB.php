@@ -17,13 +17,10 @@ class PaymentTransactionDB {
         $this->supabaseServiceKey = $supabaseServiceKey;
     }
 
-    /**
-     * Return the normalized Supabase REST URL (always ends with /rest/v1)
-     * regardless of whether SUPABASE_URL already includes /rest or /rest/v1.
-     */
+  
     private function getSupabaseRestUrl() {
         $base = rtrim($this->supabaseUrl, '/');
-        // Remove any trailing /rest or /rest/v1 to avoid double segments
+      
         $base = preg_replace('#/rest(/v1)?$#', '', $base);
         return $base . '/rest/v1';
     }
@@ -31,11 +28,12 @@ class PaymentTransactionDB {
     public function createTransaction($data) {
         try {
             
-            $amount = $data['amount'];
+            $amount = isset($data['amount']) ? (float)$data['amount'] : 0.0;
+            $transactionFee = isset($data['transaction_fee']) ? (float)$data['transaction_fee'] : round($amount * 0.025, 2);
+            $commissionPercentage = isset($data['commission_percentage']) ? (float)$data['commission_percentage'] : 0.0;
+            $commissionAmount = isset($data['commission_amount']) ? (float)$data['commission_amount'] : round($amount * $commissionPercentage / 100, 2);
+            $netAmount = isset($data['net_amount']) ? (float)$data['net_amount'] : round($amount - $transactionFee - $commissionAmount, 2);
 
-            // Assemble the payload for the DB. The DB trigger/function is responsible for
-            // computing all financial fields (fees, commission, net, total, etc.).
-            // Do not send those fields from the app; the DB will reject them.
             $transactionData = [
                 'tx_ref' => $data['tx_ref'],
                 'company_id' => $data['company_id'],
@@ -43,47 +41,59 @@ class PaymentTransactionDB {
                 'user_id' => $data['user_id'],
                 'parcel_id' => $data['parcel_id'] ?? null,
                 'amount' => $amount,
+                'transaction_fee' => $data['transaction_fee'] ?? $transactionFee,
+                'commission_percentage' => $data['commission_percentage'] ?? $commissionPercentage,
+                'commission_amount' => $data['commission_amount'] ?? $commissionAmount,
+                'net_amount' => $data['net_amount'] ?? $netAmount,
+                'total_amount' => $data['total_amount'] ?? $amount,
+                'currency' => $data['currency'] ?? 'ZMW',
+                'exchange_rate' => $data['exchange_rate'] ?? 1.0000,
+                'original_amount' => $data['original_amount'] ?? null,
+                'original_currency' => $data['original_currency'] ?? null,
                 'payment_method' => $data['payment_method'],
-
                 'payment_type' => $data['payment_type'] ?? null,
                 'mobile_network' => $data['mobile_network'] ?? null,
                 'mobile_number' => $this->maskMobileNumber($data['mobile_number'] ?? null),
+                'card_last4' => $data['card_last4'] ?? null,
+                'card_type' => $data['card_type'] ?? null,
+                'card_bin' => $data['card_bin'] ?? null,
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'],
                 'customer_phone' => $data['customer_phone'],
-                // Metadata can contain financial fields; avoid sending it on insert.
-                // User-facing metadata can be saved/updated after transaction is created.
+                'status' => $data['status'] ?? 'pending',
+                'lenco_status' => $data['lenco_status'] ?? null,
+                'processor_response' => $data['processor_response'] ?? null,
+                'auth_model' => $data['auth_model'] ?? null,
+                'payment_link' => $data['payment_link'] ?? null,
+                'redirect_url' => $data['redirect_url'] ?? null,
+                'verified_at' => $data['verified_at'] ?? null,
+                'verified_by' => $data['verified_by'] ?? null,
+                'signature_verified' => $data['signature_verified'] ?? false,
+                'settlement_status' => $data['settlement_status'] ?? 'pending',
+                'settlement_date' => $data['settlement_date'] ?? null,
+                'settlement_reference' => $data['settlement_reference'] ?? null,
+                'settlement_amount' => $data['settlement_amount'] ?? null,
+                'vat_amount' => $data['vat_amount'] ?? 0,
+                'vat_percentage' => $data['vat_percentage'] ?? 16.00,
+                'receipt_number' => $data['receipt_number'] ?? null,
+                'fiscal_year' => $data['fiscal_year'] ?? date('Y'),
+                'accounting_period' => $data['accounting_period'] ?? date('Y-m'),
+                'metadata' => json_encode($data['metadata'] ?? []),
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                'device_fingerprint' => $data['device_fingerprint'] ?? null,
+                'geolocation' => $data['geolocation'] ?? null,
+                'error_code' => $data['error_code'] ?? null,
+                'error_message' => $data['error_message'] ?? null,
+                'retry_count' => $data['retry_count'] ?? 0,
+                'expires_at' => $data['expires_at'] ?? date('Y-m-d H:i:s', strtotime('+1 hour')),
+                'amount_minor_units' => $data['amount_minor_units'] ?? null,
+                'paid_at' => $data['paid_at'] ?? null,
+                'failed_at' => $data['failed_at'] ?? null,
+                'created_at' => $data['created_at'] ?? date('Y-m-d H:i:s'),
+                'updated_at' => $data['updated_at'] ?? date('Y-m-d H:i:s')
             ];
-            // strip out null entries so database only sees fields we care about
-            // We also remove any fields that are calculated on the DB side (financial fields)
-            // to avoid triggering the "Financial fields cannot be set manually" rule.
-            $forbiddenFields = [
-                'transaction_fee',
-                'commission_percentage',
-                'commission_amount',
-                'net_amount',
-                'total_amount',
-                'currency',
-                'exchange_rate',
-                'vat_percentage',
-                'vat_amount',
-            ];
 
-            $transactionData = array_filter($transactionData, function($v, $k) use ($forbiddenFields) {
-                if (in_array($k, $forbiddenFields, true)) {
-                    return false;
-                }
-                return $v !== null;
-            }, ARRAY_FILTER_USE_BOTH);
-
-            // DEBUG: sanity assert - should never send calculated financial fields
-            foreach (['transaction_fee','commission_amount','net_amount','total_amount'] as $f) {
-                if (array_key_exists($f, $transactionData)) {
-                    error_log("WARNING: forbidden financial field still present: $f");
-                }
-            }
-
-            // Use raw HTTP request since custom Supabase client doesn't support insert
             $url = $this->getSupabaseRestUrl() . '/payment_transactions';
 
             $ch = curl_init($url);
@@ -127,7 +137,7 @@ class PaymentTransactionDB {
     
     public function verifyTransaction($txRef, $verificationData) {
         try {
-            // Check if this transaction is already marked successful to avoid double-crediting the wallet.
+          
             $existingTxn = $this->getTransactionByRef($txRef);
             $alreadySuccessful = false;
             if ($existingTxn['success'] && !empty($existingTxn['data']['status']) && strtolower($existingTxn['data']['status']) === 'successful') {
@@ -147,10 +157,26 @@ class PaymentTransactionDB {
             ];
             
             
-            if ($verificationData['status'] === 'successful') {
+            $normalizedStatus = strtolower(trim((string)($verificationData['status'] ?? '')));
+            $successStatuses = ['successful', 'success', 'completed', 'paid'];
+
+            // Enforce the DB status transition flow: pending -> processing -> successful
+            $currentStatus = '';
+            if ($existingTxn['success'] && !empty($existingTxn['data']['status'])) {
+                $currentStatus = strtolower($existingTxn['data']['status']);
+            }
+
+            if ($currentStatus === 'pending' && in_array($normalizedStatus, $successStatuses, true)) {
+                $intermediate = $this->updateTransactionStatus($txRef, 'processing');
+                if (!$intermediate['success']) {
+                    error_log("PaymentTransactionDB: failed interim processing status for tx_ref {$txRef}: " . ($intermediate['error'] ?? 'unknown'));
+                }
+            }
+
+            if (in_array($normalizedStatus, $successStatuses, true)) {
                 $updateData['status'] = 'successful';
                 $updateData['paid_at'] = date('Y-m-d H:i:s');
-            } else if ($verificationData['status'] === 'failed') {
+            } else if (in_array($normalizedStatus, ['failed', 'error', 'declined'], true)) {
                 $updateData['status'] = 'failed';
                 $updateData['failed_at'] = date('Y-m-d H:i:s');
                 $updateData['error_message'] = $verificationData['error_message'] ?? 'Payment failed';
@@ -163,7 +189,6 @@ class PaymentTransactionDB {
                 $updateData['card_bin'] = $verificationData['card']['first_6digits'] ?? null;
             }
             
-            // Use raw HTTP request for update since custom Supabase client doesn't support update
             $url = $this->getSupabaseRestUrl() . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
 
             $ch = curl_init($url);
@@ -185,12 +210,12 @@ class PaymentTransactionDB {
                 $responseData = json_decode($responseBody, true);
 
                 // If payment was successful, update parcel status and credit the wallet (once).
-                if ($verificationData['status'] === 'successful' && isset($responseData[0])) {
+                if (in_array($normalizedStatus, $successStatuses, true) && isset($responseData[0])) {
                     if (isset($responseData[0]['parcel_id'])) {
                         $this->updateParcelPaymentStatus($responseData[0]['parcel_id']);
                     }
 
-                    // Update wallet ledger only once per successful payment.
+                    // Updatinng wallet ledger only once per successful payment.
                     if (!$alreadySuccessful) {
                         require_once __DIR__ . '/WalletManager.php';
                         $companyId = $responseData[0]['company_id'] ?? null;
@@ -230,6 +255,62 @@ class PaymentTransactionDB {
     }
     
     
+    public function updateTransactionStatus($txRef, $newStatus, $additionalData = []) {
+        try {
+            $existing = $this->getTransactionByRef($txRef);
+            $currentStatus = strtolower($existing['data']['status'] ?? '');
+
+
+            if ($currentStatus === strtolower($newStatus)) {
+                return ['success' => true, 'data' => $existing['data'] ?? null];
+            }
+
+           
+            if (strtolower($newStatus) === 'successful' && $currentStatus === 'pending') {
+                $intermediate = $this->updateTransactionStatus($txRef, 'processing', array_merge($additionalData, ['updated_at' => date('Y-m-d H:i:s')]));
+                if (!$intermediate['success']) {
+                    return $intermediate;
+                }
+                $currentStatus = 'processing';
+            }
+
+            $updateData = [
+                'status' => $newStatus,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            if ($newStatus === 'successful' && empty($additionalData['paid_at'])) {
+                $updateData['paid_at'] = date('Y-m-d H:i:s');
+            } elseif ($newStatus === 'failed' && empty($additionalData['failed_at'])) {
+                $updateData['failed_at'] = date('Y-m-d H:i:s');
+            }
+            $updateData = array_merge($updateData, $additionalData);
+
+            $url = $this->getSupabaseRestUrl() . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($updateData));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'apikey: ' . $this->supabaseServiceKey,
+                'Authorization: Bearer ' . $this->supabaseServiceKey,
+                'Content-Type: application/json',
+                'Prefer: return=representation'
+            ]);
+            $responseBody = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $decoded = json_decode($responseBody, true);
+                return ['success' => true, 'data' => $decoded[0] ?? null];
+            }
+
+            return ['success' => false, 'error' => 'Failed to update transaction status'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
     public function getTransactionByRef($txRef) {
         try {
             $query = $this->supabase
@@ -360,7 +441,7 @@ class PaymentTransactionDB {
     
     public function incrementRetryCount($txRef) {
         try {
-            // Use raw HTTP request to get current retry count
+     
             $url = $this->getSupabaseRestUrl() . '/payment_transactions?select=retry_count&tx_ref=eq.' . urlencode($txRef);
 
             $ch = curl_init($url);
@@ -379,7 +460,7 @@ class PaymentTransactionDB {
                 $responseData = json_decode($responseBody, true);
                 $currentCount = $responseData[0]['retry_count'] ?? 0;
 
-                // Update retry count
+                // Updating retry count
                 $updateUrl = $this->getSupabaseRestUrl() . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
                 $ch = curl_init($updateUrl);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -422,7 +503,6 @@ class PaymentTransactionDB {
                 'updated_at' => date('Y-m-d H:i:s')
             ];
 
-            // Use raw HTTP request for update
             $url = $this->getSupabaseRestUrl() . '/payment_transactions?tx_ref=eq.' . urlencode($txRef);
 
             $ch = curl_init($url);
@@ -639,9 +719,9 @@ class PaymentTransactionDB {
     }
 
     /**
-     * Update parcel payment status to 'paid' when payment transaction is successful
+   
      *
-     * @param string $parcelId The parcel ID to update
+     * @param string $parcelId 
      * @return bool Success status
      */
     private function updateParcelPaymentStatus($parcelId) {
@@ -650,7 +730,7 @@ class PaymentTransactionDB {
                 return false;
             }
 
-            // Update parcel payment status
+            // Updating parcel payment status
             $url = $this->getSupabaseRestUrl() . '/parcels?id=eq.' . urlencode($parcelId);
 
             $updateData = [

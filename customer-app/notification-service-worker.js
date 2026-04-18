@@ -71,26 +71,26 @@ self.addEventListener('notificationclick', function(event) {
     event.notification.close();
     
     const trackingNumber = event.notification.data?.tracking_number;
-    const url = trackingNumber 
-        ? `/customer-app/track_parcel.php?track=${trackingNumber}`
-        : '/customer-app/track_parcel.php';
+    const fallbackUrl = trackingNumber
+        ? `/track_parcel.php?track=${encodeURIComponent(trackingNumber)}`
+        : '/track_parcel.php';
+    const url = event.notification.data?.url || fallbackUrl;
+    const absoluteUrl = new URL(url, self.location.origin).href;
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-          
             for (const client of clientList) {
                 if (client.url.includes('track_parcel') && 'focus' in client) {
                     return client.focus().then(() => {
                         if (client.navigate) {
-                            return client.navigate(url);
+                            return client.navigate(absoluteUrl);
                         }
                     });
                 }
             }
             
-           
             if (clients.openWindow) {
-                return clients.openWindow(url);
+                return clients.openWindow(absoluteUrl);
             }
         })
     );

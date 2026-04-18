@@ -63,6 +63,8 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
     <link rel="stylesheet" href="../assets/css/company-search-notifications.css">
     <!-- Form Validation Styles (shared with super_admin) -->
     <link rel="stylesheet" href="../../assets/css/form-validation.css">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="shortcut icon" href="/favicon.png" type="image/png">
     <!-- PWA Manifest - Pointing to company-app folder -->
     <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#2e0b3f">

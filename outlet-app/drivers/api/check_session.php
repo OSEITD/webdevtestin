@@ -18,8 +18,8 @@ try {
             'role' => 'driver'
         ],
         'need_to_do' => 'Log out and log in as the correct driver',
-        'logout_url' => 'http://acme.localhost/drivers/logout.php',
-        'login_url' => 'http://acme.localhost/drivers/login.php'
+        'logout_url' => '/drivers/logout.php',
+        'login_url' => '/drivers/login.php'
     ], JSON_PRETTY_PRINT);
     
 } catch (Exception $e) {

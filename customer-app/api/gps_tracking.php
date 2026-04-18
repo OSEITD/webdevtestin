@@ -48,8 +48,24 @@ class GPSTracker {
                         continue; 
                     }
                     
+                    if (!is_string($value)) {
+                        continue;
+                    }
+                    
                     if (strpos($value, 'eq.') === 0) {
                         $query = $query->eq($key, substr($value, 3));
+                    } elseif (strpos($value, 'gte.') === 0) {
+                        $query = $query->gte($key, substr($value, 4));
+                    } elseif (strpos($value, 'lte.') === 0) {
+                        $query = $query->lte($key, substr($value, 4));
+                    } elseif (strpos($value, 'neq.') === 0) {
+                        $query = $query->neq($key, substr($value, 4));
+                    } elseif (strpos($value, 'like.') === 0) {
+                        $query = $query->like($key, substr($value, 5));
+                    } elseif (strpos($value, 'ilike.') === 0) {
+                        $query = $query->ilike($key, substr($value, 6));
+                    } elseif (strpos($value, 'in.') === 0) {
+                        $query = $query->in($key, explode(',', substr($value, 3)));
                     }
                 }
                 
@@ -117,8 +133,11 @@ class GPSTracker {
                     'id' => 'eq.' . $parcel['driver_id'],
                     'select' => 'current_trip_id,driver_name,driver_phone,status'
                 ];
+                $driverData = [];
                 $driverData = $this->callSupabase('drivers', 'GET', $driverParams);
-                if (!empty($driverData) && !empty($driverData[0]['current_trip_id'])) {
+                if (empty($driverData)) {
+                    error_log('GPS tracking: driver record not found for driver_id=' . $parcel['driver_id']);
+                } elseif (!empty($driverData[0]['current_trip_id'])) {
                     $currentTripId = $driverData[0]['current_trip_id'];
                    
                     $tripParams = [
@@ -128,7 +147,11 @@ class GPSTracker {
                     $tripData = $this->callSupabase('trips', 'GET', $tripParams);
                     if (!empty($tripData)) {
                         $tripStatus = $tripData[0]['trip_status'];
+                    } else {
+                        error_log('GPS tracking: trip record not found for trip_id=' . $currentTripId);
                     }
+                } else {
+                    error_log('GPS tracking: current_trip_id missing for driver_id=' . $parcel['driver_id']);
                 }
                 
                
@@ -179,6 +202,8 @@ class GPSTracker {
                             'outlet_name' => $originData[0]['outlet_name'],
                             'address' => $originData[0]['address']
                         ];
+                    } else {
+                        error_log('GPS tracking: origin outlet missing for parcel_id=' . $parcel['id'] . ' origin_outlet_id=' . $parcel['origin_outlet_id']);
                     }
                   
                     $destData = $this->callSupabase('outlets', 'GET', [
@@ -192,6 +217,8 @@ class GPSTracker {
                             'outlet_name' => $destData[0]['outlet_name'],
                             'address' => $destData[0]['address']
                         ];
+                    } else {
+                        error_log('GPS tracking: destination outlet missing for parcel_id=' . $parcel['id'] . ' destination_outlet_id=' . $parcel['destination_outlet_id']);
                     }
                 }
             } catch (Exception $e) {
@@ -243,7 +270,9 @@ class GPSTracker {
             ];
 
         } catch (Exception $e) {
-            error_log("GPS tracking error: " . $e->getMessage());
+            $message = "GPS tracking error: " . $e->getMessage();
+            error_log($message);
+            file_put_contents('/tmp/gps_tracking_debug.log', '[' . date('c') . '] ' . $message . "\n" , FILE_APPEND | LOCK_EX);
             return [
                 'success' => false,
                 'error' => 'Failed to retrieve tracking information'
@@ -465,15 +494,19 @@ class GPSTracker {
 }
 
 // Main API handling
-try {
-    set_error_handler(function($errno, $errstr, $errfile, $errline) {
-        error_log("PHP Error [$errno] $errstr in $errfile on line $errline");
-        http_response_code(500);
-        echo json_encode(['success' => false, 'error' => 'Internal server error']);
-        exit;
-    });
+if (php_sapi_name() !== 'cli') {
+    try {
+        set_error_handler(function($errno, $errstr, $errfile, $errline) {
+            if (!in_array($errno, [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR], true)) {
+                return false;
+            }
+            error_log("PHP Error [$errno] $errstr in $errfile on line $errline");
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Internal server error']);
+            exit;
+        });
 
-    register_shutdown_function(function() {
+        register_shutdown_function(function() {
         $error = error_get_last();
         if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
             error_log("Fatal Error: {$error['message']} in {$error['file']} on line {$error['line']}");
@@ -502,8 +535,11 @@ try {
         echo json_encode(['success' => false, 'error' => 'Method not allowed']);
     }
 } catch (Exception $e) {
-    error_log("GPS Tracker API Error: " . $e->getMessage());
+    $message = "GPS Tracker API Error: " . $e->getMessage();
+    error_log($message);
+    file_put_contents('/tmp/gps_tracking_debug.log', '[' . date('c') . '] ' . $message . "\n", FILE_APPEND | LOCK_EX);
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Internal server error']);
+}
 }
 ?>

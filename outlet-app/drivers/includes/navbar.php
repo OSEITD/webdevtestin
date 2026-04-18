@@ -48,7 +48,7 @@ $notificationCount = 0;
             <i class="fas fa-home"></i>
             <span>Dashboard</span>
         </a>
-        <a href="<?php echo (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) ? '../profile.php' : 'pages/profile.php'; ?>" class="menu-item">
+        <a href="<?php echo (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) ? 'profile.php' : 'pages/profile.php'; ?>" class="menu-item">
             <i class="fas fa-user"></i>
             <span>Profile</span>
         </a>

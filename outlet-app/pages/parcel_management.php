@@ -220,44 +220,20 @@ $current_user = getCurrentUser();
         }
 
         @media (max-width: 768px) {
-            /* Make table responsive: convert to stacked cards */
-            .scan-history table, .scan-history thead, .scan-history tbody, .scan-history th, .scan-history td, .scan-history tr {
-                display: block;
+            .scan-history .table-wrapper {
+                overflow-x: auto;
+                overflow-y: auto;
             }
-            .scan-history thead tr {
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
+
+            .scan-history table {
+                min-width: 680px;
             }
-            .scan-history tr {
-                margin: 0 0 12px 0;
-                border-radius: 8px;
-                background: #fff;
-                box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-                padding: 10px;
-            }
+
+            .scan-history th,
             .scan-history td {
-                border: none;
-                position: relative;
-                padding: 12px 15px 12px 15px;
-                white-space: normal;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
+                padding: 10px 12px;
+                font-size: 12px;
             }
-            .scan-history td::before {
-                position: relative;
-                left: 0;
-                top: 0;
-                width: auto;
-                padding-right: 0;
-                white-space: normal;
-                font-weight: 600;
-                color: #4a5568;
-                margin-bottom: 5px;
-                content: attr(data-label);
-            }
-            /* use data-label attributes on td instead of nth-of-type */
         }
 
         .scan-history th {

@@ -43,12 +43,19 @@ $lencoEnv = LENCO_ENV;
     
     <!-- Lenco Configuration for JavaScript -->
     <script>
+        const configuredPublicKey = '<?php echo htmlspecialchars($lencoPublicKey); ?>';
+
         window.LENCO_CONFIG = {
-            publicKey: '<?php echo htmlspecialchars($lencoPublicKey); ?>',
+            publicKey: configuredPublicKey,
             currency: '<?php echo htmlspecialchars($lencoCurrency); ?>',
             environment: '<?php echo htmlspecialchars($lencoEnv); ?>',
-            verifyUrl: '../api/payments/verify_lenco.php'
+            verifyUrl: '../api/payments/verify_lenco.php',
+            configured: Boolean(configuredPublicKey)
         };
+
+        if (!window.LENCO_CONFIG.configured) {
+            console.warn('Lenco public key is missing. Lenco payment options will be disabled.');
+        }
     </script>
     
     <!-- Error Handler for Browser Extension Issues -->
@@ -79,7 +86,7 @@ $lencoEnv = LENCO_ENV;
                     <!-- Left Column -->
                     <div class="form-column-left">
                         <!-- Sender Information -->
-                        <div class="form-section">
+                        <div class="form-section section-sender">
                             <h3><i class="fas fa-user"></i> Sender Information</h3>
                             
                             <!-- Sender NRC (First Field) -->
@@ -111,7 +118,7 @@ $lencoEnv = LENCO_ENV;
                         </div>
 
                         <!-- Parcel Details -->
-                        <div class="form-section">
+                        <div class="form-section section-parcel">
                             <h3><i class="fas fa-box"></i> Parcel Details</h3>
                             
                             <div class="form-group">
@@ -153,7 +160,7 @@ $lencoEnv = LENCO_ENV;
                         </div>
 
                         <!-- Photo Upload & Submit - Full Width -->
-                        <div class="form-section photo-upload-section">
+                        <div class="form-section photo-upload-section section-photos">
                             <h3><i class="fas fa-camera"></i> Parcel Photos & Submit</h3>
                             
                             <div class="photo-upload-grid">
@@ -174,22 +181,7 @@ $lencoEnv = LENCO_ENV;
                                     <div id="photoPreview" class="photo-preview"></div>
                                 </div>
                                 
-                                <div class="submit-area">
-                                    <!-- Form Actions -->
-                                    <div class="form-actions">
-                                        <button type="button" class="btn-secondary" onclick="window.history.back()">
-                                            <i class="fas fa-arrow-left"></i> Cancel
-                                        </button>
-                                        <button type="submit" class="btn-primary" id="submitBtn">
-                                            <i class="fas fa-paper-plane"></i> Register Parcel
-                                        </button>
-                                    </div>
-                                    
-                                    <div class="submit-info">
-                                        <p><i class="fas fa-info-circle"></i> Please review all information before submitting.</p>
-                                        <p><i class="fas fa-shield-alt"></i> Your parcel will be assigned a tracking number upon registration.</p>
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
 
@@ -198,7 +190,7 @@ $lencoEnv = LENCO_ENV;
                     <!-- Right Column -->
                     <div class="form-column-right">
                         <!-- Recipient Information -->
-                        <div class="form-section">
+                        <div class="form-section section-recipient">
                             <h3><i class="fas fa-user-check"></i> Recipient Information</h3>
                             
                             <!-- Recipient NRC (First Field) -->
@@ -306,7 +298,7 @@ $lencoEnv = LENCO_ENV;
                             window.COMPANY_COMMISSION = <?php echo json_encode($companyCommission); ?>;
                         </script>
 
-                        <div class="form-section collapsible">
+                        <div class="form-section collapsible section-financial">
                             <h3><i class="fas fa-dollar-sign"></i> Financial Information <i class="fas fa-chevron-down toggle-icon"></i></h3>
                             <div class="section-content">
                             
@@ -611,7 +603,7 @@ $lencoEnv = LENCO_ENV;
                         
                         <!-- Trip Assignment -->
                         <!-- Trip Assignment -->
-                        <div class="trip-assignment-container" id="tripAssignmentSection">
+                        <div class="trip-assignment-container section-trip" id="tripAssignmentSection">
                             <h3><i class="fas fa-route"></i> Trip Assignment <span class="optional-badge">(Optional)</span></h3>
                             
                             <!-- Instruction Message (shown when destination not selected) -->
@@ -839,6 +831,22 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Section Outside Card -->
+                    <div class="submit-area submit-area-outside-card">
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </button>
+                            <button type="submit" class="btn-primary" id="submitBtn">
+                                <i class="fas fa-paper-plane"></i> Register Parcel
+                            </button>
+                        </div>
+                        <div class="submit-info">
+                            <p><i class="fas fa-info-circle"></i> Please review all information before submitting.</p>
+                            <p><i class="fas fa-shield-alt"></i> Your parcel will be assigned a tracking number upon registration.</p>
                         </div>
                     </div>
 

@@ -13,7 +13,8 @@ define('LENCO_ENV', $_lencoEnv);
 // ─── Live / Production Credentials ───────────────────────────────────────────
 define('LENCO_PUBLIC_KEY_LIVE',  getenv('LENCO_PUBLIC_KEY_LIVE')  ?: '');
 define('LENCO_SECRET_KEY_LIVE',  getenv('LENCO_SECRET_KEY_LIVE')  ?: '');
-
+define('LENCO_PUBLIC_KEY', getenv('LENCO_PUBLIC_KEY') ?: '');
+define('LENCO_SECRET_KEY', getenv('LENCO_SECRET_KEY') ?: '');
 // ─── Sandbox / Test Credentials ──────────────────────────────────────────────
 define('LENCO_PUBLIC_KEY_SANDBOX', getenv('LENCO_PUBLIC_KEY_SANDBOX') ?: '');
 define('LENCO_SECRET_KEY_SANDBOX', getenv('LENCO_SECRET_KEY_SANDBOX') ?: '');
@@ -47,18 +48,51 @@ define('LENCO_RATE_LIMIT_WINDOW', 60);
 define('LENCO_RATE_LIMIT_MAX', 10);
 
 function getLencoPublicKey() {
-    return LENCO_ENV === 'live' ? LENCO_PUBLIC_KEY_LIVE : LENCO_PUBLIC_KEY_SANDBOX;
+    if (!class_exists('EnvLoader')) {
+        require_once __DIR__ . '/../../includes/env.php';
+    }
+    EnvLoader::load();
+
+    // Explicit env key take highest precedence
+    $explicit = EnvLoader::get('LENCO_PUBLIC_KEY', getenv('LENCO_PUBLIC_KEY') ?: '');
+    if (!empty($explicit)) {
+        return $explicit;
+    }
+
+    // Legacy per-env-specific keys
+    $keyName = LENCO_ENV === 'live' ? 'LENCO_PUBLIC_KEY_LIVE' : 'LENCO_PUBLIC_KEY_SANDBOX';
+    $key = EnvLoader::get($keyName, getenv($keyName) ?: '');
+    if (!empty($key)) {
+        return $key;
+    }
+
+    // Final fallback direct environment variable for compatibility
+    return getenv('LENCO_PUBLIC_KEY') ?: '';
 }
 
 
 function getLencoSecretKey() {
-    // Allow overriding entirely with a single env var for the active mode (live/sandbox)
-    $override = getenv('LENCO_API_KEY') ?: '';
+    if (!class_exists('EnvLoader')) {
+        require_once __DIR__ . '/../../includes/env.php';
+    }
+    EnvLoader::load();
+
+    // Allow overriding with single env var (general cfg)
+    $override = EnvLoader::get('LENCO_API_KEY', getenv('LENCO_API_KEY') ?: '');
     if (!empty($override)) {
         return $override;
     }
 
-    return LENCO_ENV === 'live' ? LENCO_SECRET_KEY_LIVE : LENCO_SECRET_KEY_SANDBOX;
+    if (!empty(LENCO_SECRET_KEY)) {
+        return LENCO_SECRET_KEY;
+    }
+
+    $key = LENCO_ENV === 'live' ? LENCO_SECRET_KEY_LIVE : LENCO_SECRET_KEY_SANDBOX;
+    if (!empty($key)) {
+        return $key;
+    }
+
+    return getenv('LENCO_SECRET_KEY') ?: '';
 }
 
 /** API base URL */

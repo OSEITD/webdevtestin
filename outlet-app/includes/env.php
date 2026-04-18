@@ -10,17 +10,15 @@ class EnvLoader {
         }
 
         if ($path === null) {
-            // Check for Admins/.env first (primary config source for all apps)
+            // Prefer outlet-app/.env for outlet-app context, then Admins/.env, then root .env
             $adminsEnv = __DIR__ . '/../../Admins/.env';
-            // Then check for outlet-app/.env
             $outletEnv = __DIR__ . '/../.env';
-            // Then check for root level .env
             $rootEnv = __DIR__ . '/../../.env';
-            
-            if (file_exists($adminsEnv)) {
-                $path = $adminsEnv;
-            } elseif (file_exists($outletEnv)) {
+
+            if (file_exists($outletEnv)) {
                 $path = $outletEnv;
+            } elseif (file_exists($adminsEnv)) {
+                $path = $adminsEnv;
             } elseif (file_exists($rootEnv)) {
                 $path = $rootEnv;
             } else {

@@ -9,6 +9,9 @@
     <meta name="keywords" content="secure parcel tracking, NRC verification, Zambian parcel tracking, logistics">
     <meta name="author" content="WD Parcel Services">
     <meta name="theme-color" content="#1e40af">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="shortcut icon" href="/favicon.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -108,6 +111,30 @@
                     
                 </ul>
             </div>
+        </div>
+    </div>
+
+    <div id="pwa-install-banner" class="pwa-install-banner" style="display: none;">
+        <div class="pwa-banner-content">
+            <div class="pwa-banner-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+            </div>
+            <div class="pwa-banner-text">
+                <strong>Install App</strong>
+                <span>Add to home screen for quick access</span>
+            </div>
+            <button id="pwa-install-btn" class="pwa-install-btn-primary">
+                Install
+            </button>
+            <button id="pwa-install-dismiss" class="pwa-install-btn-dismiss" aria-label="Dismiss">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -330,6 +357,80 @@
             trackingForm.reset();
             clearAlerts();
         });
+    </script>
+
+    <script>
+        (function() {
+            let deferredPrompt = null;
+            const installBanner = document.getElementById('pwa-install-banner');
+            const installBtn = document.getElementById('pwa-install-btn');
+            const dismissBtn = document.getElementById('pwa-install-dismiss');
+
+            const dismissedUntil = parseInt(localStorage.getItem('pwa-install-dismissed') || '0', 10);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone
+                || document.referrer.includes('android-app://');
+
+            if (dismissedUntil && Date.now() > dismissedUntil) {
+                localStorage.removeItem('pwa-install-dismissed');
+            }
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('service-worker.js').catch(() => {});
+            }
+
+            if (isStandalone) {
+                return;
+            }
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+
+                if (!localStorage.getItem('pwa-install-dismissed') && installBanner) {
+                    setTimeout(() => {
+                        installBanner.style.display = 'block';
+                    }, 1500);
+                }
+            });
+
+            function hideBanner() {
+                if (installBanner) {
+                    installBanner.classList.add('hiding');
+                    setTimeout(() => {
+                        installBanner.style.display = 'none';
+                        installBanner.classList.remove('hiding');
+                    }, 300);
+                }
+            }
+
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) {
+                        return;
+                    }
+
+                    hideBanner();
+                    deferredPrompt.prompt();
+
+                    await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                });
+            }
+
+            if (dismissBtn) {
+                dismissBtn.addEventListener('click', () => {
+                    hideBanner();
+                    const hideUntil = Date.now() + (7 * 24 * 60 * 60 * 1000);
+                    localStorage.setItem('pwa-install-dismissed', String(hideUntil));
+                });
+            }
+
+            window.addEventListener('appinstalled', () => {
+                hideBanner();
+                localStorage.removeItem('pwa-install-dismissed');
+            });
+        })();
     </script>
 </body>
 </html>

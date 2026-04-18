@@ -537,6 +537,7 @@ $current_user = getCurrentUser();
         @media (max-width: 768px) {
             .wizard-steps {
                 flex-direction: column;
+                gap: 10px;
             }
             
             .form-row {
@@ -546,6 +547,12 @@ $current_user = getCurrentUser();
             .wizard-actions {
                 flex-direction: column;
                 gap: 10px;
+                align-items: stretch;
+            }
+
+            .wizard-actions .btn {
+                width: 100%;
+                justify-content: center;
             }
 
             .main-content {
@@ -555,7 +562,9 @@ $current_user = getCurrentUser();
             }
 
             .content-container {
-                margin: 10px 0;
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
                 padding: 0;
                 box-shadow: none;
                 border-radius: 0;
@@ -585,6 +594,31 @@ $current_user = getCurrentUser();
 
             .wizard-step {
                 padding: 15px 10px;
+            }
+
+            .wizard-step div {
+                font-size: 0.9rem;
+                line-height: 1.2;
+            }
+
+            .form-section {
+                padding: 18px;
+            }
+
+            .selected-parcels-list {
+                grid-template-columns: 1fr;
+            }
+
+            .selected-parcel-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .stop-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
             }
         }
     </style>
@@ -1025,15 +1059,25 @@ $current_user = getCurrentUser();
             
             if (Array.isArray(drivers)) {
                 drivers.forEach(driver => {
-                    if (driver && driver.status === 'available') {
+                    if (driver && driver.id) {
                         const option = document.createElement('option');
                         option.value = driver.id;
-                        
+
                         const driverName = driver.driver_name || 'Driver';
                         const driverPhone = driver.driver_phone || 'No Phone';
                         const driverEmail = driver.driver_email ? ` - ${driver.driver_email.substring(0, 20)}...` : '';
                         const driverId = driver.id ? ` [${driver.id.substring(0, 8)}...]` : '';
-                        option.textContent = `${driverName} (${driverPhone})${driverEmail}${driverId}`;
+
+                        const status = (driver.status || 'unavailable').toLowerCase();
+                        const isAvailable = status === 'available';
+
+                        option.textContent = `${driverName} (${driverPhone})${driverEmail}${driverId}` + (isAvailable ? '' : ' (Unavailable)');
+
+                        if (!isAvailable) {
+                            option.disabled = true;
+                            option.style.color = '#85919e';
+                        }
+
                         select.appendChild(option);
                     }
                 });

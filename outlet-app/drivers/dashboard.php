@@ -54,6 +54,8 @@ if (isset($_SESSION['company_id']) && !empty($_SESSION['company_id'])) {
 }
 
 $brandingColors = getCompanyBrandingColors($companyInfo);
+
+$driverAssetPrefix = (strpos($_SERVER['SCRIPT_NAME'], '/drivers/') !== false) ? '/drivers' : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,7 +66,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="assets/css/driver-dashboard-new.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo $driverAssetPrefix; ?>/assets/css/driver-dashboard-new.css?v=<?php echo time(); ?>">
     
     <style>
         
@@ -639,10 +641,10 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
     <script src="../assets/js/professional-gps-tracker.js"></script>
     
     <!-- Push Notification System -->
-    <script src="assets/js/push-manager.js"></script>
+    <script src="<?php echo $driverAssetPrefix; ?>/assets/js/push-manager.js"></script>
     
     <!-- Professional JavaScript for Driver Dashboard -->
-    <script src="assets/js/driver-dashboard.js?v=<?php echo time(); ?>"></script>
+    <script src="<?php echo $driverAssetPrefix; ?>/assets/js/driver-dashboard.js?v=<?php echo time(); ?>"></script>
     
     <script>
     async function loadPerformanceStats() {

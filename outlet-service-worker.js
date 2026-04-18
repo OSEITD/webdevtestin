@@ -470,8 +470,8 @@ self.addEventListener('notificationclick', (event) => {
     
     event.notification.close();
     
-    // Get the URL from notification data
-    const urlToOpen = event.notification.data?.url || 'http://acme.localhost/outlet-app/pages/outlet_dashboard.php';
+    // Get the URL from notification data or use the current host with the outlet dashboard path
+    const urlToOpen = event.notification.data?.url || new URL('/outlet-app/pages/outlet_dashboard.php', self.location.origin).href;
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

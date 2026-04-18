@@ -9,7 +9,8 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['company_id'])) {
     exit;
 }
 $helper = new OutletAwareSupabaseHelper();
-$filters = "status=eq.available";
+// Include all drivers (available/unavailable/assigned/out_for_delivery), but not deleted ones.
+$filters = "deleted_at=is.null";
 $select = "id,driver_name,driver_email,driver_phone,status";
 $drivers = $helper->get('drivers', $filters, $select);
 echo json_encode(['success' => true, 'drivers' => $drivers]);

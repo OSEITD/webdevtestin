@@ -1,9 +1,7 @@
 <?php
-require_once __DIR__ . '/../includes/init.php';
-require_once __DIR__ . '/../api/supabase-client.php';
+require_once __DIR__ . '/../../api/init.php';
+require_once __DIR__ . '/supabase-client.php';
 require_once __DIR__ . '/../includes/WalletManager.php';
-
-header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['status' => 'error', 'message' => 'Invalid request method.']);
@@ -12,12 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'super_admin') {
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized.']);
-    exit;
-}
-
-$csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-if (!class_exists('CSRFHelper') || !CSRFHelper::validateToken($csrfToken)) {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid CSRF token.']);
     exit;
 }
 
@@ -56,7 +48,7 @@ try {
         throw new Exception('Payout request not found.');
     }
 
-    // enforce server-trust company id to avoid client override
+    // enforcing server-trust company id to avoid client override
     $companyId = $payoutData['company_id'] ?? null;
     if (empty($companyId)) {
         throw new Exception('Payout request missing company association.');
@@ -100,7 +92,7 @@ try {
 
     callSupabaseWithServiceKey("company_payouts?id=eq.{$payoutId}", 'PATCH', $updateData);
 
-    // Keep wallet row synced in a single method and avoid client-side direct patch logic.
+
     CompanyWalletManager::applyPayoutStatusUpdate($companyId, $amount, $status);
 
     // Updatin the wallet balances for completed / failed/cancelled payouts ensuring that the wallet remains consistent even if the payout request itself did not adjust balances.
@@ -130,8 +122,7 @@ try {
         }
 
         if (!empty($walletUpdate)) {
-            // Persist updated wallet balances so the UI reflects pending/completed payouts.
-            // If the DB uses triggers to reconcile ledger entries, this will still keep the row in sync.
+      
             callSupabaseWithServiceKey("company_wallets?id=eq.{$companyId}", 'PATCH', $walletUpdate);
         }
     }

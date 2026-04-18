@@ -1,8 +1,7 @@
 <?php
-require_once __DIR__ . '/../includes/init.php';
+require_once __DIR__ . '/../../api/init.php';
 require_once __DIR__ . '/../includes/WalletManager.php';
-
-header('Content-Type: application/json');
+require_once __DIR__ . '/supabase-client.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
@@ -12,13 +11,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $companyId = $_SESSION['company_id'] ?? $_SESSION['id'] ?? null;
 if (!$companyId) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
-    exit;
-}
-
-// CSRF protection
-$csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-if (!class_exists('CSRFHelper') || !CSRFHelper::validateToken($csrfToken)) {
-    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token.']);
     exit;
 }
 

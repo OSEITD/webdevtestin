@@ -211,6 +211,15 @@ class NotificationHelper {
     
     private function createNotification($data) {
         $url = "{$this->supabaseUrl}/rest/v1/notifications";
+
+        // notifications.recipient_id is NOT NULL in DB schema.
+        if (empty($data['recipient_id'])) {
+            return [
+                'success' => false,
+                'data' => ['message' => 'Missing recipient_id for notification payload'],
+                'status_code' => 400
+            ];
+        }
         
         $notificationData = array_merge([
             'status' => 'unread',

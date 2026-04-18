@@ -29,9 +29,7 @@ class PaymentTransactionDB {
             $vatPercentage = $data['vat_percentage'] ?? 16.00;
             $vatAmount = $data['vat_amount'] ?? round($amount * $vatPercentage / 100, 2);
 
-            // total_amount is required by the schema and must be provided.
-            // We populate it using the value passed in or default to amount.
-            // If the DB trigger expects a certain relationship between amount/fee/total, this should match.
+           
             $transactionData = [
                 'tx_ref' => $data['tx_ref'],
                 'company_id' => $data['company_id'],
@@ -169,12 +167,7 @@ class PaymentTransactionDB {
                 $updateData['failed_at'] = date('Y-m-d H:i:s');
                 $updateData['error_message'] = $verificationData['error_message'] ?? 'Payment failed';
             } else {
-             
-                $updateData['status'] = $normalizedStatus ?: ($updateData['status'] ?? 'pending');
-            }
-       
-            if (isset($verificationData['card'])) {
-                $updateData['card_last4'] = $verificationData['card']['last_4digits'] ?? null;
+
                 $updateData['card_type'] = $verificationData['card']['type'] ?? null;
                 $updateData['card_bin'] = $verificationData['card']['first_6digits'] ?? null;
             }
@@ -216,6 +209,14 @@ class PaymentTransactionDB {
                     } catch (Exception $e) {
                         error_log('Wallet update failed after payment verification: ' . $e->getMessage());
                     }
+
+                    try {
+                        if (!empty($updated['parcel_id'])) {
+                            $this->updateParcelPaymentStatus($updated['parcel_id']);
+                        }
+                    } catch (Exception $e) {
+                        error_log('Parcel payment status update failed after payment verification: ' . $e->getMessage());
+                    }
                 }
 
                 return [
@@ -242,7 +243,7 @@ class PaymentTransactionDB {
     /**
      * Updating transaction status (for COD, cash, or manual status updates)
      * 
-     * @param string $txRef Transaction reference (or parcel_id for COD lookup)
+     * @param string $txRef Transaction reference 
      * @param string $newStatus New status (successful, failed, cancelled, etc.)
      * @param array $additionalData Additional fields to update
      * @return array Result with success status
@@ -335,6 +336,41 @@ class PaymentTransactionDB {
                 'success' => false,
                 'error' => $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Updates parcel payment status to 'paid' when a linked payment transaction succeeds.
+     *
+     * @param string $parcelId
+     * @return array
+     */
+    public function updateParcelPaymentStatus($parcelId) {
+        if (empty($parcelId)) {
+            return ['success' => false, 'error' => 'Parcel ID is required'];
+        }
+
+        try {
+            $updateData = [
+                'payment_status' => 'paid',
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $response = $this->supabase
+                ->from('parcels')
+                ->update($updateData)
+                ->eq('id', $parcelId)
+                ->select()
+                ->single()
+                ->execute();
+
+            if ($response->status === 200) {
+                return ['success' => true, 'data' => $response->data];
+            }
+
+            return ['success' => false, 'error' => 'Failed to update parcel payment status'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
     

@@ -540,7 +540,21 @@ header('Content-Type: text/html; charset=UTF-8');
         @media (max-width: 768px) {
             .company-header {
                 padding: 1rem;
-                margin: -1rem -1rem 1.5rem -1rem;
+                margin: 0 0 1.5rem 0;
+                border-radius: 0.85rem;
+            }
+
+            .main-content {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .dashboard-content {
+                width: 100%;
+            }
+
+            .collapsible-section {
+                padding: 0.75rem;
             }
 
             .company-header-content {
@@ -1128,7 +1142,12 @@ header('Content-Type: text/html; charset=UTF-8');
             margin-top: 1.25rem;
             border-radius: 1rem;
             border: 1px solid rgba(46, 13, 42, 0.1);
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+            overscroll-behavior-y: contain;
+            max-height: 420px;
             background: rgba(255, 255, 255, 0.95);
             box-shadow: 0 15px 35px -20px rgba(46, 13, 42, 0.45);
         }
@@ -1136,7 +1155,7 @@ header('Content-Type: text/html; charset=UTF-8');
         .recent-activity-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 680px;
+            min-width: 760px;
         }
 
         .recent-activity-table thead th {
@@ -1360,6 +1379,16 @@ header('Content-Type: text/html; charset=UTF-8');
 
             .status-pill {
                 justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .activity-table-wrapper {
+                overflow-x: auto;
+            }
+
+            .recent-activity-table {
+                min-width: 760px;
             }
         }
 
@@ -1728,16 +1757,6 @@ header('Content-Type: text/html; charset=UTF-8');
                         </div>
                     </div>
 
-                    <div class="company-status">
-                        <div class="status-indicator">
-                            <div class="status-dot"></div>
-                            <span><?php echo ucfirst($companyInfo['status'] ?? 'active'); ?> System</span>
-                        </div>
-                        <div class="company-contact">
-                            <i class="fas fa-user-circle"></i>
-                            <span><?php echo htmlspecialchars($current_user['full_name'] ?? $current_user['email'] ?? 'User'); ?></span>
-                        </div>
-                    </div>
                 </div>
             </div>
             <?php elseif ($current_user['company_name']): ?>
@@ -1755,16 +1774,6 @@ header('Content-Type: text/html; charset=UTF-8');
                         </div>
                     </div>
 
-                    <div class="company-status">
-                        <div class="status-indicator">
-                            <div class="status-dot"></div>
-                            <span>Active System</span>
-                        </div>
-                        <div class="company-contact">
-                            <i class="fas fa-user-circle"></i>
-                            <span><?php echo htmlspecialchars($current_user['full_name'] ?? $current_user['email'] ?? 'User'); ?></span>
-                        </div>
-                    </div>
                 </div>
             </div>
             <?php endif; ?>
@@ -2152,7 +2161,7 @@ header('Content-Type: text/html; charset=UTF-8');
                             <tbody>
                             <?php if ($recentActivityError): ?>
                                 <tr>
-                                    <td colspan="6" class="table-empty-message"><?= htmlspecialchars($recentActivityError) ?></td>
+                                    <td colspan="7" class="table-empty-message"><?= htmlspecialchars($recentActivityError) ?></td>
                                 </tr>
                             <?php elseif (!empty($notifications)): ?>
                                 <?php foreach ($notifications as $note): ?>
@@ -2219,31 +2228,31 @@ header('Content-Type: text/html; charset=UTF-8');
                                         }
                                     ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($timeDisplay) ?></td>
-                                        <td>
+                                        <td data-label="Time"><?= htmlspecialchars($timeDisplay) ?></td>
+                                        <td data-label="Type">
                                             <span class="type-pill <?= htmlspecialchars($typeClass) ?>">
                                                 <i class="<?= htmlspecialchars($typeIcon) ?>" aria-hidden="true"></i>
                                                 <?= htmlspecialchars($typeLabel) ?>
                                             </span>
                                         </td>
-                                        <td>
+                                        <td data-label="Parcel">
                                             <?php if ($parcelReference): ?>
                                                 <span class="parcel-chip"><i class="fas fa-hashtag" aria-hidden="true"></i><?= htmlspecialchars($parcelReference) ?></span>
                                             <?php else: ?>
                                                 <span class="table-muted">Not linked</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="message-cell">
+                                        <td class="message-cell" data-label="Details">
                                             <span class="message-title"><?= htmlspecialchars($note['title'] ?? 'Notification') ?></span>
                                             <span class="message-text"><?= htmlspecialchars($note['message'] ?? '') ?></span>
                                         </td>
-                                        <td>
+                                        <td data-label="Priority">
                                             <span class="priority-pill <?= htmlspecialchars($priorityClass) ?>"><?= htmlspecialchars($priorityLabel) ?></span>
                                         </td>
-                                        <td>
+                                        <td data-label="Status">
                                             <span class="status-pill <?= htmlspecialchars($statusClass) ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                         </td>
-                                        <td class="action-cell">
+                                        <td class="action-cell" data-label="Actions">
                                             <button class="btn-icon btn-delete-activity" data-id="<?= htmlspecialchars($note['id']) ?>" title="Delete activity">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -2252,7 +2261,7 @@ header('Content-Type: text/html; charset=UTF-8');
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="6" class="table-empty-message">No recent activity found.</td>
+                                    <td colspan="7" class="table-empty-message">No recent activity found.</td>
                                 </tr>
                             <?php endif; ?>
                             </tbody>

@@ -11,11 +11,20 @@ class SessionManager {
             
             ini_set('session.gc_maxlifetime', $lifetime);
             ini_set('session.cookie_lifetime', $lifetime);
+            $cookieDomain = '';
+            if (!$isLocalhost) {
+                $hostName = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+                $cookieDomain = preg_replace('/:\d+$/', '', $hostName);
+                if ($cookieDomain !== '' && filter_var('http://' . $cookieDomain, FILTER_VALIDATE_URL) === false) {
+                    $cookieDomain = '';
+                }
+            }
+
             session_set_cookie_params([
                 'lifetime' => $lifetime,
                 'path' => '/',
-                'domain' => $isLocalhost ? '' : '.localhost', 
-                'secure' => !$isLocalhost, 
+                'domain' => $cookieDomain,
+                'secure' => !$isLocalhost,
                 'httponly' => true,
                 'samesite' => 'Lax'
             ]);

@@ -4801,6 +4801,18 @@ class DriverDashboard {
         if (confirmBtn) {
             confirmBtn.addEventListener('click', () => this.confirmTripCompletion(confirmBtn));
         }
+
+        // Refresh once when trip is fully completed to avoid reload loops.
+        if (allCompleted) {
+            const tripId = (stops[0] && stops[0].trip_id) || (this.lastDashboardData && this.lastDashboardData.active_trips && this.lastDashboardData.active_trips[0] ? this.lastDashboardData.active_trips[0].id : 'current');
+            const refreshKey = `driver_trip_completed_refresh_${tripId}`;
+            if (!sessionStorage.getItem(refreshKey)) {
+                sessionStorage.setItem(refreshKey, '1');
+                setTimeout(() => {
+                    this.loadDashboardData(true);
+                }, 2000);
+            }
+        }
     }
 
     async confirmTripCompletion(buttonElement = null) {

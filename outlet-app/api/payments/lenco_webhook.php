@@ -137,7 +137,8 @@ function handlePendingCollection($data) {
  * @param array $additionalData 
  */
 function updatePaymentStatus($reference, $status, $additionalData = []) {
-   
+    require_once __DIR__ . '/../../includes/PaymentTransactionDB.php';
+
     $config = require __DIR__ . '/../../config.php';
     
     if (!$config || !isset($config['supabase'])) {
@@ -149,7 +150,36 @@ function updatePaymentStatus($reference, $status, $additionalData = []) {
     $supabaseKey = $config['supabase']['service_role_key'];
     
     try {
-       
+        $paymentDB = new PaymentTransactionDB();
+
+        $additional = [];
+        if (!empty($additionalData['payment_data'])) {
+            $additional['metadata'] = json_encode($additionalData['payment_data']);
+            if (!empty($additionalData['payment_data']['mobileNetwork'])) {
+                $additional['mobile_network'] = strtoupper($additionalData['payment_data']['mobileNetwork']);
+            }
+            if (!empty($additionalData['payment_data']['mobileNumber'])) {
+                $additional['mobile_number'] = $additionalData['payment_data']['mobileNumber'];
+            }
+        }
+        if ($status === 'successful' && isset($additionalData['lenco_reference'])) {
+            $additional['lenco_tx_ref'] = $additionalData['lenco_reference'];
+            $additional['paid_at'] = $additionalData['completed_at'] ?? date('c');
+        }
+        if ($status === 'failed' && isset($additionalData['error_message'])) {
+            $additional['error_message'] = $additionalData['error_message'];
+            $additional['failed_at'] = date('c');
+        }
+
+        $result = $paymentDB->updateTransactionStatus($reference, $status, $additional);
+        if ($result['success']) {
+            error_log("Payment status updated successfully (via PaymentTransactionDB) - Reference: {$reference}, Status: {$status}");
+            return true;
+        }
+
+        error_log("PaymentTransactionDB failed to update status (fallback): " . json_encode($result));
+
+        // Fallback to manual REST patch if helper is unavailable or fails
         $getOldStatusUrl = $supabaseUrl . '/rest/v1/payment_transactions?select=status&tx_ref=eq.' . urlencode($reference);
         $chGet = curl_init();
         curl_setopt_array($chGet, [
@@ -170,7 +200,7 @@ function updatePaymentStatus($reference, $status, $additionalData = []) {
             $existingDeets = json_decode($responseGet, true);
             if (!empty($existingDeets) && $existingDeets[0]['status'] === 'successful') {
                 error_log("Payment already successful - Reference: {$reference}. Skipping update.");
-                return false; // Prevent returning true to stop double-crediting
+                return false;
             }
         }
 
@@ -324,10 +354,7 @@ function updateParcelPaymentStatus($reference) {
     }
 }
 
-/**
- * Update the Company Wallet upon a successful Lenco payment.
- * Requires fetching the transaction details.
- */
+
 function updateCompanyWalletFromPayment($reference) {
     $config = require __DIR__ . '/../../config.php';
     if (!$config || !isset($config['supabase'])) return false;

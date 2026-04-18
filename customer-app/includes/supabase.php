@@ -7,7 +7,7 @@ use Supabase\CreateClient;
 
 function getSupabaseClient() {
     
-    // Look for .env in customer-app/ first, then fall back to workspace root
+   
     $envPath = file_exists(__DIR__ . '/../.env') ? __DIR__ . '/../.env' : __DIR__ . '/../../.env';
     if (file_exists($envPath)) {
         try {
@@ -214,7 +214,6 @@ function getSupabaseClient() {
 
                     $response = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
 
                     if ($httpCode >= 200 && $httpCode < 300) {
                         return $this->buildResponse($httpCode, $response);
@@ -239,7 +238,6 @@ function getSupabaseClient() {
 
                     $response = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
 
                     if ($httpCode >= 200 && $httpCode < 300) {
                         return $this->buildResponse($httpCode, $response);
@@ -264,7 +262,7 @@ function getSupabaseClient() {
 
                     $response = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
+
 
                     if ($httpCode >= 200 && $httpCode < 300) {
                         return $this->buildResponse($httpCode, $response);
@@ -287,7 +285,6 @@ function getSupabaseClient() {
 
                     $response = curl_exec($ch);
                     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
 
                     if ($httpCode >= 200 && $httpCode < 300) {
                         return $this->buildResponse($httpCode, $response);

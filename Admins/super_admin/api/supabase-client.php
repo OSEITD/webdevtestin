@@ -1,27 +1,55 @@
 <?php
 require_once __DIR__ . '/../includes/env.php';
 
-// Load .env from root
 try {
     EnvLoader::load(__DIR__ . '/../../../.env');
 } catch (Exception $e) {
     error_log("Failed to load .env: " . $e->getMessage());
 }
 
-$supabaseUrl = EnvLoader::get('SUPABASE_URL');
-// Anonymous key for public operations
-$supabaseKey = EnvLoader::get('SUPABASE_ANON_KEY');
+// Force clear opcode cache for this critical config file to avoid stale runtime behavior on Render.
+if (function_exists('opcache_reset')) {
+    opcache_reset();
+}
 
-// Prefer the supremum of Supabase keys: service role key (best) -> service key -> anon key
-$supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY');
+error_log('DEBUG: opcache_reset called? ' . (function_exists('opcache_reset') ? 'yes' : 'not available'));
+
+
+$supabaseUrl = getenv('SUPABASE_URL') ?: EnvLoader::get('SUPABASE_URL');
+
+$supabaseKey = getenv('SUPABASE_ANON_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
+
+// Prefer explicit Render/production env vars over local .env (EnvLoader)
+$supabaseServiceKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
+if (empty($supabaseServiceKey)) {
+    $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY');
+}
 if (empty($supabaseServiceKey)) {
     $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
 }
 
-// If outlet-app defined a .env, use its keys as the source of truth (and also persist them back to the root .env)
+// final fallback to anon key if no service key available (improves resilience)
+if (empty($supabaseServiceKey) && !empty($supabaseKey)) {
+    $supabaseServiceKey = $supabaseKey;
+    $serviceKeyName = 'SUPABASE_ANON_KEY';
+    error_log('WARNING: No service key defined; falling back to anon key for Supabase operations.');
+}
+
+if (empty($supabaseServiceKey)) {
+    error_log('ERROR: SUPABASE_SERVICE_KEY not set in Render env and no fallback found.');
+}
+
+
+error_log('DEBUG: Supabase URL from env=' . ($supabaseUrl ?: '[missing]'));
+error_log('DEBUG: Supabase key source: ' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY env' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY env' : 'EnvLoader')));
+error_log('DEBUG: Supabase URL is set: ' . (!empty($supabaseUrl) ? 'yes' : 'no'));
+error_log('DEBUG: Supabase service key present: ' . (!empty($supabaseServiceKey) ? 'yes' : 'no'));
+
+
 $outletEnvPath = dirname(__DIR__, 3) . '/outlet-app/.env';
 $rootEnvPath = dirname(__DIR__, 3) . '/.env';
-if (file_exists($outletEnvPath)) {
+$isSuperAdminContext = (strpos(realpath(__DIR__), DIRECTORY_SEPARATOR . 'Admins' . DIRECTORY_SEPARATOR . 'super_admin') !== false);
+if (!$isSuperAdminContext && file_exists($outletEnvPath)) {
     $outletVars = [];
     $lines = file($outletEnvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
@@ -41,7 +69,6 @@ if (file_exists($outletEnvPath)) {
         $outletVars[$key] = $value;
     }
 
-    // Use outlet-app keys if present (they should be authoritative for the running app)
     if (!empty($outletVars['SUPABASE_URL'])) {
         $supabaseUrl = $outletVars['SUPABASE_URL'];
         error_log('Supabase: overriding SUPABASE_URL from outlet-app .env');
@@ -65,7 +92,6 @@ if (empty($supabaseServiceKey)) {
     $supabaseServiceKey = $supabaseKey;
 }
 
-// Determine which env variable provided the key (for clearer logging)
 $serviceKeyName = 'SUPABASE_ANON_KEY';
 if (!empty(EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY'))) {
     $serviceKeyName = 'SUPABASE_SERVICE_ROLE_KEY';
@@ -75,13 +101,11 @@ if (!empty(EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY'))) {
     $serviceKeyName = 'SUPABASE_ANON_KEY';
 }
 
-// Mask key for logs (keep first 4 and last 4 chars)
 function mask_key_for_log($k) {
     if (!is_string($k) || strlen($k) <= 8) return '***';
     return substr($k, 0, 4) . str_repeat('*', max(0, strlen($k) - 8)) . substr($k, -4);
 }
 
-// Decode a JWT without validating its signature, to inspect its payload for debugging.
 function decode_jwt_payload($jwt) {
     $parts = explode('.', $jwt);
     if (count($parts) < 2) {
@@ -113,9 +137,6 @@ if (is_array($supabaseJwtPayload) && isset($supabaseJwtPayload['ref']) && $expec
             "the project '{$expectedRef}' (Supabase dashboard -> Settings -> API -> Service Role Key).";
         error_log($msg);
 
-        // Fall back to a safer key so the application can continue running and show an actionable error.
-        // The mismatch indicates the key is for a different project, so the request will almost certainly fail.
-        // We still prefer SUPABASE_SERVICE_KEY if it exists, otherwise fall back to the anon key.
         if (!empty(EnvLoader::get('SUPABASE_SERVICE_KEY'))) {
             $supabaseServiceKey = EnvLoader::get('SUPABASE_SERVICE_KEY');
             $serviceKeyName = 'SUPABASE_SERVICE_KEY';
@@ -130,14 +151,14 @@ if (is_array($supabaseJwtPayload) && isset($supabaseJwtPayload['ref']) && $expec
 
 error_log("Supabase: using key from {$serviceKeyName}: " . mask_key_for_log($supabaseServiceKey));
 
-// Prevent using placeholder values from .env.example and provide a clearer message.
 foreach (['SUPABASE_URL' => $supabaseUrl, 'SUPABASE_SERVICE_KEY' => $supabaseServiceKey] as $name => $value) {
     if (is_string($value) && preg_match('/your[-_ ]/i', $value)) {
-        throw new Exception("Supabase configuration appears to be using placeholder values ({$name}); please set the correct values in your .env file.");
+        error_log("WARNING: Supabase configuration placeholder-like value detected for {$name}. Continuing with caution.");
+        // Do not throw in production--use log + fallback in case env vars are still being applied
+        continue;
     }
 }
 
-// Prevent using placeholder values from .env.example and provide a clearer message.
 $placeholderPatterns = [
     '/your[-_ ]?project[-_ ]?ref/i',
     '/your[-_ ]?supabase/i',
@@ -147,7 +168,8 @@ $placeholderPatterns = [
 
 foreach (['SUPABASE_URL' => $supabaseUrl, 'SUPABASE_SERVICE_KEY' => $supabaseServiceKey] as $name => $value) {
     if (is_string($value) && preg_match('/your[-_ ]/i', $value)) {
-        throw new Exception("Supabase configuration appears to be using placeholder values ({$name}); please set the correct values in your .env file.");
+        error_log("WARNING: Supabase configuration placeholder-like value detected for {$name} (second check). Continuing.");
+        continue;
     }
 }
 
@@ -157,7 +179,7 @@ class SupabaseClient {
 
     public function __construct($url, $key) {
         if (empty($key)) {
-            throw new Exception("API key cannot be empty");
+            error_log("SupabaseClient constructed with empty API key; requests may fail if a key is required.");
         }
         $this->url = rtrim($url, '/');
         $this->key = trim($key);
@@ -166,13 +188,12 @@ class SupabaseClient {
     private function cleanJsonResponse($response) {
         error_log("Raw response: " . $response);
         
-        // If response is already valid JSON, return it
+        
         $decoded = json_decode($response);
         if (json_last_error() === JSON_ERROR_NONE) {
             return $response;
         }
         
-        // Find the first occurrence of { or [
         $start = strpos($response, '{');
         if ($start === false) {
             $start = strpos($response, '[');
@@ -183,7 +204,6 @@ class SupabaseClient {
             return false;
         }
 
-        // Find the last occurrence of } or ]
         $end = strrpos($response, '}');
         if ($end === false) {
             $end = strrpos($response, ']');
@@ -193,11 +213,21 @@ class SupabaseClient {
             error_log("No JSON end marker found in response");
             return false;
         }
-
-        // Extract the JSON part
         $jsonPart = substr($response, $start, $end - $start + 1);
         error_log("Extracted JSON part: " . $jsonPart);
         return $jsonPart;
+    }
+
+    private function closeCurlHandle(&$handle) {
+        if (!is_resource($handle) && !is_object($handle)) {
+            return;
+        }
+
+        if (defined('PHP_VERSION_ID') && PHP_VERSION_ID < 80500) {
+            curl_close($handle);
+        }
+
+        $handle = null;
     }
 
     public function makeRequest($endpoint, $method = 'GET', $data = null, $customHeaders = []) {
@@ -208,21 +238,20 @@ class SupabaseClient {
                 $url = $this->url . '/rest/v1/' . ltrim($endpoint, '/');
             }
 
-            // Add Range header for potentially large datasets
             $headers = [
                 "apikey: {$this->key}",
                 "Authorization: Bearer {$this->key}",
                 "Content-Type: application/json",
                 "Accept: application/json",
                 "Prefer: return=representation",
-                "Range: 0-999" // Limit to 1000 records per request
+                "Range: 0-999"
             ];
 
             foreach ($customHeaders as $header) {
                 $headers[] = $header;
             }
 
-            // Mask sensitive API keys in logs (keep first/last 4 chars) to avoid leaking them
+            // Masking sensitive API keys in logs  to avoid leaking them
             $maskedHeaders = array_map(function($header) {
                 if (stripos($header, 'apikey:') === 0 || stripos($header, 'authorization:') === 0) {
                     $parts = explode(' ', $header, 2);
@@ -269,18 +298,18 @@ class SupabaseClient {
             
             if ($response === false) {
                 $error = curl_error($ch);
-                curl_close($ch);
+                $this->closeCurlHandle($ch);
                 throw new Exception("cURL error: " . $error);
             }
 
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             error_log("Response HTTP code: " . $httpCode);
-            error_log("Raw response: " . substr($response, 0, 1000)); // Log first 1000 chars
+            error_log("Raw response: " . substr($response, 0, 1000)); 
 
             if ($httpCode >= 400) {
-                curl_close($ch);
+                $this->closeCurlHandle($ch);
 
-                // Provide clearer guidance for common Supabase errors.
+               
                 $message = "HTTP error {$httpCode}: {$response}";
                 if ($httpCode === 401) {
                     $message = "Supabase 401 Unauthorized (invalid API key). " .
@@ -294,9 +323,9 @@ class SupabaseClient {
                 throw new Exception($message);
             }
 
-            curl_close($ch);
+            $this->closeCurlHandle($ch);
 
-            // Clean and validate JSON response
+         
             if (!empty($response)) {
                 $cleanedResponse = $this->cleanJsonResponse($response);
                 if ($cleanedResponse !== false) {
@@ -308,7 +337,6 @@ class SupabaseClient {
                 }
             }
             
-            // Empty responses are valid for PATCH/DELETE operations
             if (in_array($method, ['PATCH', 'DELETE', 'PUT'])) {
                 return true;
             }
@@ -378,7 +406,7 @@ class SupabaseClient {
     }
 
     /**
-     * Alias for update() (legacy name used in some code paths).
+    
      *
      * @param string $endpoint
      * @param array  $data
@@ -395,16 +423,14 @@ class SupabaseClient {
     }
 
     /**
-     * Soft-delete a record: sets deleted_at = NOW() and deleted_by = user ID.
-     * Uses PATCH instead of DELETE to preserve the record and avoid FK constraint errors.
-     *
-     * @param string      $endpoint  Table name, e.g. "outlets"
-     * @param string      $query     PostgREST filter, e.g. "id=eq.123"
-     * @param string|null $deletedBy UUID of the user performing the deletion
-     * @return mixed Parsed response
+    
+     * @param string      $endpoint  
+     * @param string      $query    
+     * @param string|null $deletedBy
+     * @return mixed 
      */
     public function softDelete($endpoint, $query = '', $deletedBy = null) {
-        $data = ['deleted_at' => date('c')]; // ISO 8601 timestamp
+        $data = ['deleted_at' => date('c')]; 
         if ($deletedBy) {
             $data['deleted_by'] = $deletedBy;
         }
@@ -413,8 +439,7 @@ class SupabaseClient {
     }
 
     /**
-     * Restore a soft-deleted record: sets deleted_at and deleted_by back to NULL.
-     *
+     
      * @param string $endpoint Table name, e.g. "outlets"
      * @param string $query    PostgREST filter, e.g. "id=eq.123"
      * @return mixed Parsed response
@@ -441,39 +466,39 @@ function callSupabaseCount($endpoint, $useServiceRole = false) {
 }
 
 function callSupabaseWithServiceKey($endpoint, $method = 'GET', $data = null, $customHeaders = []) {
-    global $supabaseUrl, $supabaseServiceKey;
+    global $supabaseUrl, $supabaseServiceKey, $supabaseKey;
+
+    if (empty($supabaseServiceKey)) {
+        error_log('callSupabaseWithServiceKey: SUPABASE_SERVICE_KEY/SERVICE_ROLE_KEY missing; falling back to SUPABASE_ANON_KEY for this request.');
+        $supabaseServiceKey = $supabaseKey;
+    }
 
     $client = new SupabaseClient($supabaseUrl, $supabaseServiceKey);
 
     try {
-        // Build query string for GET requests
+        
         $query = '';
         if ($method === 'GET' && is_array($data) && !empty($data)) {
             $params = [];
-            
-            // Handle select parameter
+          
             if (isset($data['select'])) {
                 $params[] = 'select=' . urlencode($data['select']);
             }
-            
-            // Handle filters
             if (isset($data['filters']) && is_array($data['filters'])) {
                 foreach ($data['filters'] as $key => $value) {
                     $params[] = urlencode($key) . '=eq.' . urlencode($value);
                 }
             }
             
-            // Handle order
             if (isset($data['order'])) {
                 $params[] = 'order=' . urlencode($data['order']);
             }
             
-            // Handle limit
+           
             if (isset($data['limit'])) {
                 $params[] = 'limit=' . intval($data['limit']);
             }
             
-            // Handle offset (PostgREST supports offset)
             if (isset($data['offset'])) {
                 $params[] = 'offset=' . intval($data['offset']);
             }
@@ -485,7 +510,7 @@ function callSupabaseWithServiceKey($endpoint, $method = 'GET', $data = null, $c
             case 'POST':
                 return $client->insert($endpoint, $data);
             case 'PATCH':
-                // SupabaseClient uses update() for PATCH/UPDATE operations.
+              
                 return $client->update($endpoint, $data);
             case 'DELETE':
                 return $client->delete($endpoint);

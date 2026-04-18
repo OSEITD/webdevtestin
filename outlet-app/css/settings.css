@@ -29,12 +29,21 @@ body {
         /* Ensure page content is pushed below the fixed top header */
         .main-content {
             padding-top: 90px; /* safe offset to clear header */
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-bottom: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         @media (max-width: 768px) {
             /* mobile header may be taller due to stacked elements */
             .main-content {
                 padding-top: 110px;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
             }
         }
 
@@ -241,6 +250,8 @@ body {
             background-color: white;
             width: 100%;
             max-width: 1400px;
+            margin: 0 auto;
+            box-sizing: border-box;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             overflow: hidden;

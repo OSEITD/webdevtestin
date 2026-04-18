@@ -2750,12 +2750,12 @@ body {
 .trip-completion-title {
     margin: 0;
     font-weight: 600;
-    color: #ffffff;
+    color: #10b981; /* green */
 }
 
 .trip-completion-subtitle {
     margin: 4px 0 0;
-    color: rgba(255, 255, 255, 0.72);
+    color: #10b981; /* green */
     font-size: 0.85rem;
 }
 

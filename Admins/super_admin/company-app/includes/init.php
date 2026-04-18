@@ -30,6 +30,14 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Ensure company session identifiers are aligned for legacy/new usage.
+if (!empty($_SESSION['company_id']) && empty($_SESSION['id'])) {
+    $_SESSION['id'] = $_SESSION['company_id'];
+}
+if (!empty($_SESSION['id']) && empty($_SESSION['company_id'])) {
+    $_SESSION['company_id'] = $_SESSION['id'];
+}
+
 // Basic session validation used by company-app pages. If invalid, clear and redirect to login.
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     error_log("Invalid or missing session data in init.php");
@@ -46,11 +54,18 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION[
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'];
     
-    // Extract the base path from REQUEST_URI 
-    // e.g., /webdevtestin/Admins/super_admin/company-app/pages/wallet.php → /webdevtestin
+    // Extract the base path from REQUEST_URI.
+    // If hosted under a folder (e.g. /WDParcelSendReceiverPWA/...), keep that prefix.
+    // If hosted at the domain root, use '/'.
     $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-    preg_match('#^(/[^/]*/)#', $requestUri, $matches);
-    $basePath = $matches[1] ?? '/';
+    $adminsMarker = '/Admins/super_admin/';
+    $adminsPos = strpos($requestUri, $adminsMarker);
+    if ($adminsPos !== false) {
+        $prefix = substr($requestUri, 0, $adminsPos);
+        $basePath = rtrim($prefix, '/') . '/';
+    } else {
+        $basePath = '/';
+    }
     
     // Redirect to the SUPER_ADMIN login, not company-app login
     $loginUrl = $protocol . '://' . $host . $basePath . 'Admins/super_admin/auth/login.php?error=session_invalid';

@@ -417,7 +417,7 @@ class PushNotificationService {
                 $result = $this->sendToCustomer($parcel, '🚚 Parcel In Transit', $message, [
                     'type' => 'trip_started',
                     'tracking_number' => $parcel['track_number'],
-                    'url' => getCustomerUrl('customer-app/track_parcel.php?track=' . $parcel['track_number'])
+                    'url' => getCustomerUrl('track_parcel.php?track=' . $parcel['track_number'])
                 ]);
                 
                 $notifications[] = $result;
