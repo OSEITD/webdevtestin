@@ -173,10 +173,7 @@ class SupabaseClient {
         return $this->parseResponse($response);
     }
 
-    /**
-     * Get parcels for a company with optional filters
-     */
-    public function getParcels($companyId, $accessToken, $filters = []) {
+    private function buildParcelsQuery($companyId, $filters = []) {
         $query = "company_id=eq.{$companyId}";
 
         if (!empty($filters['status'])) {
@@ -218,8 +215,47 @@ class SupabaseClient {
         } elseif (!empty($filters['destination_outlet_id'])) {
             $query .= "&destination_outlet_id=eq.{$filters['destination_outlet_id']}";
         }
+        
+        // Search term
+        if (!empty($filters['search'])) {
+            $s = rawurlencode('%' . $filters['search'] . '%');
+            $query .= "&or=(track_number.ilike.{$s},sender_name.ilike.{$s},receiver_name.ilike.{$s})";
+        }
 
-        $url = "{$this->supabaseUrl}/rest/v1/parcels?{$query}&deleted_at=is.null&select=*";
+        return $query;
+    }
+
+    /**
+     * Get parcels count for a company with optional filters using getExactCount
+     */
+    public function getParcelsCount($companyId, $accessToken, $filters = []) {
+        $query = $this->buildParcelsQuery($companyId, $filters);
+        $endpoint = "parcels?{$query}&deleted_at=is.null";
+        return $this->getExactCount($endpoint, false, $accessToken);
+    }
+
+    /**
+     * Get parcels for a company with optional filters
+     */
+    public function getParcels($companyId, $accessToken, $filters = []) {
+        $query = $this->buildParcelsQuery($companyId, $filters);
+        
+        $select = !empty($filters['select']) ? $filters['select'] : '*';
+        $fullQuery = "{$query}&deleted_at=is.null&select={$select}";
+        
+        if (isset($filters['limit'])) {
+            $fullQuery .= "&limit=" . (int)$filters['limit'];
+        }
+        if (isset($filters['offset'])) {
+            $fullQuery .= "&offset=" . (int)$filters['offset'];
+        }
+        if (isset($filters['order'])) {
+            $fullQuery .= "&order=" . urlencode($filters['order']);
+        } else {
+            $fullQuery .= "&order=created_at.desc";
+        }
+
+        $url = "{$this->supabaseUrl}/rest/v1/parcels?{$fullQuery}";
         $headers = array_merge($this->defaultHeaders, ['Authorization: Bearer ' . $accessToken]);
 
         $response = $this->makeRequest('GET', $url, null, $headers);
@@ -436,6 +472,47 @@ class SupabaseClient {
         ]);
         $response = $this->makeRequest('GET', $url, null, $headers);
         return $this->parseResponse($response);
+    }
+
+    public function getExactCount($endpoint, $useServiceRole = false, $accessToken = null) {
+        // Allow endpoint to already have rest/v1/ included
+        if (strpos($endpoint, 'rest/v1/') === 0) {
+            $url = "{$this->supabaseUrl}/{$endpoint}";
+        } else {
+            $url = "{$this->supabaseUrl}/rest/v1/" . ltrim($endpoint, '/');
+        }
+        
+        $authKey = $this->supabaseKey;
+        if ($useServiceRole && $this->serviceRoleKey) {
+            $authKey = $this->serviceRoleKey;
+        }
+        
+        $headers = array_merge($this->defaultHeaders, [
+            'Authorization: Bearer ' . ($accessToken ? $accessToken : $authKey),
+            'Prefer: count=exact,head=true'
+        ]);
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'HEAD');
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, (getenv('APP_ENV') ?: 'production') === 'production');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, ((getenv('APP_ENV') ?: 'production') === 'production') ? 2 : 0);
+        
+        $response = curl_exec($ch);
+        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($statusCode >= 200 && $statusCode < 300) {
+            if (preg_match('/Content-Range:\s*(?:\w+\s+)?\d+-\d+\/(\d+)/i', $response, $matches)) {
+                return (int)$matches[1];
+            } elseif (preg_match('/Content-Range:\s*(?:\w+\s+)?\*\/?(\d+)?/i', $response, $matches)) {
+                return isset($matches[1]) ? (int)$matches[1] : 0;
+            }
+        }
+        return 0;
     }
 
     

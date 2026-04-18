@@ -14,12 +14,18 @@ $currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $offset = ($currentPage - 1) * $itemsPerPage;
 
 try {
-    // Fetch all non-deleted companies to get total count
-    $allCompanies = callSupabase('companies?deleted_at=is.null&select=*');
-    // Sort by newest first (reverse order by creation)
-    $allCompanies = array_reverse($allCompanies);
-    $totalCompanies = count($allCompanies);
-    $totalPages = ceil($totalCompanies / $itemsPerPage);
+    // Get total count of non-deleted companies using optimized exact count header
+    $countEndpoint = 'companies?deleted_at=is.null';
+    
+    // Apply search filter if present
+    if (isset($_GET['search']) && !empty($_GET['search'])) {
+        $search = urlencode('%' . $_GET['search'] . '%');
+        $countEndpoint .= "&or=(company_name.ilike.{$search},contact_email.ilike.{$search},contact_person.ilike.{$search})";
+    }
+    
+    $totalCompanies = callSupabaseCount($countEndpoint);
+    
+    $totalPages = max(1, ceil($totalCompanies / $itemsPerPage));
     
     // Ensure current page is within valid range
     if ($currentPage > $totalPages && $totalPages > 0) {
@@ -27,8 +33,16 @@ try {
         $offset = ($currentPage - 1) * $itemsPerPage;
     }
     
-    // Get companies for current page
-    $companies = array_slice($allCompanies, $offset, $itemsPerPage);
+    // Build query to fetch paginated companies
+    $endpoint = 'companies?deleted_at=is.null&select=*&order=id.desc';
+    if (isset($_GET['search']) && !empty($_GET['search'])) {
+        $search = urlencode('%' . $_GET['search'] . '%');
+        $endpoint .= "&or=(company_name.ilike.{$search},contact_email.ilike.{$search},contact_person.ilike.{$search})";
+    }
+    $endpoint .= "&limit={$itemsPerPage}&offset={$offset}";
+    
+    $companiesRes = callSupabase($endpoint);
+    $companies = is_array($companiesRes) ? $companiesRes : [];
 } catch (Exception $e) {
     error_log('Error fetching companies: ' . $e->getMessage());
     $companies = [];
@@ -256,5 +270,4 @@ require_once __DIR__ . '/../includes/header.php';
             font-size: 12px;
         }
     </style>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

@@ -54,24 +54,21 @@ try {
     error_log('[users.php] Applied filters - search: ' . ($_GET['search'] ?? 'none') . ', role: ' . ($_GET['role'] ?? 'none'));
     error_log('[users.php] Fetched ' . count($allUsers) . ' users');
 
-    // Total count: try to fetch count separately
+    // Total count: use the new optimized callSupabaseCount method
     $totalUsers = 0;
     try {
-        $countEndpoint = 'all_users?select=count';
+        $countEndpoint = 'all_users';
+        $countFilters = [];
         if (isset($_GET['search']) && !empty($_GET['search'])) {
             $search = urlencode('%' . $_GET['search'] . '%');
-            $countEndpoint .= "&or=(full_name.ilike.{$search},email.ilike.{$search})";
+            $countFilters[] = "or=(full_name.ilike.{$search},email.ilike.{$search})";
         }
         if (isset($_GET['role']) && !empty($_GET['role'])) {
             $role = $_GET['role'];
-            $countEndpoint .= "&role=ilike.{$role}";
+            $countFilters[] = "role=ilike.{$role}";
         }
-        $countRes = callSupabase($countEndpoint);
-        if (is_array($countRes) && isset($countRes[0]['count'])) {
-            $totalUsers = (int)$countRes[0]['count'];
-        } else {
-            $totalUsers = count($allUsers);
-        }
+        $queryStr = !empty($countFilters) ? '?' . implode('&', $countFilters) : '';
+        $totalUsers = callSupabaseCount($countEndpoint . $queryStr);
     } catch (Exception $e) {
         $totalUsers = count($allUsers);
     }
@@ -666,6 +663,30 @@ require_once __DIR__ . '/../includes/header.php';
                     }
                 }
             });
+
+            // Re-sort the table rows so online users appear on top
+            const tbody = document.getElementById('usersTableBody');
+            if (tbody) {
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                // Sort rows based on online status (online first)
+                rows.sort((a, b) => {
+                    const statusCellA = a.querySelector('.user-status-cell');
+                    const statusCellB = b.querySelector('.user-status-cell');
+                    
+                    if (!statusCellA || !statusCellB) return 0;
+                    
+                    const aId = statusCellA.getAttribute('data-user-id');
+                    const bId = statusCellB.getAttribute('data-user-id');
+                    
+                    const aOnline = onlineUsers.hasOwnProperty(aId) ? 1 : 0;
+                    const bOnline = onlineUsers.hasOwnProperty(bId) ? 1 : 0;
+                    
+                    return bOnline - aOnline;
+                });
+                
+                // Re-append sorted rows to the tbody
+                rows.forEach(row => tbody.appendChild(row));
+            }
         });
 
         // Start polling for online users
@@ -839,5 +860,4 @@ require_once __DIR__ . '/../includes/header.php';
             font-size: 12px;
         }
     </style>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

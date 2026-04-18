@@ -157,11 +157,10 @@ include __DIR__ . '/../includes/header.php';
                 const result = await response.json();
 
                 if (result.success === true) {
-                    const creds = result.data.driver;
                     Swal.fire({
                         icon: 'success',
                         title: 'Driver Added!',
-                        html: `<p>Login credentials for <strong>${creds.name}</strong>:</p><p>Email: <strong>${creds.email}</strong></p><p>Temporary Password: <strong>${creds.temp_password}</strong></p><p style="color:#666;margin-top:10px;">Please ask them to change their password upon first login.</p>`,
+                        text: 'The driver has been successfully added.',
                         confirmButtonColor: '#2e0d2a'
                     }).then(() => {
                         window.location.href = 'drivers.php';
@@ -183,5 +182,4 @@ include __DIR__ . '/../includes/header.php';
             }
         });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

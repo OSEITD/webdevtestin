@@ -294,5 +294,4 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Link to the external JavaScript file -->
 <script src="../assets/js/company-scripts.js"></script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

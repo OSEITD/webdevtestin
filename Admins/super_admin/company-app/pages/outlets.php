@@ -62,5 +62,4 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- Link to the external JavaScript files -->
     <script src="../assets/js/company-scripts.js"></script>
     <script src="../assets/js/outlets.js"></script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

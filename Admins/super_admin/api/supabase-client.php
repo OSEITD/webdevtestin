@@ -325,6 +325,41 @@ class SupabaseClient {
         return $this->makeRequest($url, 'GET', null, $customHeaders);
     }
 
+    public function getExactCount($endpoint) {
+        $url = $this->url . '/rest/v1/' . ltrim($endpoint, '/');
+        
+        $headers = [
+            "apikey: {$this->key}",
+            "Authorization: Bearer {$this->key}",
+            "Prefer: count=exact,head=true"
+        ];
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_CUSTOMREQUEST => 'HEAD',
+            CURLOPT_NOBODY => true,
+            CURLOPT_HEADER => true,
+            CURLOPT_SSL_VERIFYPEER => (getenv('APP_ENV') ?: 'production') === 'production',
+            CURLOPT_SSL_VERIFYHOST => ((getenv('APP_ENV') ?: 'production') === 'production') ? 2 : 0,
+        ]);
+        
+        $response = curl_exec($ch);
+        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($statusCode >= 200 && $statusCode < 300) {
+            if (preg_match('/Content-Range:\s*(?:\w+\s+)?\d+-\d+\/(\d+)/i', $response, $matches)) {
+                return (int)$matches[1];
+            } elseif (preg_match('/Content-Range:\s*(?:\w+\s+)?\*\/?(\d+)?/i', $response, $matches)) {
+                return isset($matches[1]) ? (int)$matches[1] : 0;
+            }
+        }
+        return 0;
+    }
+
     public function insert($endpoint, $data) {
         if (!is_array($data)) {
             throw new Exception('Data must be an array');
@@ -396,6 +431,13 @@ function callSupabase($endpoint, $query = '') {
     global $supabaseUrl, $supabaseKey;
     $client = new SupabaseClient($supabaseUrl, $supabaseKey);
     return $client->get($endpoint, $query);
+}
+
+function callSupabaseCount($endpoint, $useServiceRole = false) {
+    global $supabaseUrl, $supabaseKey, $supabaseServiceKey;
+    $key = $useServiceRole ? $supabaseServiceKey : $supabaseKey;
+    $client = new SupabaseClient($supabaseUrl, $key);
+    return $client->getExactCount($endpoint);
 }
 
 function callSupabaseWithServiceKey($endpoint, $method = 'GET', $data = null, $customHeaders = []) {

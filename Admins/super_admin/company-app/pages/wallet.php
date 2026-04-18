@@ -688,5 +688,4 @@ $hasGatewayPayments = CompanyWalletManager::hasGatewayPayments($companyId);
 // We don't necessarily have a footer, some files use closing body.
 // If header.php doesn't close body and html, we can do it here.
 ?>
-    </body>
-</html>
+    <?php include __DIR__ . '/../../includes/footer.php'; ?>

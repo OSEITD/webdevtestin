@@ -83,8 +83,8 @@ $avatarUrl = $avatarUrl ?? $_SESSION['avatar'] ?? 'https://placehold.co/56x56/FF
         <li><a href="./dashboard.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'dashboard.php') echo 'active'; ?>"><i class="fas fa-home"></i> Dashboard</a></li>
         <li><a href="./companies.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'companies.php') echo 'active'; ?>"><i class="fas fa-building"></i> Companies</a></li>
         <li><a href="./outlets.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'outlets.php') echo 'active'; ?>"><i class="fas fa-store"></i> Outlets</a></li>
-        <li><a href="./payouts.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'payouts.php') echo 'active'; ?>"><i class="fas fa-money-bill-wave"></i> Payouts</a></li>
         <li><a href="./users.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'users.php') echo 'active'; ?>"><i class="fas fa-users"></i> Users</a></li>
+        <li><a href="./payouts.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'payouts.php') echo 'active'; ?>"><i class="fas fa-money-bill-wave"></i> Payouts</a></li>
         <li><a href="./reports.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'reports.php') echo 'active'; ?>"><i class="fas fa-chart-line"></i> Reports</a></li>
         <li><a href="./settings.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'settings.php') echo 'active'; ?>"><i class="fas fa-cog"></i> Settings</a></li>
         <li><a href="./help.php" class="<?php if(basename($_SERVER['PHP_SELF']) == 'help.php') echo 'active'; ?>"><i class="fas fa-question-circle"></i> Help</a></li>

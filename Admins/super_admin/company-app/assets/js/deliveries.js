@@ -46,8 +46,8 @@ function renderDeliveriesPagination(totalItems) {
 
 function changeParcelsPage(page) {
     parcelsCurrentPage = page;
-    // re-render from cache
-    if (window.__parcelsCache) renderParcelsResult({ data: window.__parcelsCache });
+    // Fetch directly from server with new page filter
+    loadParcels();
 }
 
 // Initialize when document is ready
@@ -111,6 +111,7 @@ function setupEventListeners() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 currentFilters.search = e.target.value;
+                parcelsCurrentPage = 1;
                 loadParcels();
             }, 500);
         });
@@ -176,9 +177,9 @@ async function loadParcels() {
         if (!result || typeof result !== 'object') {
             throw new Error('Invalid response format');
         }
-        // cache parcels and render with pagination
-        window.__parcelsCache = result.data || [];
-        parcelsCurrentPage = 1;
+        // With server-side pagination, we no longer cache all parcels
+        // But we store the result locally to safely re-render if needed
+        window.__parcelsCache = result;
         renderParcelsResult(result);
     } catch (error) {
         console.error('Error loading parcels:', error);
@@ -253,6 +254,10 @@ async function fetchParcelsWithFilters() {
         if (currentFilters.driver_id) params.append('driver_id', currentFilters.driver_id);
         // The parcels table uses origin_outlet_id/destination_outlet_id — send origin_outlet_id
         if (currentFilters.outlet_id) params.append('origin_outlet_id', currentFilters.outlet_id);
+
+        // Append pagination parameter
+        params.append('page', parcelsCurrentPage);
+
         if (params.toString()) url += '?' + params.toString();
 
         console.log('Fetching from URL:', url);
@@ -296,11 +301,11 @@ async function fetchParcelsWithFilters() {
     }
 }
 
-// Render the parcels list
 function renderParcelsResult(result) {
     const tableBody = document.getElementById('deliveriesTableBody');
     if (tableBody) {
-        const data = (window.__parcelsCache && Array.isArray(window.__parcelsCache)) ? window.__parcelsCache : (result.data || []);
+        // Data is now page-specific
+        const data = result.data || [];
         if (!data || data.length === 0) {
             tableBody.innerHTML = `
                 <tr>
@@ -313,11 +318,13 @@ function renderParcelsResult(result) {
             // clear pagination
             renderDeliveriesPagination(0);
         } else {
-            const total = data.length;
+            // total is now supplied by the API
+            const total = result.total || 0;
             const totalPages = Math.max(1, Math.ceil(total / parcelsItemsPerPage));
-            if (parcelsCurrentPage > totalPages) parcelsCurrentPage = totalPages;
-            const start = (parcelsCurrentPage - 1) * parcelsItemsPerPage;
-            const slice = data.slice(start, start + parcelsItemsPerPage);
+            if (parcelsCurrentPage > totalPages) parcelsCurrentPage = Math.max(1, totalPages);
+
+            // Server-side returning exactly what we need, no slicing locally!
+            const slice = data;
             tableBody.innerHTML = slice.map(parcel => `
                 <tr>
                     <td data-label="Tracking Number">${escapeHtml(parcel.track_number)}</td>
@@ -353,48 +360,31 @@ async function viewParcelDetails(parcelId) {
         }
 
         const parcel = result.data;
-        const modalBody = document.querySelector('.modal-body');
-        if (!modalBody) return;
 
-        modalBody.innerHTML = renderParcelDetails(parcel);
+        // Populate modal data
+        document.getElementById('modalTrackingNumber').textContent = `Tracking Number: ${parcel.track_number || 'N/A'}`;
+        document.getElementById('modalParcelStatusDisplay').textContent = parcel.status ? parcel.status.replace('_', ' ').toUpperCase() : 'UNKNOWN';
+        document.getElementById('modalParcelStatusDisplay').className = `parcel-status-display status-${(parcel.status || 'pending').toLowerCase()}`;
+
+        document.getElementById('modalRecipientName').textContent = parcel.receiver_name || parcel.receiver || 'N/A';
+        document.getElementById('modalDeliveryAddress').textContent = parcel.receiver_address || parcel.destination_address || 'N/A';
+        document.getElementById('modalContactNumber').textContent = parcel.receiver_phone || 'N/A';
+
+        document.getElementById('modalParcelWeight').textContent = parcel.parcel_weight ? `${parcel.parcel_weight} kg` : (parcel.weight ? `${parcel.weight} kg` : 'N/A');
+        document.getElementById('modalDeliveryFee').textContent = parcel.delivery_fee ? `ZMW ${parcel.delivery_fee}` : 'N/A';
+        document.getElementById('modalSpecialInstructions').textContent = parcel.special_instructions || parcel.description || 'None';
+
+        document.getElementById('modalSenderName').textContent = parcel.sender_name || parcel.sender || 'N/A';
+        document.getElementById('modalSenderPhone').textContent = parcel.sender_phone || 'N/A';
+
+        document.getElementById('modalOriginOutlet').textContent = parcel.origin_outlet_name || parcel.origin_address || 'Unknown';
+        document.getElementById('modalDestinationOutlet').textContent = parcel.destination_outlet_name || parcel.destination_address || 'Unknown';
+
         openParcelModal();
     } catch (error) {
         console.error('Error:', error);
         alert('Failed to load parcel details. Please try again.');
     }
-}
-
-// Render parcel details for modal
-function renderParcelDetails(parcel) {
-    return `
-        <div class="parcel-details">
-            <div class="detail-group">
-                <h3>Tracking Information</h3>
-                <p><strong>Tracking Number:</strong> ${escapeHtml(parcel.track_number)}</p>
-                <p><strong>Status:</strong> <span class="status-badge ${escapeHtml(parcel.status.toLowerCase())}">${escapeHtml(parcel.status)}</span></p>
-                <p><strong>Created Date:</strong> ${new Date(parcel.created_at).toLocaleString()}</p>
-            </div>
-            
-            <div class="detail-group">
-                <h3>Sender Information</h3>
-                <p><strong>Name:</strong> ${escapeHtml(parcel.sender_name)}</p>
-                <p><strong>Address:</strong> ${escapeHtml(parcel.origin_address)}</p>
-            </div>
-            
-            <div class="detail-group">
-                <h3>Receiver Information</h3>
-                <p><strong>Name:</strong> ${escapeHtml(parcel.receiver_name)}</p>
-                <p><strong>Address:</strong> ${escapeHtml(parcel.destination_address)}</p>
-            </div>
-            
-            <div class="detail-group">
-                <h3>Parcel Information</h3>
-                <p><strong>Weight:</strong> ${escapeHtml(String(parcel.weight))} kg</p>
-                <p><strong>Description:</strong> ${escapeHtml(parcel.description || 'No description provided')}</p>
-                <p><strong>Estimated Delivery:</strong> ${parcel.estimated_delivery_date ? new Date(parcel.estimated_delivery_date).toLocaleDateString() : 'Not available'}</p>
-            </div>
-        </div>
-    `;
 }
 
 // Modal control functions

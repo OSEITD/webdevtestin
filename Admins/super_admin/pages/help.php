@@ -225,12 +225,6 @@ require_once __DIR__ . '/../includes/header.php';
         </main>
     </div>
 
-    <footer class="footer footer-help">
-        <p>For CRITICAL SYSTEM HELP: Immediately Contact Webdev.Tech @ 0960911672 / info@webdevzmt.tech</p>
-        <div></div>
-        <p class="typing">&copy; 2025 WebDevTech. All rights reserved.</p>
-    </footer>
-
     <script>
         // ===== Smooth Scroll =====
         function smoothScrollTo(id) {
@@ -326,5 +320,4 @@ require_once __DIR__ . '/../includes/header.php';
             window.addEventListener('offline', updateNetworkStatus);
         });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

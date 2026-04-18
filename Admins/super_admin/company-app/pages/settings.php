@@ -35,7 +35,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-group">
                         <label>Phone</label>
                         <input id="profilePhone" type="text" placeholder="e.g. +12025550123" value="<?php echo htmlspecialchars($_SESSION['user_phone'] ?? ''); ?>">
-                    </div>
+                    </div>s
                     <div class="form-group">
                         <label>Avatar</label>
                         <input id="profileAvatar" type="file" accept="image/*">
@@ -53,15 +53,15 @@ require_once __DIR__ . '/../includes/header.php';
                     <h3><i class="fas fa-lock"></i> Password</h3>
                     <div class="form-group">
                         <label>Current Password</label>
-                        <input id="currentPassword" type="password" placeholder="Enter current password">
+                        <input id="currentPassword" type="password" autocomplete="new-password" placeholder="Enter current password">
                     </div>
                     <div class="form-group">
                         <label>New Password</label>
-                        <input id="newPassword" type="password" placeholder="Enter new password">
+                        <input id="newPassword" type="password" autocomplete="new-password" placeholder="Enter new password">
                     </div>
                     <div class="form-group">
                         <label>Confirm New Password</label>
-                        <input id="confirmNewPassword" type="password" placeholder="Confirm new password">
+                        <input id="confirmNewPassword" type="password" autocomplete="new-password" placeholder="Confirm new password">
                     </div>
                     <button id="updatePasswordBtn" class="save-btn">Update Password</button>
                     <div id="passwordMsg" style="margin-top:8px;color:#666;font-size:0.95rem"></div>
@@ -378,6 +378,9 @@ require_once __DIR__ . '/../includes/header.php';
                     timer: 2500,
                     timerProgressBar: true
                 });
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmNewPassword').value = '';
             } else {
                 Swal.fire({
                     icon: 'error',

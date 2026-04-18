@@ -891,11 +891,19 @@ error_log("Outlet ID in trips.php: " . ($current_user['outlet_id'] ?? 'not set')
             actions.appendChild(viewBtn);
 
             const editBtn = document.createElement('a');
-            // Open the trip editor page we wired for create/update
-            editBtn.href = `create-trip.php?edit=${trip.id}`;
-            editBtn.className = 'filter-btn';
-            editBtn.style.cssText = 'background:#10b981;color:white;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;';
-            editBtn.textContent = 'Edit';
+            if (trip.trip_status === 'completed' || trip.trip_status === 'in_transit') {
+                editBtn.href = '#';
+                editBtn.className = 'filter-btn';
+                editBtn.style.cssText = 'background:#9ca3af;color:white;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;cursor:not-allowed;opacity:0.6;';
+                editBtn.textContent = 'Edit';
+                editBtn.onclick = (e) => e.preventDefault();
+            } else {
+                // Open the trip editor page we wired for create/update
+                editBtn.href = `create-trip.php?edit=${trip.id}`;
+                editBtn.className = 'filter-btn';
+                editBtn.style.cssText = 'background:#10b981;color:white;padding:0.5rem 0.75rem;border-radius:6px;text-decoration:none;';
+                editBtn.textContent = 'Edit';
+            }
             actions.appendChild(editBtn);
 
             card.appendChild(actions);
@@ -997,5 +1005,4 @@ error_log("Outlet ID in trips.php: " . ($current_user['outlet_id'] ?? 'not set')
             }
         })();
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

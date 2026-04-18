@@ -255,10 +255,11 @@ try {
     
     // Calculate commission data
     $total_commission = 0.0;
+    $cash_commission = 0.0;
     $total_transactions = 0;
     $transactions = [];
     try {
-        $txResponse = $supabase->getWithToken("payment_transactions?company_id=eq.{$companyId}&select=id,created_at,parcel_id,outlet_id,amount,commission_amount,transaction_fee,status", $accessToken);
+        $txResponse = $supabase->getWithToken("payment_transactions?company_id=eq.{$companyId}&select=id,created_at,parcel_id,outlet_id,amount,commission_amount,transaction_fee,status,payment_method", $accessToken);
         $txData = is_object($txResponse) && isset($txResponse->data) ? $txResponse->data : ($txResponse ?? []);
         
         // Filter by date range if provided
@@ -288,8 +289,14 @@ try {
             $tx_outlet_id = $tx['outlet_id'] ?? ($tx->outlet_id ?? null);
             $tx_amount = floatval($tx['amount'] ?? ($tx->amount ?? 0));
             $tx_commission = floatval($tx['commission_amount'] ?? ($tx->commission_amount ?? 0));
+            $tx_payment_method = strtolower(trim($tx['payment_method'] ?? ($tx->payment_method ?? '')));
             
             $total_commission += $tx_commission;
+            
+            // Accumulate commission for cash/COD transactions
+            if ($tx_payment_method === 'cod' || $tx_payment_method === 'cash') {
+                $cash_commission += $tx_commission;
+            }
             
             // Find outlet name
             $outlet_name = null;
@@ -328,6 +335,7 @@ try {
         error_log("Commission data fetch failed in PDF generator: " . $e->getMessage());
     }
     $total_commission = round($total_commission, 2);
+    $cash_commission = round($cash_commission, 2);
 
     // Build a simple top outlets table
     $outletCounts = [];
@@ -709,6 +717,47 @@ try {
         $html .= '<div class="summary" style="margin-top:18px">';
         $html .= '<div class="card"><strong>Commission Rate</strong><div style="font-size:18px">' . number_format($commission_rate, 2) . '%</div></div>';
         $html .= '<div class="card"><strong>Total Commission</strong><div style="font-size:18px">' . format_currency($total_commission, $companyCurrency) . '</div></div>';
+        $html .= '<div class="card"><strong>Transactions</strong><div style="font-size:18px">' . number_format($total_transactions) . '</div></div>';
+        $html .= '</div>';
+
+        // All Transactions table
+        $html .= '<h2 style="margin-top:18px">Transactions</h2>';
+        $html .= '<table><thead><tr><th>Date</th><th>Transaction ID</th><th>Service Type</th><th>Outlet</th><th>Amount</th><th>Commission</th><th>Net Amount</th></tr></thead><tbody>';
+        if (empty($transactions)) {
+            $html .= '<tr><td colspan="7">No transactions</td></tr>';
+        } else {
+            $sumAmount = 0;
+            $sumCommission = 0;
+            $sumNetAmount = 0;
+            foreach ($transactions as $t) {
+                $date = htmlspecialchars($t['date'] ?? '—');
+                $txId = htmlspecialchars($t['transaction_id'] ?? '—');
+                $serviceType = htmlspecialchars($t['service_type'] ?? '—');
+                $outlet = htmlspecialchars($t['outlet_name'] ?? '—');
+                
+                $rawAmount = $t['amount'] ?? 0;
+                $rawComm = $t['commission'] ?? 0;
+                $rawNet = $t['net_amount'] ?? 0;
+                
+                $sumAmount += $rawAmount;
+                $sumCommission += $rawComm;
+                $sumNetAmount += $rawNet;
+                
+                $amount = format_currency($rawAmount, $companyCurrency);
+                $commission = format_currency($rawComm, $companyCurrency);
+                $netAmount = format_currency($rawNet, $companyCurrency);
+                $html .= "<tr><td>{$date}</td><td>{$txId}</td><td>{$serviceType}</td><td>{$outlet}</td><td>{$amount}</td><td>{$commission}</td><td>{$netAmount}</td></tr>";
+            }
+            $html .= '</tbody><tfoot><tr><th colspan="4" style="text-align: right;">Totals:</th><th>' . format_currency($sumAmount, $companyCurrency) . '</th><th>' . format_currency($sumCommission, $companyCurrency) . '</th><th>' . format_currency($sumNetAmount, $companyCurrency) . '</th></tr></tfoot></table>';
+        }
+
+    } elseif (strtolower($reportType) === 'financial') {
+        // Financial Summary layout
+        $html .= '<div class="summary">';
+        $html .= '<div class="card"><strong>Total Revenue</strong><div style="font-size:18px">' . format_currency($total_revenue, $companyCurrency) . '</div></div>';
+        $html .= '<div class="card"><strong>Commission Rate</strong><div style="font-size:18px">' . number_format($commission_rate, 2) . '%</div></div>';
+        $html .= '<div class="card"><strong>Total Commission</strong><div style="font-size:18px">' . format_currency($total_commission, $companyCurrency) . '</div></div>';
+        $html .= '<div class="card"><strong>Cash Commission</strong><div style="font-size:18px">' . format_currency($cash_commission, $companyCurrency) . '</div></div>';
         $html .= '<div class="card"><strong>Transactions</strong><div style="font-size:18px">' . number_format($total_transactions) . '</div></div>';
         $html .= '</div>';
 

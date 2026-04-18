@@ -59,11 +59,20 @@ try {
     error_log("Attempting to verify current password for user: {$userEmail}");
     $supabase = new SupabaseClient();
     
-    $signInResult = $supabase->signIn($userEmail, $currentPassword);
+    try {
+        $signInResult = $supabase->signIn($userEmail, $currentPassword);
+    } catch (Exception $e) {
+        $errMsg = $e->getMessage();
+        if (strpos($errMsg, 'HTTP Error 400') !== false || strpos($errMsg, 'invalid_credentials') !== false || strpos($errMsg, 'Invalid login credentials') !== false) {
+            throw new Exception('Wrong current password entered');
+        }
+        throw $e;
+    }
+    
     error_log("Sign in result: " . print_r($signInResult, true));
 
     if (!is_array($signInResult) || !isset($signInResult['access_token'])) {
-        throw new Exception('Current password is incorrect');
+        throw new Exception('Wrong current password entered');
     }
 
     $accessToken = $signInResult['access_token'];

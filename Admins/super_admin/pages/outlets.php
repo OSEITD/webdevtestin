@@ -15,11 +15,15 @@ $offset = ($currentPage - 1) * $itemsPerPage;
 
 // Fetch outlets data from Supabase with company information
 try {
-    $allOutlets = callSupabaseWithServiceKey('outlets?deleted_at=is.null&select=*,companies(company_name)', 'GET');
-    // Sort by newest first (reverse order by creation)
-    $allOutlets = array_reverse($allOutlets);
-    $totalOutlets = count($allOutlets);
-    $totalPages = ceil($totalOutlets / $itemsPerPage);
+    // Get total count of non-deleted outlets using optimized exact count header
+    $countEndpoint = 'outlets?deleted_at=is.null';
+    if (isset($_GET['search']) && !empty($_GET['search'])) {
+        $search = urlencode('%' . $_GET['search'] . '%');
+        $countEndpoint .= "&or=(outlet_name.ilike.{$search},address.ilike.{$search},contact_phone.ilike.{$search})";
+    }
+    
+    $totalOutlets = callSupabaseCount($countEndpoint);
+    $totalPages = max(1, ceil($totalOutlets / $itemsPerPage));
     
     // Ensure current page is within valid range
     if ($currentPage > $totalPages && $totalPages > 0) {
@@ -27,8 +31,16 @@ try {
         $offset = ($currentPage - 1) * $itemsPerPage;
     }
     
-    // Get outlets for current page
-    $outlets = array_slice($allOutlets, $offset, $itemsPerPage);
+    // Build query to fetch paginated form of outlets including related company info
+    $endpoint = 'outlets?deleted_at=is.null&select=*,companies(company_name)&order=id.desc';
+    if (isset($_GET['search']) && !empty($_GET['search'])) {
+        $search = urlencode('%' . $_GET['search'] . '%');
+        $endpoint .= "&or=(outlet_name.ilike.{$search},address.ilike.{$search},contact_phone.ilike.{$search})";
+    }
+    $endpoint .= "&limit={$itemsPerPage}&offset={$offset}";
+    
+    $outletsRes = callSupabaseWithServiceKey($endpoint, 'GET');
+    $outlets = is_array($outletsRes) ? $outletsRes : [];
 } catch (Exception $e) {
     error_log("Error fetching outlets: " . $e->getMessage());
     $outlets = [];
@@ -335,5 +347,4 @@ require_once __DIR__ . '/../includes/header.php';
             font-size: 12px;
         }
     </style>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

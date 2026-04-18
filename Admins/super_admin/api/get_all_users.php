@@ -43,22 +43,14 @@ try {
         $rows = $res;
     }
 
-    // Get total count (PostgREST can return count=exact using Prefer header, but we'll make a separate request)
+    // Get total count (using exact count header instead of downloading records)
     try {
-        $countEndpoint = 'profiles?select=count';
+        $countEndpoint = 'profiles';
         if ($search !== '') {
             $q = rawurlencode('%' . $search . '%');
-            $countEndpoint .= "&or=(full_name.ilike.{$q},email.ilike.{$q})";
+            $countEndpoint .= "?or=(full_name.ilike.{$q},email.ilike.{$q})";
         }
-        $countRes = $supabase->get($countEndpoint);
-        $total = 0;
-        if (is_array($countRes) && isset($countRes[0]['count'])) {
-            $total = (int)$countRes[0]['count'];
-        } elseif (is_object($countRes) && isset($countRes->data) && is_array($countRes->data) && isset($countRes->data[0]['count'])) {
-            $total = (int)$countRes->data[0]['count'];
-        } else {
-            $total = count($rows);
-        }
+        $total = $supabase->getExactCount($countEndpoint);
     } catch (Exception $e) {
         // ignore count errors
         $total = count($rows);

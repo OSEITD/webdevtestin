@@ -712,5 +712,4 @@ require_once __DIR__ . '/../includes/header.php';
             document.body.appendChild(overlay);
         }
 </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

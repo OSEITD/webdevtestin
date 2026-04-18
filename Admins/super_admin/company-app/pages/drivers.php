@@ -71,5 +71,4 @@ require_once __DIR__ . '/../includes/header.php';
     <script src="../assets/js/company-scripts.js"></script>
     <?php $driversJs = __DIR__ . '/../assets/js/drivers.js'; $ts = file_exists($driversJs) ? filemtime($driversJs) : time(); ?>
     <script src="../assets/js/drivers.js?v=<?php echo $ts; ?>"></script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

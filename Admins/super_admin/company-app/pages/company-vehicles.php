@@ -62,5 +62,4 @@ include __DIR__ . '/../includes/header.php';
     <?php $v = file_exists(__DIR__ . '/../assets/js/vehicles.js') ? filemtime(__DIR__ . '/../assets/js/vehicles.js') : time(); ?>
     <script src="../assets/js/vehicles.js?v=<?php echo $v; ?>"></script>
     <script src="../assets/js/company-scripts.js"></script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

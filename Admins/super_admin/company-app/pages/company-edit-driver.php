@@ -8,6 +8,70 @@
         session_start();
     }
     require_once __DIR__ . '/../api/supabase-client.php';
+
+    // Handle AJAX POST requests early — before header.php outputs any HTML
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    $acceptsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($isAjax || $acceptsJson)) {
+        while (ob_get_level()) { @ob_end_clean(); }
+        header('Content-Type: application/json');
+
+        $companyId = $_SESSION['id'] ?? null;
+        if (!$companyId) {
+            echo json_encode(['success' => false, 'error' => 'Not authenticated. Please log in.']);
+            exit;
+        }
+
+        $driverId = $_POST['id'] ?? (isset($_GET['id']) ? trim($_GET['id']) : null);
+        $driverName = trim($_POST['driver_name'] ?? '');
+        $driverEmail = trim($_POST['driver_email'] ?? '');
+        $driverPhone = trim($_POST['driver_phone'] ?? '');
+        $licenseNumber = trim($_POST['license_number'] ?? '');
+        $address = trim($_POST['address_line1'] ?? '');
+        $city = trim($_POST['city'] ?? '');
+        $state = trim($_POST['state'] ?? '');
+        $postal_code = trim($_POST['postal_code'] ?? '');
+        $country = trim($_POST['country'] ?? '');
+        $status = strtolower(trim($_POST['status'] ?? 'unavailable'));
+
+        $allowedStatuses = ['available', 'assigned', 'out for delivery', 'unavailable', 'Available', 'Assigned', 'Out for delivery', 'Unavailable'];
+
+        if (empty($driverId) || empty($driverName)) {
+            echo json_encode(['success' => false, 'error' => 'Driver ID and name are required.']);
+            exit;
+        }
+        if (!in_array($status, $allowedStatuses, true)) {
+            echo json_encode(['success' => false, 'error' => 'Invalid status selected.']);
+            exit;
+        }
+
+        try {
+            $supabase = new SupabaseClient();
+            $payload = [
+                'driver_name' => $driverName,
+                'driver_email' => $driverEmail,
+                'driver_phone' => $driverPhone,
+                'license_number' => $licenseNumber,
+                'address' => $address,
+                'city' => $city,
+                'state' => $state,
+                'postal_code' => $postal_code,
+                'country' => $country,
+                'status' => $status,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $path = "drivers?id=eq.{$driverId}&company_id=eq.{$companyId}";
+            $res = $supabase->put($path, $payload);
+            echo json_encode(['success' => true, 'message' => 'Driver updated successfully.']);
+        } catch (Exception $e) {
+            error_log('Error updating driver (AJAX): ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Failed to update driver: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
     include __DIR__ . '/../includes/header.php';
 
     $error = null;
@@ -61,15 +125,20 @@
                 $path = "drivers?id=eq.{$driverId}&company_id=eq.{$companyId}";
                 $res = $supabase->put($path, $payload);
 
-                // Build a reliable redirect URL to the company-view-driver page in the same directory
+                // If this is an AJAX request, return JSON
+                $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+                $acceptsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+                if ($isAjax || $acceptsJson) {
+                    while (ob_get_level()) { @ob_end_clean(); }
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'Driver updated successfully.']);
+                    exit;
+                }
+
+                // Fallback: traditional redirect
                 $dir = rtrim(dirname($_SERVER['PHP_SELF']), '\/');
                 $redirectUrl = $dir . '/company-view-driver.php?id=' . urlencode($driverId);
-
-                // Clear output buffers to avoid partial output
                 while (ob_get_level()) { @ob_end_clean(); }
-
-                // Some includes may have already sent output (sidebar/header). Use a JS/meta redirect
-                // so the browser will navigate even when PHP headers can't be sent.
                 $safeUrl = htmlspecialchars($redirectUrl, ENT_QUOTES);
                 $jsUrl = addslashes($redirectUrl);
                 echo '<!doctype html><html><head><meta http-equiv="refresh" content="0;url=' . $safeUrl . '">';
@@ -78,6 +147,16 @@
             } catch (Exception $e) {
                 error_log('Error updating driver: ' . $e->getMessage());
                 $error = 'Failed to update driver: ' . $e->getMessage();
+
+                // If AJAX, return JSON error
+                $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+                $acceptsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+                if ($isAjax || $acceptsJson) {
+                    while (ob_get_level()) { @ob_end_clean(); }
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'error' => $error]);
+                    exit;
+                }
             }
         }
     }
@@ -250,21 +329,63 @@
             });
         })();
 
-        document.getElementById('editDriverForm').addEventListener('submit', function(e) {
-            if (!validator.validateAll()) {
-                e.preventDefault();
-                return;
+        document.getElementById('editDriverForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!validator.validateAll()) return;
+
+            const saveBtn = this.querySelector('button[type="submit"]');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            // Process phone with country code
+            const phoneInput = document.getElementById('driver_phone');
+            let fullPhone = phoneInput.value.replace(/\s/g, '');
+            if (fullPhone) {
+                const selectedCountryCode = validator._phoneCountrySelections['driver_phone'] || '<?php echo $phoneCountry; ?>';
+                const country = COUNTRY_CODES.find(c => c.code === selectedCountryCode);
+                fullPhone = country ? country.dial + fullPhone : '+260' + fullPhone;
             }
 
-            // Process phone with country code before submitting
-            const phoneVal = document.getElementById('driver_phone').value.replace(/\s/g, '');
-            if (phoneVal) {
-                const selectedCountryCode = validator._phoneCountrySelections['driver_phone'] || 'ZM';
-                const country = COUNTRY_CODES.find(c => c.code === selectedCountryCode);
-                const fullPhone = country ? country.dial + phoneVal : '+260' + phoneVal;
-                document.getElementById('driver_phone').value = fullPhone;
+            const formData = new URLSearchParams(new FormData(this));
+            // Override phone with the full international number
+            formData.set('driver_phone', fullPhone);
+
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'include',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success === true) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Driver Updated!',
+                        text: 'The driver has been successfully updated.',
+                        confirmButtonColor: '#2e0d2a'
+                    }).then(() => {
+                        window.location.href = 'company-view-driver.php?id=<?php echo urlencode($driverId); ?>';
+                    });
+                    return;
+                }
+                throw new Error(result.error || 'Failed to update driver');
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'An unexpected error occurred.',
+                    confirmButtonColor: '#2e0d2a'
+                });
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
             }
         });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

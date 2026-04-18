@@ -498,11 +498,13 @@ class NotificationManager {
 
     async markAsRead(notificationId) {
         try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const formData = new FormData();
             formData.append('notification_id', notificationId);
 
             const response = await fetch('../../api/notifications.php?action=mark_read', {
                 method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken },
                 body: formData
             });
 
@@ -522,8 +524,10 @@ class NotificationManager {
 
     async markAllAsRead() {
         try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const response = await fetch('../../api/notifications.php?action=mark_all_read', {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken }
             });
 
             const data = await response.json();
@@ -541,11 +545,13 @@ class NotificationManager {
         event.stopPropagation();
 
         try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const formData = new FormData();
             formData.append('notification_id', notificationId);
 
             const response = await fetch('../../api/notifications.php?action=dismiss', {
                 method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken },
                 body: formData
             });
 

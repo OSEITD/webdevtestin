@@ -44,7 +44,7 @@ class PresenceTracker {
 
         const currentPath = window.location.pathname;
         // Extract base path up to /Admins/super_admin (strip any sub-app suffix)
-        const match = currentPath.match(/^(.+\/Admins\/super_admin)(?:\/|$)/i);
+        const match = currentPath.match(/^(.*?\/Admins\/super_admin)(?:\/|$)/i);
         if (match) {
             return match[1] + '/api/presence_heartbeat.php';
         }
@@ -232,13 +232,13 @@ class PresenceTracker {
         setTimeout(() => {
             // Construct absolute path to login page
             const currentPath = window.location.pathname;
-            const match = currentPath.match(/^(.+\/Admins\/super_admin)/i);
+            const match = currentPath.match(/^(.*?\/Admins\/super_admin)/i);
             if (match) {
                 const basePath = match[1];
                 window.location.href = basePath + '/auth/login.php?error=session_expired';
             } else {
                 // Fallback to relative path
-                window.location.href = '/webdevtestin/Admins/super_admin/auth/login.php?error=session_expired';
+                window.location.href = '../auth/login.php?error=session_expired';
             }
         }, 2000);
     }

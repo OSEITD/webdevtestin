@@ -417,7 +417,7 @@ include __DIR__ . '/../includes/header.php';
             try {
                 const response = await fetch('../../api/notifications.php?action=bulk_action', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
                     body: JSON.stringify({ notification_id: notificationId, action: 'delete' })
                 });
                 const data = await response.json();
@@ -430,7 +430,7 @@ include __DIR__ . '/../includes/header.php';
             try {
                 const response = await fetch('../../api/notifications.php?action=bulk_action', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
                     body: JSON.stringify({ notification_id: notificationId, action: action })
                 });
                 const data = await response.json();
@@ -552,7 +552,7 @@ include __DIR__ . '/../includes/header.php';
 
         async markAllAsRead() {
             try {
-                const response = await fetch('../../api/notifications.php?action=mark_all_read', { method: 'POST' });
+                const response = await fetch('../../api/notifications.php?action=mark_all_read', { method: 'POST', headers: { 'X-CSRF-Token': document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || '' } });
                 const data = await response.json();
                 if (data.success) { this.showToast('All notifications read', 'success'); this.loadNotifications(); }
                 else throw new Error(data.error);
@@ -572,7 +572,7 @@ include __DIR__ . '/../includes/header.php';
         try {
             const response = await fetch('../../api/notifications.php?action=bulk_action', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
                 body: JSON.stringify({ action: 'mark_read', notification_ids: Array.from(notificationsPage.selectedNotifications) })
             });
             const data = await response.json();
@@ -587,7 +587,7 @@ include __DIR__ . '/../includes/header.php';
         try {
             const response = await fetch('../../api/notifications.php?action=bulk_action', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
                 body: JSON.stringify({ action: 'archive', notification_ids: Array.from(notificationsPage.selectedNotifications) })
             });
             const data = await response.json();
@@ -603,7 +603,7 @@ include __DIR__ . '/../includes/header.php';
         try {
             const response = await fetch('../../api/notifications.php?action=bulk_action', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
                 body: JSON.stringify({ action: 'delete', notification_ids: Array.from(notificationsPage.selectedNotifications) })
             });
             const data = await response.json();

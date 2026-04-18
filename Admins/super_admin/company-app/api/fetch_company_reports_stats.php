@@ -361,6 +361,7 @@ class CompanyReportsStatsAPI {
             // Fetch commission data from companies table and payment_transactions
             $commission_rate = 0.0;
             $total_commission = 0.0;
+            $cash_commission = 0.0;
             $total_transactions = 0;
             $transactions = [];
             
@@ -378,7 +379,7 @@ class CompanyReportsStatsAPI {
             
             // Fetch all payment transactions for this company in the date range
             try {
-                $txPath = "payment_transactions?company_id=eq.{$_SESSION['id']}&select=id,created_at,parcel_id,outlet_id,amount,commission_amount,transaction_fee,status&order=created_at.desc";
+                $txPath = "payment_transactions?company_id=eq.{$_SESSION['id']}&select=id,created_at,parcel_id,outlet_id,amount,commission_amount,transaction_fee,status,payment_method&order=created_at.desc";
                 // Use the user's access token so RLS allows reading their own transactions
                 $txResponse = $attemptSupabaseCall(function($token) use ($txPath) {
                     return $this->supabase->getWithToken($txPath, $token);
@@ -421,8 +422,14 @@ class CompanyReportsStatsAPI {
                         $tx_outlet_id = $tx['outlet_id'] ?? ($tx->outlet_id ?? null);
                         $tx_amount = floatval($tx['amount'] ?? ($tx->amount ?? 0));
                         $tx_commission = floatval($tx['commission_amount'] ?? ($tx->commission_amount ?? 0));
+                        $tx_payment_method = strtolower(trim($tx['payment_method'] ?? ($tx->payment_method ?? '')));
                         
                         $total_commission += $tx_commission;
+                        
+                        // Accumulate commission for cash/COD transactions
+                        if ($tx_payment_method === 'cod' || $tx_payment_method === 'cash') {
+                            $cash_commission += $tx_commission;
+                        }
                         
                         // Find outlet name
                         $outlet_name = null;
@@ -532,6 +539,7 @@ class CompanyReportsStatsAPI {
                 'avg_delivery_time' => $avg_delivery_time,
                 'commission_rate' => $commission_rate,
                 'total_commission' => round($total_commission, 2),
+                'cash_commission' => round($cash_commission, 2),
                 'total_transactions' => $total_transactions,
                 'top_outlets' => $top_outlets,
                 'top_drivers' => $top_drivers,

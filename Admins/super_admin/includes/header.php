@@ -11,6 +11,7 @@ $adminBaseUrl = '..';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="admin-base-url" content="<?php echo $adminBaseUrl; ?>">
+    <meta name="csrf-token" content="<?php echo CSRFHelper::getToken(); ?>">
     
     <!-- Poppins Font -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">

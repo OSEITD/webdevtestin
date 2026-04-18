@@ -85,18 +85,9 @@ try {
     // Remove null/empty fields
     $tripPayload = array_filter($tripPayload, function($v){ return $v !== null && $v !== ''; });
 
-    // Update trip record using PATCH via put() helper. Path expects table and query string.
-    $patchPath = "trips?id=eq.{$tripId}";
-    // Use service-role key when available inside put()
-    $updateResult = $supabase->put($patchPath, $tripPayload);
-
-    // If put returns false or null, consider it an error
-    if ($updateResult === false || $updateResult === null) {
-        error_log('Update Trip - Warning: trip update returned false/null');
-    }
-
-    // Determine authoritative company_id for this trip so inserted rows align
+    // Determine authoritative company_id and existing status before updating
     $tripCompanyId = null;
+    $existingTripStatus = null;
     try {
         // Use service role to bypass RLS when reading the trip record
         $tripRec = $supabase->getRecord("trips?id=eq.{$tripId}", true);
@@ -116,9 +107,24 @@ try {
         if (count($tripDataArray) > 0) {
             $firstTrip = is_object($tripDataArray[0]) ? (array)$tripDataArray[0] : $tripDataArray[0];
             $tripCompanyId = $firstTrip['company_id'] ?? null;
+            $existingTripStatus = $firstTrip['trip_status'] ?? null;
         }
     } catch (Exception $e) {
-        error_log('Update Trip - Warning: failed fetching trip record for company_id: ' . $e->getMessage());
+        error_log('Update Trip - Warning: failed fetching trip record for status check: ' . $e->getMessage());
+    }
+
+    if ($existingTripStatus === 'completed' || $existingTripStatus === 'in_transit') {
+        send_json_error_and_exit('Trip has already been ' . str_replace('_', ' ', $existingTripStatus) . ' and cannot be edited.', 403);
+    }
+
+    // Update trip record using PATCH via put() helper. Path expects table and query string.
+    $patchPath = "trips?id=eq.{$tripId}";
+    // Use service-role key when available inside put()
+    $updateResult = $supabase->put($patchPath, $tripPayload);
+
+    // If put returns false or null, consider it an error
+    if ($updateResult === false || $updateResult === null) {
+        error_log('Update Trip - Warning: trip update returned false/null');
     }
 
     // Final company id used for created stops and parcel_list rows (fallback order)

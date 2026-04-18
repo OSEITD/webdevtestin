@@ -503,6 +503,7 @@ class NotificationManager {
 
             const response = await fetch('../api/notifications.php?action=mark_read', {
                 method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
                 body: formData
             });
 
@@ -523,7 +524,8 @@ class NotificationManager {
     async markAllAsRead() {
         try {
             const response = await fetch('../api/notifications.php?action=mark_all_read', {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content }
             });
 
             const data = await response.json();
@@ -546,6 +548,7 @@ class NotificationManager {
 
             const response = await fetch('../api/notifications.php?action=dismiss', {
                 method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
                 body: formData
             });
 

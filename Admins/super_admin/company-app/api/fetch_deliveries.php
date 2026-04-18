@@ -34,12 +34,19 @@ class FetchDeliveriesAPI {
                                       InputValidator::validateUUID($_GET['outlet_id'] ?? '') ?: null
             ];
 
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $limit = max(1, (int)($_GET['limit'] ?? 25));
+            $filters['limit'] = $limit;
+            $filters['offset'] = ($page - 1) * $limit;
+
+            $companyId = SessionHelper::getCompanyId();
+            $accessToken = SessionHelper::getAccessToken();
+
+            // Ask supabase for exact total count of matching deliveries
+            $totalCount = $this->supabase->getParcelsCount($companyId, $accessToken, $filters);
+
             // Ask supabase for only the fields we need to avoid undefined key warnings
-            $response = $this->supabase->getParcels(
-                SessionHelper::getCompanyId(),
-                SessionHelper::getAccessToken(),
-                $filters
-            );
+            $response = $this->supabase->getParcels($companyId, $accessToken, $filters);
 
             if (!is_array($response)) {
                 throw new Exception('Invalid response from database');
@@ -56,7 +63,7 @@ class FetchDeliveriesAPI {
                 ];
             }, $response);
 
-            echo json_encode(['success' => true, 'data' => $data]);
+            echo json_encode(['success' => true, 'data' => $data, 'total' => $totalCount, 'page' => $page, 'limit' => $limit]);
 
         } catch (Exception $e) {
             ErrorHandler::handleException($e, 'fetch_deliveries.php');

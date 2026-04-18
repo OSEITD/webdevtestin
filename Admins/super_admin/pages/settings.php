@@ -543,6 +543,31 @@ require_once __DIR__ . '/../includes/header.php';
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Password Update Card -->
+                        <div class="settings-card">
+                            <div class="card-header">
+                                <i class="fas fa-lock"></i>
+                                <h3>Password</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="info-group">
+                                    <label for="currentPassword">Current Password</label>
+                                    <input type="password" id="currentPassword" autocomplete="new-password" class="form-input-field" placeholder="Enter current password">
+                                </div>
+                                <div class="info-group">
+                                    <label for="newPassword">New Password</label>
+                                    <input type="password" id="newPassword" autocomplete="new-password" class="form-input-field" placeholder="Enter new password">
+                                </div>
+                                <div class="info-group">
+                                    <label for="confirmNewPassword">Confirm New Password</label>
+                                    <input type="password" id="confirmNewPassword" autocomplete="new-password" class="form-input-field" placeholder="Confirm new password">
+                                </div>
+                                <button type="button" class="action-btn full-width" id="updatePasswordBtn" style="background-color: var(--accent-color);">
+                                    <i class="fas fa-key"></i> Update Password
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Action Buttons -->
@@ -706,10 +731,64 @@ require_once __DIR__ . '/../includes/header.php';
             // In a real app, you might reset the form or navigate back
         });
 
+        // Settings form submission
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             await saveSettings(formData);
+        });
+
+        // Password update functionality
+        document.getElementById('updatePasswordBtn').addEventListener('click', async function () {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.disabled = true; 
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            
+            const current = document.getElementById('currentPassword').value;
+            const nw = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmNewPassword').value;
+            
+            if (!current || !nw || !confirm) {
+                showMessageBox('All password fields are required.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            try {
+                const response = await fetch('../api/update_password.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.getElementById('csrf_token').value
+                    },
+                    body: JSON.stringify({ current, new: nw, confirm })
+                });
+
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error(text || 'Invalid JSON response from server');
+                }
+
+                if (data && data.success) {
+                    showMessageBox('Your password has been changed successfully.');
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmNewPassword').value = '';
+                } else {
+                    throw new Error(data.error || 'Failed to update password');
+                }
+            } catch (err) {
+                console.error('Password update error:', err);
+                showMessageBox('Error: ' + err.message);
+            }
+
+            btn.innerHTML = originalText; 
+            btn.disabled = false;
         });
 
         // Function to display a custom message box instead of alert()
@@ -772,5 +851,4 @@ require_once __DIR__ . '/../includes/header.php';
         }
     </script>
     <script src="../assets/js/admin-scripts.js" defer></script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

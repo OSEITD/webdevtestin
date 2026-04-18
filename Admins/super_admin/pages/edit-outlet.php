@@ -281,5 +281,4 @@ require_once __DIR__ . '/../includes/header.php';
             window.history.back();
         });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

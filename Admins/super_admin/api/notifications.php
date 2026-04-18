@@ -55,11 +55,7 @@ try {
                 $params['filters']['notification_type'] = $filterType;
             }
             
-            if ($filterStatus === 'unread') {
-                $params['filters']['is_read'] = 'false';
-            } elseif ($filterStatus === 'read') {
-                $params['filters']['is_read'] = 'true';
-            } elseif ($filterStatus !== 'all') {
+            if ($filterStatus !== 'all') {
                 $params['filters']['status'] = $filterStatus;
             }
             
@@ -120,7 +116,7 @@ try {
                     'page' => ($offset / $limit) + 1,
                     'limit' => $limit
                 ],
-                'unread_count' => count(array_filter($filteredNotifications, fn($n) => isset($n['is_read']) && $n['is_read'] === false))
+                'unread_count' => count(array_filter($filteredNotifications, fn($n) => isset($n['status']) && $n['status'] === 'unread'))
             ]);
             break;
 
@@ -129,7 +125,7 @@ try {
             // which returns the body.
             $params = [
                 'select' => 'id',
-                'filters' => ['is_read' => 'false']
+                'filters' => ['status' => 'unread']
             ];
             
             if (!$isSuperAdmin && $companyId) {
@@ -184,7 +180,7 @@ try {
             break;
             
         case 'mark_all_read':
-            $endpoint = "notifications?is_read=eq.false";
+            $endpoint = "notifications?status=eq.unread";
             if ($userId && !$isSuperAdmin && !$companyId) {
                 $endpoint .= "&recipient_id=eq.$userId";
             } else if (!$isSuperAdmin && $companyId) {

@@ -1,6 +1,7 @@
 <?php
 // Require centralized init to configure error reporting, session and output buffering
 require_once __DIR__ . '/init.php';
+require_once __DIR__ . '/../../includes/csrf-helper.php';
 
 // Determine company currency for frontend usage. Prefer session value, otherwise try to fetch company record.
 $appCurrency = $_SESSION['company_currency'] ?? null;
@@ -42,6 +43,7 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="csrf-token" content="<?php echo CSRFHelper::getToken(); ?>">
     <title>Company - <?php echo ucfirst(basename($_SERVER['PHP_SELF'], '.php')); ?></title>
     <!-- Poppins Font -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">

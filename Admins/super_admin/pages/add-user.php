@@ -504,5 +504,4 @@ require_once __DIR__ . '/../includes/header.php';
             }
         });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

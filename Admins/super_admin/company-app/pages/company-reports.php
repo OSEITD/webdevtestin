@@ -242,13 +242,12 @@ include __DIR__ . '/../includes/header.php';
                                     <th>Service Type</th>
                                     <th>Outlet</th>
                                     <th>Amount</th>
-                                    <th>Commission Rate</th>
                                     <th>Commission</th>
                                     <th>Net Amount</th>
                                 </tr>
                             </thead>
                             <tbody id="allTransactionsBody">
-                                <tr><td colspan="8">Loading…</td></tr>
+                                <tr><td colspan="7">Loading…</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -506,13 +505,12 @@ include __DIR__ . '/../includes/header.php';
                             const serviceType = t.service_type || t.type || '—';
                             const outlet = t.outlet_name || t.origin_outlet_name || '—';
                             const amount = (t.amount != null) ? formatCurrencyValue(t.amount, d.currency) : '—';
-                            const commRate = (t.commission_rate != null) ? (Number(t.commission_rate).toFixed(2) + '%') : '—';
                             const commAmount = (t.commission != null) ? formatCurrencyValue(t.commission, d.currency) : '—';
                             const netAmount = (t.net_amount != null) ? formatCurrencyValue(t.net_amount, d.currency) : '—';
-                            return `<tr><td>${date}</td><td>${txId}</td><td>${serviceType}</td><td>${outlet}</td><td>${amount}</td><td>${commRate}</td><td>${commAmount}</td><td>${netAmount}</td></tr>`;
+                            return `<tr><td>${date}</td><td>${txId}</td><td>${serviceType}</td><td>${outlet}</td><td>${amount}</td><td>${commAmount}</td><td>${netAmount}</td></tr>`;
                         }).join('');
                     } else {
-                        allTransactionsBody.innerHTML = '<tr><td colspan="8">No transactions</td></tr>';
+                        allTransactionsBody.innerHTML = '<tr><td colspan="7">No transactions</td></tr>';
                     }
                 }
 
@@ -667,5 +665,4 @@ include __DIR__ . '/../includes/header.php';
         }
     });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

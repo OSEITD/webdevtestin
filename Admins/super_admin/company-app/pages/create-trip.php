@@ -2330,5 +2330,4 @@ async function loadAvailableParcels(parcelId = null) {
         console.log('Trip creation wizard loaded successfully');
     </script>
     <script src="../assets/js/company-scripts.js"></script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

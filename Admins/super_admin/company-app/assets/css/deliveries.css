@@ -87,14 +87,19 @@
     padding: 0.25rem 0.75rem;
     border-radius: 999px;
     font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: capitalize;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
-.status-badge.in-transit { background: #3498db; color: white; }
-.status-badge.delivered { background: #2ecc71; color: white; }
-.status-badge.pending { background: #f1c40f; color: #2c3e50; }
-.status-badge.cancelled { background: #e74c3c; color: white; }
+/* Status colors matching parcelpool.php (used as both .status-badge.[status] and .status-[status]) */
+.status-badge.pending, .status-pending { background: #fff3cd; color: #856404; }
+.status-badge.at_outlet, .status-at_outlet { background: #d4edda; color: #155724; }
+.status-badge.assigned, .status-assigned { background: #cce5ff; color: #004085; }
+.status-badge.in_transit, .status-in_transit { background: #e2e3ff; color: #383d41; }
+.status-badge.delivered, .status-delivered { background: #d4edda; color: #155724; }
+.status-badge.cancelled, .status-cancelled { background: #f8d7da; color: #721c24; }
+.status-badge.ready_for_dispatch, .status-ready_for_dispatch { background: #e2e3ff; color: #383d41; }
 
 .parcel-info {
     padding: 1rem;
@@ -276,4 +281,91 @@
 .no-parcels i {
     font-size: 2rem;
     margin-bottom: 1rem;
+}
+
+/* --- OVERRIDES FOR PARCEL MODAL --- 
+   These specifically target #parcelModal to isolate it from company.css 
+   so it looks exactly like the parcelpool.php modal.
+*/
+#parcelModal .modal-content {
+    margin: 5% auto !important;
+}
+#parcelModal h2 {
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: #2E0D2A !important;
+    margin-bottom: 10px !important;
+    margin-top: 0 !important;
+    line-height: 1.2 !important;
+}
+#parcelModal .subtitle {
+    color: #777 !important;
+    margin-bottom: 25px !important;
+    font-size: 16px !important;
+    margin-top: 0 !important;
+    line-height: 1.5 !important;
+}
+#parcelModal .parcel-status-display {
+    display: inline-block !important;
+    padding: 6px 12px !important;
+    border-radius: 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: white !important;
+    margin-top: 10px !important;
+    margin-bottom: 20px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+#parcelModal .status-pending { background-color: #FFC107 !important; color: white !important; }
+#parcelModal .status-assigned { background-color: #17A2B8 !important; color: white !important; }
+#parcelModal .status-in-transit, #parcelModal .status-in_transit { background-color: #007BFF !important; color: white !important; }
+#parcelModal .status-delivered { background-color: #28A745 !important; color: white !important; }
+#parcelModal .status-returned { background-color: #DC3545 !important; color: white !important; }
+
+#parcelModal .detail-section {
+    margin-bottom: 25px !important;
+}
+#parcelModal .detail-section h3 {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: #2E0D2A !important;
+    margin-bottom: 15px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    padding-bottom: 8px !important;
+    width: 100% !important;
+    line-height: 1.2 !important;
+}
+#parcelModal .detail-item {
+    display: flex !important;
+    align-items: flex-start !important;
+    margin-bottom: 15px !important;
+    gap: 15px !important;
+    border-bottom: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+}
+#parcelModal .detail-item i {
+    font-size: 18px !important;
+    color: #2E0D2A !important;
+    width: 24px !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+    margin-right: 0 !important; /* using gap */
+}
+#parcelModal .detail-item div {
+    flex-grow: 1 !important;
+}
+#parcelModal .detail-item p.label {
+    font-weight: 500 !important;
+    color: #333 !important;
+    margin-bottom: 2px !important;
+    font-size: 14px !important;
+    min-width: 0 !important; /* override min-width 140px */
+}
+#parcelModal .detail-item p.value {
+    color: #777 !important;
+    font-size: 14px !important;
+    margin: 0 !important;
 }

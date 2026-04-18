@@ -12,6 +12,55 @@
         ob_start();
     }
 
+    // Handle AJAX POST requests early — before header.php outputs any HTML
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    $acceptsJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($isAjax || $acceptsJson)) {
+        while (ob_get_level()) { @ob_end_clean(); }
+        header('Content-Type: application/json');
+
+        $companyId = $_SESSION['id'] ?? null;
+        if (!$companyId) {
+            echo json_encode(['success' => false, 'error' => 'Not authenticated. Please log in.']);
+            exit;
+        }
+
+        $vehicleId = $_POST['id'] ?? (isset($_GET['id']) ? trim($_GET['id']) : null);
+        $name = trim($_POST['name'] ?? '');
+        $plate = trim($_POST['plate_number'] ?? '');
+        $status = trim(strtolower($_POST['status'] ?? 'inactive'));
+
+        $allowedStatuses = ['available', 'assigned', 'out_for_delivery', 'unavailable'];
+
+        if (empty($vehicleId) || empty($name) || empty($plate)) {
+            echo json_encode(['success' => false, 'error' => 'Vehicle ID, name and plate number are required.']);
+            exit;
+        }
+        if (!in_array($status, $allowedStatuses, true)) {
+            echo json_encode(['success' => false, 'error' => 'Invalid status selected.']);
+            exit;
+        }
+
+        try {
+            $supabase = new SupabaseClient();
+            $payload = [
+                'name' => $name,
+                'plate_number' => $plate,
+                'status' => $status,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $path = "vehicle?id=eq.{$vehicleId}&company_id=eq.{$companyId}";
+            $res = $supabase->put($path, $payload);
+            echo json_encode(['success' => true, 'message' => 'Vehicle updated successfully.']);
+        } catch (Exception $e) {
+            error_log('Error updating vehicle (AJAX): ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Failed to update vehicle: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
     include __DIR__ . '/../includes/header.php';
 
     $error = null;
@@ -161,11 +210,52 @@
             plate_number: { required: true, minLength: 2, maxLength: 20 }
         });
 
-        document.getElementById('editVehicleForm').addEventListener('submit', function(e) {
-            if (!validator.validateAll()) {
-                e.preventDefault();
+        document.getElementById('editVehicleForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!validator.validateAll()) return;
+
+            const saveBtn = this.querySelector('button[type="submit"]');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            const formData = new URLSearchParams(new FormData(this));
+
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'include',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success === true) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Vehicle Updated!',
+                        text: 'The vehicle has been successfully updated.',
+                        confirmButtonColor: '#2e0d2a'
+                    }).then(() => {
+                        window.location.href = 'company-vehicles.php';
+                    });
+                    return;
+                }
+                throw new Error(result.error || 'Failed to update vehicle');
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'An unexpected error occurred.',
+                    confirmButtonColor: '#2e0d2a'
+                });
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
             }
         });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

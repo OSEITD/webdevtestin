@@ -79,5 +79,4 @@
 
     <!-- Link to the external JavaScript file -->
     <script src="company-manager-scripts.js"></script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

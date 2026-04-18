@@ -91,41 +91,27 @@ try {
 
     // Get active users count
     try {
-        error_log("Fetching active users...");
-        // FIXED: Changed 'account_status' to 'status' to match database schema
-        $activeUsersQuery = callSupabase('all_users?select=id&status=eq.active');
-        error_log("Active users query result: " . print_r($activeUsersQuery, true));
-        if (is_array($activeUsersQuery)) {
-            $response['stats']['active_users'] = count($activeUsersQuery);
-            error_log("Updated active_users count: " . $response['stats']['active_users']);
-        }
+        error_log("Fetching active users count...");
+        $response['stats']['active_users'] = callSupabaseCount('all_users?status=eq.active');
+        error_log("Updated active_users count: " . $response['stats']['active_users']);
     } catch (Exception $e) {
         error_log("Error fetching active users: " . $e->getMessage());
     }
 
     // Get delivery counts
     try {
-        error_log("Fetching delivered parcels...");
-        // FIXED: Changed to query 'parcels' table directly instead of view for consistency and reliability
-        $deliveredParcelsQuery = callSupabase('parcels?select=id&status=eq.delivered');
-        error_log("Delivered parcels query result: " . print_r($deliveredParcelsQuery, true));
-        if (is_array($deliveredParcelsQuery)) {
-            $response['stats']['total_deliveries'] = count($deliveredParcelsQuery);
-            error_log("Updated total_deliveries count: " . $response['stats']['total_deliveries']);
-        }
+        error_log("Fetching delivered parcels count...");
+        $response['stats']['total_deliveries'] = callSupabaseCount('parcels?status=eq.delivered');
+        error_log("Updated total_deliveries count: " . $response['stats']['total_deliveries']);
     } catch (Exception $e) {
         error_log("Error fetching delivered parcels: " . $e->getMessage());
     }
 
     // Get ongoing deliveries
     try {
-        error_log("Fetching ongoing deliveries...");
-        $inProgressQuery = callSupabase('parcels?select=id&status=neq.delivered');
-        error_log("In-progress parcels query result: " . print_r($inProgressQuery, true));
-        if (is_array($inProgressQuery)) {
-            $response['stats']['ongoing_deliveries'] = count($inProgressQuery);
-            error_log("Updated ongoing_deliveries count: " . $response['stats']['ongoing_deliveries']);
-        }
+        error_log("Fetching ongoing deliveries count...");
+        $response['stats']['ongoing_deliveries'] = callSupabaseCount('parcels?status=neq.delivered');
+        error_log("Updated ongoing_deliveries count: " . $response['stats']['ongoing_deliveries']);
     } catch (Exception $e) {
         error_log("Error fetching ongoing deliveries: " . $e->getMessage());
     }

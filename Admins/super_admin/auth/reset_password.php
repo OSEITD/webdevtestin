@@ -21,8 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Invalid or missing session token. Please try requesting a new password reset link.";
     } elseif ($newPassword !== $confirmPassword) {
         $error = "Passwords do not match.";
-    } elseif (strlen($newPassword) < 6) {
-        $error = "Password must be at least 6 characters long.";
+    } elseif (strlen($newPassword) < 8) {
+        $error = "Password must be at least 8 characters long.";
     } else {
         
         $url = "$supabaseUrl/auth/v1/user";

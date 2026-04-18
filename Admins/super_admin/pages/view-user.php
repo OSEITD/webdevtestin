@@ -226,6 +226,7 @@ require_once __DIR__ . '/../includes/header.php';
                     $roleDisplay = ucwords(str_replace('_', ' ', $roleName));
                     $createdAt = isset($user['created_at']) ? date('d M Y, H:i', strtotime($user['created_at'])) : 'N/A';
                     $updatedAt = isset($user['updated_at']) ? date('d M Y, H:i', strtotime($user['updated_at'])) : 'N/A';
+                    $lastSeen = isset($user['last_seen_at']) ? date('d M Y, H:i', strtotime($user['last_seen_at'])) : 'Never';
                 ?>
 
                 <div class="user-profile-card">
@@ -290,6 +291,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <!-- Timestamps -->
                         <div class="detail-section">
                             <h3>Activity</h3>
+                            <div class="detail-row">
+                                <span class="detail-label">Last Seen</span>
+                                <span class="detail-value"><?php echo htmlspecialchars($lastSeen); ?></span>
+                            </div>
                             <div class="detail-row">
                                 <span class="detail-label">Created</span>
                                 <span class="detail-value"><?php echo htmlspecialchars($createdAt); ?></span>
@@ -384,5 +389,4 @@ require_once __DIR__ . '/../includes/header.php';
     });
     <?php endif; ?>
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

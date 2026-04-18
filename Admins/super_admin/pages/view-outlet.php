@@ -341,5 +341,4 @@ $updatedAt = !empty($outlet['updated_at']) ? date('d M Y, H:i', strtotime($outle
         }
     });
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

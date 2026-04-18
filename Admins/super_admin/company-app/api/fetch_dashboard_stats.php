@@ -130,53 +130,36 @@ class DashboardStatsAPI {
                 }
             };
 
-            // Fetch outlets and drivers (with retry logic).
+            // Fetch counts (with retry logic).
             // If user's token is expired and refresh fails, fall back to service-role queries.
             try {
-                $outlets = $attemptSupabaseCall(function($token) use ($companyId) {
-                    return $this->supabase->getCompanyOutlets($companyId, $token);
+                $outletsCount = $attemptSupabaseCall(function($token) use ($companyId) {
+                    return $this->supabase->getExactCount("outlets?company_id=eq.{$companyId}&deleted_at=is.null", false, $token);
                 });
-                $drivers = $attemptSupabaseCall(function($token) use ($companyId) {
-                    return $this->supabase->getCompanyDrivers($companyId, $token);
+                $driversCount = $attemptSupabaseCall(function($token) use ($companyId) {
+                    return $this->supabase->getExactCount("drivers?company_id=eq.{$companyId}&deleted_at=is.null", false, $token);
                 });
-
-                // Fetch parcels (deliveries) for the company
-                $parcels = $attemptSupabaseCall(function($token) use ($companyId) {
-                    return $this->supabase->getParcels($companyId, $token, []);
+                $totalDeliveries = $attemptSupabaseCall(function($token) use ($companyId) {
+                    return $this->supabase->getExactCount("parcels?company_id=eq.{$companyId}&deleted_at=is.null", false, $token);
+                });
+                $inProgress = $attemptSupabaseCall(function($token) use ($companyId) {
+                    // Deliveries in progress: statuses that are not 'delivered' or 'cancelled'
+                    // ensure proper URL encoding for the comma
+                    return $this->supabase->getExactCount("parcels?company_id=eq.{$companyId}&deleted_at=is.null&status=not.in.(delivered,cancelled)", false, $token);
                 });
             } catch (Exception $e) {
                 // If the error indicates session expiry, attempt service-role fallback
                 $msg = $e->getMessage();
                 error_log('Authenticated fetch failed for dashboard stats: ' . $msg);
-                // Use service role (if available) through getRecord with useServiceRole=true
+                // Use service role fallback efficiently using getExactCount
                 try {
-                    // Fetch only minimal fields to reduce payload
-                    $outletsResult = $this->supabase->getRecord("outlets?company_id=eq.{$companyId}&deleted_at=is.null&select=id", true);
-                    $driversResult = $this->supabase->getRecord("drivers?company_id=eq.{$companyId}&deleted_at=is.null&select=id", true);
-                    $parcelsResult = $this->supabase->getRecord("parcels?company_id=eq.{$companyId}&select=status", true);
-
-                    $outlets = is_object($outletsResult) && isset($outletsResult->data) ? $outletsResult->data : ($outletsResult ?? []);
-                    $drivers = is_object($driversResult) && isset($driversResult->data) ? $driversResult->data : ($driversResult ?? []);
-                    $parcels = is_object($parcelsResult) && isset($parcelsResult->data) ? $parcelsResult->data : ($parcelsResult ?? []);
+                    $outletsCount = $this->supabase->getExactCount("outlets?company_id=eq.{$companyId}&deleted_at=is.null", true);
+                    $driversCount = $this->supabase->getExactCount("drivers?company_id=eq.{$companyId}&deleted_at=is.null", true);
+                    $totalDeliveries = $this->supabase->getExactCount("parcels?company_id=eq.{$companyId}&deleted_at=is.null", true);
+                    $inProgress = $this->supabase->getExactCount("parcels?company_id=eq.{$companyId}&deleted_at=is.null&status=not.in.(delivered,cancelled)", true);
                 } catch (Exception $e2) {
                     error_log('Service role fallback failed: ' . $e2->getMessage());
                     throw new Exception('Session expired. Please log in again.', 401);
-                }
-            }
-
-            // Ensure arrays
-            $outletsCount = is_array($outlets) ? count($outlets) : 0;
-            $driversCount = is_array($drivers) ? count($drivers) : 0;
-            $totalDeliveries = is_array($parcels) ? count($parcels) : 0;
-
-            // Deliveries in progress: statuses that are not 'delivered' or 'cancelled'
-            $inProgress = 0;
-            if (is_array($parcels)) {
-                foreach ($parcels as $p) {
-                    $status = isset($p['status']) ? strtolower($p['status']) : '';
-                    if ($status !== 'delivered' && $status !== 'cancelled' && $status !== '') {
-                        $inProgress++;
-                    }
                 }
             }
 

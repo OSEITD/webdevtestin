@@ -98,9 +98,48 @@ try {
         throw new Exception("Parcel not found", 404);
     }
 
+    $parcel = $parcels[0];
+
+    // Fetch outlet information to provide origin_outlet_name and destination_outlet_name
+    $outletIds = [];
+    if (!empty($parcel['origin_outlet_id'])) {
+        $outletIds[] = $parcel['origin_outlet_id'];
+    }
+    if (!empty($parcel['destination_outlet_id'])) {
+        $outletIds[] = $parcel['destination_outlet_id'];
+    }
+
+    if (!empty($outletIds)) {
+        $outletsEndpoint = $supabase->getUrl() . '/rest/v1/outlets?id=in.(' . implode(',', array_map('urlencode', $outletIds)) . ')&select=id,outlet_name';
+        $ch2 = curl_init($outletsEndpoint);
+        curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch2, CURLOPT_HTTPHEADER, [
+            'apikey: ' . $supabase->getKey(),
+            'Authorization: Bearer ' . $_SESSION['access_token']
+        ]);
+        $outletsResponse = curl_exec($ch2);
+        curl_close($ch2);
+
+        $outletsData = json_decode($outletsResponse, true);
+        $outletsMap = [];
+        if (is_array($outletsData)) {
+            foreach ($outletsData as $outlet) {
+                $outletsMap[$outlet['id']] = $outlet;
+            }
+        }
+
+        $parcel['origin_outlet_name'] = isset($outletsMap[$parcel['origin_outlet_id']]) ? 
+            $outletsMap[$parcel['origin_outlet_id']]['outlet_name'] : 'Unknown';
+        $parcel['destination_outlet_name'] = isset($outletsMap[$parcel['destination_outlet_id']]) ? 
+            $outletsMap[$parcel['destination_outlet_id']]['outlet_name'] : 'Unknown';
+    } else {
+        $parcel['origin_outlet_name'] = 'Unknown';
+        $parcel['destination_outlet_name'] = 'Unknown';
+    }
+
     echo json_encode([
         'success' => true,
-        'data' => $parcels[0]  // Return the first (and should be only) result
+        'data' => $parcel  // Return the first (and should be only) result with outlet names included
     ]);
 
 } catch (Exception $e) {

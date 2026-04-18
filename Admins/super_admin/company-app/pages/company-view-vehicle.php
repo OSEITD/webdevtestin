@@ -399,5 +399,4 @@ include __DIR__ . '/../includes/header.php';
     });
     <?php endif; ?>
     </script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>

@@ -288,5 +288,4 @@ require_once __DIR__ . '/../includes/header.php';
 
     // showMessageBox removed — replaced by SweetAlert2 (Swal.fire)
   </script>
-</body>
-</html>
+<?php include __DIR__ . '/../../includes/footer.php'; ?>
