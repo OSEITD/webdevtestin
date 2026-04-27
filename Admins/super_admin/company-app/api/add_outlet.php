@@ -10,6 +10,7 @@ require_once __DIR__ . '/error-handler.php';
 
 // Start session to get company ID
 session_start();
+ErrorHandler::requireAuth('add_outlet.php');
 
 // Initialize Supabase client
 $supabase = new SupabaseClient();
@@ -33,10 +34,10 @@ if (!$data) {
 
 // Validate required fields
 $required_fields = ['outletName', 'address', 'contactPerson', 'contact_email', 'contact_phone', 
-                   'password', 'status'];
+                   'password', 'status', 'latitude', 'longitude'];
 
 foreach ($required_fields as $field) {
-    if (!isset($data[$field]) || empty($data[$field])) {
+    if (!isset($data[$field]) || $data[$field] === '') {
         http_response_code(400);
         echo json_encode(['error' => "Missing required field: $field"]);
         exit;
@@ -47,6 +48,26 @@ foreach ($required_fields as $field) {
 if (strlen($data['password']) < 8) {
     http_response_code(400);
     echo json_encode(['error' => 'Password must be at least 8 characters long']);
+    exit;
+}
+
+$latitude = filter_var($data['latitude'], FILTER_VALIDATE_FLOAT);
+$longitude = filter_var($data['longitude'], FILTER_VALIDATE_FLOAT);
+if ($latitude === false || $longitude === false) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Latitude and longitude must be numeric values']);
+    exit;
+}
+
+if ($latitude < -90 || $latitude > 90) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Latitude must be between -90 and 90']);
+    exit;
+}
+
+if ($longitude < -180 || $longitude > 180) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Longitude must be between -180 and 180']);
     exit;
 }
 
@@ -68,7 +89,9 @@ try {
     
     $checkResponse = curl_exec($ch);
     $existingOutlets = json_decode($checkResponse, true);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
     
     if (!empty($existingOutlets)) {
         http_response_code(409);
@@ -93,7 +116,9 @@ try {
     
     $phoneCheckResponse = curl_exec($ch);
     $existingPhoneOutlets = json_decode($phoneCheckResponse, true);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
     
     if (!empty($existingPhoneOutlets)) {
         http_response_code(409);
@@ -130,7 +155,9 @@ try {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     $authData = json_decode($response, true);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
     
     // Debug information
     error_log("Auth Response Code: " . $httpCode);
@@ -187,6 +214,8 @@ try {
         'contact_email' => $data['contact_email'],
         'contact_phone' => $data['contact_phone'],
         'status' => $data['status'],
+        'latitude' => $latitude,
+        'longitude' => $longitude,
         'company_id' => $_SESSION['id'],
         'manager_id' => $userId
     ];
@@ -219,7 +248,9 @@ try {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     $result = json_decode($response, true);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
 
     error_log("Outlet Response Code: " . $httpCode);
     error_log("Outlet Curl Error (if any): " . $curlError);
@@ -274,7 +305,9 @@ try {
     
     $profileResponse = curl_exec($ch);
     $profileHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
     
     error_log("Profile Update Response Code: " . $profileHttpCode);
 

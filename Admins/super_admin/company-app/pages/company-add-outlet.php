@@ -3,6 +3,8 @@
     include __DIR__ . '/../includes/header.php';
 ?>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+
 <body class="bg-gray-100 min-h-screen">
 
     <div class="mobile-dashboard">
@@ -22,8 +24,21 @@
                     </div>
                     <div class="form-group">
                         <input type="hidden" id="address" name="address" value="">
+                        <input type="hidden" id="latitude" name="latitude" value="">
+                        <input type="hidden" id="longitude" name="longitude" value="">
                         <label for="address_line1">Address Line 1 <span class="required">*</span></label>
                         <input type="text" id="address_line1" name="address_line1" class="form-input-field" placeholder="Street number and street name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="outletMap">Outlet Location <span class="required">*</span></label>
+                        <div class="map-toolbar" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem; align-items:center;">
+                            <button type="button" id="toggleFullScreen" class="action-btn secondary" style="padding:0.5rem 0.75rem; font-size:0.9rem;">Fullscreen</button>
+                            <span class="text-sm text-gray-600">Switch between street and satellite views</span>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-2">Click the map or drag the marker to set the outlet location.</p>
+                        <div id="outletMap" style="width:100%; min-height:320px; border:1px solid #d1d5db; border-radius:0.75rem;"></div>
+                        <p class="text-sm text-gray-600 mt-2">Selected coordinates: <span id="selectedCoordinates">Not set</span></p>
                     </div>
 
                     <div class="grid-2">
@@ -91,6 +106,7 @@
 
     <!-- Scripts -->
     <script src="../assets/js/company-scripts.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="../../assets/js/form-validator.js?v=2"></script>
     <script>
         const validator = new FormValidator('addOutletForm', {
@@ -102,7 +118,27 @@
             password:        { required: true, password: true, minLength: 8, maxLength: 16 },
             confirmPassword: { required: true, password: true, match: 'password' },
             country:         { required: true },
-            status:          { required: true }
+            status:          { required: true },
+            latitude:        {
+                required: true,
+                custom: function(value) {
+                    if (!value.trim()) return 'Latitude is required';
+                    if (!/^[-+]?(\d+)(\.\d+)?$/.test(value)) return 'Latitude must be a valid number';
+                    const num = parseFloat(value);
+                    if (num < -90 || num > 90) return 'Latitude must be between -90 and 90';
+                    return null;
+                }
+            },
+            longitude:       {
+                required: true,
+                custom: function(value) {
+                    if (!value.trim()) return 'Longitude is required';
+                    if (!/^[-+]?(\d+)(\.\d+)?$/.test(value)) return 'Longitude must be a valid number';
+                    const num = parseFloat(value);
+                    if (num < -180 || num > 180) return 'Longitude must be between -180 and 180';
+                    return null;
+                }
+            }
         });
 
         (function populateCountries() {
@@ -126,6 +162,80 @@
             document.getElementById('address').value = parts.join(', ');
         }
 
+        function updateLocationInputs(lat, lng) {
+            document.getElementById('latitude').value = lat.toFixed(6);
+            document.getElementById('longitude').value = lng.toFixed(6);
+            document.getElementById('selectedCoordinates').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+
+        function initOutletMap() {
+            const mapElement = document.getElementById('outletMap');
+            if (!mapElement || typeof L === 'undefined') return;
+
+            const initialCenter = [0, 0];
+            const initialZoom = 2;
+            const map = L.map(mapElement).setView(initialCenter, initialZoom);
+
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            });
+
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+            });
+
+            streetLayer.addTo(map);
+            const baseMaps = {
+                'Street': streetLayer,
+                'Satellite': satelliteLayer
+            };
+            L.control.layers(baseMaps, null, { position: 'topright', collapsed: false }).addTo(map);
+
+            const marker = L.marker(initialCenter, { draggable: true }).addTo(map);
+            marker.on('dragend', function(event) {
+                const position = event.target.getLatLng();
+                updateLocationInputs(position.lat, position.lng);
+            });
+
+            map.on('click', function(event) {
+                marker.setLatLng(event.latlng);
+                updateLocationInputs(event.latlng.lat, event.latlng.lng);
+            });
+
+            const fullScreenButton = document.getElementById('toggleFullScreen');
+            if (fullScreenButton) {
+                fullScreenButton.addEventListener('click', function() {
+                    if (!document.fullscreenElement && mapElement.requestFullscreen) {
+                        mapElement.requestFullscreen();
+                    } else if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    }
+                });
+            }
+
+            document.addEventListener('fullscreenchange', function() {
+                setTimeout(function() {
+                    map.invalidateSize();
+                }, 200);
+            });
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 12);
+                    marker.setLatLng([lat, lng]);
+                    updateLocationInputs(lat, lng);
+                }, function() {
+                    // geolocation denied or unavailable; keep default center
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initOutletMap);
+
         document.getElementById('addOutletForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (!validator.validateAll()) return;
@@ -147,7 +257,7 @@
 
             const formData = {
                 outletName: document.getElementById('outletName').value.trim(),
-                address: document.getElementById('address_line1').value.trim(),
+                address: document.getElementById('address').value.trim(),
                 city: document.getElementById('city').value.trim(),
                 state: document.getElementById('state').value.trim(),
                 postal_code: document.getElementById('postal_code').value.trim(),
@@ -155,6 +265,8 @@
                 contactPerson: document.getElementById('contactPerson').value.trim(),
                 contact_email: document.getElementById('contact_email').value.trim(),
                 contact_phone: fullPhone,
+                latitude: document.getElementById('latitude').value.trim(),
+                longitude: document.getElementById('longitude').value.trim(),
                 password: document.getElementById('password').value,
                 status: document.getElementById('status').value
             };

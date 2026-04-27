@@ -30,35 +30,44 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-  error_log("GET request to login page detected. Clearing session to allow fresh login.");
+  // error_log("GET request to login page detected. Clearing session to allow fresh login.");
   session_unset();
   session_regenerate_id(true);
 }
 
 // Debug session info
-error_log("Session ID at start: " . session_id());
-error_log("Session path: " . session_save_path());
-error_log("Initial session data: " . print_r($_SESSION, true));
+// error_log("Session ID at start: " . session_id());
+// error_log("Session path: " . session_save_path());
+// error_log("Initial session data: " . print_r($_SESSION, true));
 
 // Load environment variables
 require_once __DIR__ . '/../includes/env.php';
 
+// Include rate limiter
+require_once __DIR__ . '/../../../outlet-app/includes/rate_limiter.php';
+
 // Debug session state
-error_log("Session state at login: " . print_r($_SESSION, true));
-error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
+// error_log("Session state at login: " . print_r($_SESSION, true));
+// error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
 
 // Supabase config - loaded from env or .env
 $supabaseUrl = getenv('SUPABASE_URL') ?: EnvLoader::get('SUPABASE_URL');
 $supabaseKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: getenv('SUPABASE_ANON_KEY') ?: EnvLoader::get('SUPABASE_ANON_KEY');
 
-error_log('DEBUG login: supabaseUrl=' . ($supabaseUrl ?: '[missing]'));
-error_log('DEBUG login: supabaseKey source=' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY' : 'ANON_KEY')));
+// error_log('DEBUG login: supabaseUrl=' . ($supabaseUrl ?: '[missing]'));
+// error_log('DEBUG login: supabaseKey source=' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY' : 'ANON_KEY')));
 
 
 $error = '';
 $errorType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $clientId = RateLimiter::getClientIdentifier();
+  if (RateLimiter::isLimited($clientId, 5, 30)) {
+      $resetTime = RateLimiter::getResetTime($clientId, 5, 30);
+      $error = "Too many login attempts. Please try again in {$resetTime} seconds.";
+      $errorType = 'rate_limit';
+  } else {
   $host = $_SERVER['HTTP_HOST'];
   error_log('Login POST received: ' . date('c'));
   error_log('POST payload: ' . json_encode($_POST));
@@ -103,7 +112,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $response = curl_exec($ch);
   $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
   $curlError = curl_error($ch);
-  curl_close($ch);
+  if (PHP_VERSION_ID < 80000) {
+      curl_close($ch);
+  }
   error_log("Auth request HTTP code: " . ($httpCode ?: 'N/A'));
 
   // Log the raw response for debugging
@@ -138,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Friendly feedback plus useful debug hint for hosted env
     if (stripos($rawError, 'Invalid login credentials') !== false || stripos($rawError, 'invalid email or password') !== false) {
-      $error = "Invalid email or password. Please check your credentials and try again.";
+      $error = "Invalid email or password.Try Again!";
       $errorType = 'credentials';
     } elseif (stripos($rawError, 'invalid API key') !== false || stripos($rawError, 'invalid credentials for api key') !== false) {
       $error = "Authentication failed due to invalid Supabase API key. Please check your environment config (SUPABASE_KEY) and redeploy.";
@@ -210,7 +221,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $resp = curl_exec($ch);
       $err = curl_error($ch);
       $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-      curl_close($ch);
+      if (PHP_VERSION_ID < 80000) {
+          curl_close($ch);
+      }
       if ($err || !$resp) {
         error_log("supabaseGetJson failed ($url): " . ($err ?: 'empty response') . " http_code=" . ($httpCode ?: 'N/A'));
         return null;
@@ -237,7 +250,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Fallback: if still not found, query Supabase admin users endpoint using service role key
-    if (!$userId && !empty($email)) {
+    // IMPORTANT: Only do this if we have a valid access token (auth succeeded)
+    if (!$userId && !empty($email) && !empty($accessToken)) {
       $adminKey = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY') ?: EnvLoader::get('SUPABASE_SERVICE_KEY');
       if (!empty($adminKey)) {
         $adminUserUrl = "$supabaseUrl/auth/v1/admin/users?email=eq." . urlencode($email);
@@ -268,7 +282,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Second fallback: use profile lookup by email when still missing userId
-    if (!$userId && !empty($email)) {
+    // IMPORTANT: Only do this if we have a valid access token (auth succeeded)
+    if (!$userId && !empty($email) && !empty($accessToken)) {
       $profileUrl = "$supabaseUrl/rest/v1/profiles?select=id&email=ilike." . urlencode($email);
       $profileResp = supabaseGetJson($profileUrl, null, getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY') ?: $supabaseKey);
       if (!empty($profileResp['data']) && is_array($profileResp['data']) && !empty($profileResp['data'][0]['id'])) {
@@ -303,29 +318,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // If we still don't have userId, do not proceed to sensitive auth flow.
-    if (!$userId) {
-      // fallback: attempt profile lookup by email to help diagnose, but do not override invalid cred state.
-      if (!empty($email)) {
-        $profileUrl = "$supabaseUrl/rest/v1/profiles?select=*&email=eq." . urlencode($email);
-        $contextFallback = stream_context_create([
-          'http' => [
-            'method' => 'GET',
-            'header' => "apikey: $supabaseKey\r\nAuthorization: Bearer " . ($accessToken ?: $supabaseKey) . "\r\n"
-          ]
-        ]);
-        $profileByEmail = @file_get_contents($profileUrl, false, $contextFallback);
-        if ($profileByEmail) {
-          $profileList = json_decode($profileByEmail, true);
-          if (!empty($profileList[0]['id'])) {
-            $userId = $profileList[0]['id'];
-            $profile = $profileList[0];
-            error_log("Fallback extended profile lookup success by email: $userId");
-            $error = null;
-            $errorType = '';
-          }
-        }
-      }
-    }
+    // NOTE: We intentionally do NOT attempt any further profile lookups here.
+    // A missing userId at this point means authentication failed, and we must
+    // NOT bypass Supabase password verification by resolving a user from email alone.
 
     if (!$userId) {
       // still no user id after all fallback attempts, show the login error and stop.
@@ -593,16 +588,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } // end empty profiles else
   } // end profileData else
   } // end curl error else
+  } // end rate limit else
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login</title>
-  <link rel="icon" href="/favicon.png" type="image/png" />
-  <link rel="shortcut icon" href="/favicon.png" type="image/png" />
-  <link rel="manifest" href="../manifest.json">
+  <title>Login - Nexer</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="/shared/apple-touch-icon-180x180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/shared/apple-touch-icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/shared/apple-touch-icon-120x120.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/shared/favicon-16x16.png" />
+  <link rel="manifest" href="../manifest.json?v=3">
+  <meta name="msapplication-TileColor" content="#2e0b3f" />
+  <meta name="msapplication-TileImage" content="/shared/mstile-150x150.png" />
   <meta name="theme-color" content="#2e0b3f">
   <link rel="stylesheet" href="../../../outlet-app/css/login-styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
@@ -610,28 +611,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="login-body">
-    <!-- Toast Notifications -->
-    <?php if (!empty($error)): ?>
-        <div class="toast-notification error" id="errorToast">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span><?= htmlspecialchars($error) ?></span>
-        </div>
-    <?php endif; ?>
 
-    <!-- Debug toast removed in cleanup -->
 
     <div class="auth-wrapper">
         <div class="auth-card">
             <div class="brand-panel">
                 <div class="brand-logo">
-                    <img src="../assets/img/Logo.png" alt="Company logo" style="border-radius: 50%;" />
+                    <img src="../assets/img/Logo.png" alt="Nexer logo" style="border-radius: 50%;" />
                 </div>
-                <h1 class="brand-title">Welcome back</h1>
-                <p class="brand-tagline">Sign in to continue managing your admin operations.</p>
+                <h1 class="brand-title">Nexer</h1>
+                <p class="brand-tagline">Sign in to continue managing your Nexer admin operations.</p>
             </div>
             <div class="form-box">
                 <h2>Admin Login</h2>
                 <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
+                    <?php if (!empty($error)): ?>
+                    <div class="login-error-alert" id="loginError">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span><?= htmlspecialchars($error) ?></span>
+                    </div>
+                    <?php endif; ?>
                     <div class="input-container">
                         <i class="fa fa-envelope"></i>
                         <input type="email" name="email" placeholder="Email Address" autocomplete="username" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
@@ -662,15 +661,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      const toasts = document.querySelectorAll('.toast-notification');
-      toasts.forEach(function(toast) {
-        setTimeout(function() {
-          toast.classList.add('hiding');
-          setTimeout(function() {
-            toast.remove();
-          }, 300);
-        }, 5000);
-      });
 
       document.querySelectorAll('.input-container .toggle-password').forEach(function(btn) {
           btn.addEventListener('click', function() {

@@ -1,16 +1,16 @@
-const CACHE_NAME = 'wd-admin-v3';
+const CACHE_NAME = 'wd-admin-v4';
 const CRITICAL_ASSETS = [
-    '/WDParcelSendReceiverPWA/Admins/super_admin/offline.html',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/assets/css/admin-dashboard.css',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/assets/css/dashboard-improvements.css',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/assets/css/view-details.css',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/assets/css/sidebar.css',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/assets/js/admin-scripts.js',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/assets/img/Logo.png',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/company-app/assets/images/icon-192x192.png',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/company-app/assets/images/icon-512x512.png',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/company-app/assets/css/company.css',
-    '/WDParcelSendReceiverPWA/Admins/super_admin/company-app/assets/js/company-scripts.js'
+    '/Admins/super_admin/offline.html',
+    '/Admins/super_admin/assets/css/admin-dashboard.css',
+    '/Admins/super_admin/assets/css/dashboard-improvements.css',
+    '/Admins/super_admin/assets/css/view-details.css',
+    '/Admins/super_admin/assets/css/sidebar.css',
+    '/Admins/super_admin/assets/js/admin-scripts.js',
+    '/Admins/super_admin/assets/img/Logo.png',
+    '/shared/android-chrome-192.png',
+    '/shared/android-chrome-512.png',
+    '/Admins/super_admin/company-app/assets/css/company.css',
+    '/Admins/super_admin/company-app/assets/js/company-scripts.js'
 ];
 
 const OPTIONAL_ASSETS = [
@@ -89,8 +89,8 @@ self.addEventListener('push', (event) => {
 
         const options = {
             body: data.body || data.message || 'New notification',
-            icon: data.icon || '/Admins/super_admin/assets/img/Logo.png',
-            badge: data.badge || '/Admins/super_admin/assets/img/icon-72x72.png',
+            icon: data.icon || '/shared/android-chrome-192.png',
+            badge: data.badge || '/shared/favicon-32x32.png',
             data: data.data || {},
             vibrate: data.vibrate || [200, 100, 200],
             tag: data.tag || 'admin-notification',
@@ -115,7 +115,7 @@ self.addEventListener('push', (event) => {
         event.waitUntil(
             self.registration.showNotification('New Notification', {
                 body: 'You have a new admin notification',
-                icon: '/Admins/super_admin/assets/img/Logo.png'
+                icon: '/shared/android-chrome-192.png'
             })
         );
     }
@@ -218,7 +218,7 @@ self.addEventListener('fetch', event => {
                         .then(response => {
                             if (response) return response;
                             // If not in cache, show offline page
-                            return caches.match('/WDParcelSendReceiverPWA/Admins/super_admin/offline.html');
+                            return caches.match('/Admins/super_admin/offline.html');
                         });
                 })
         );

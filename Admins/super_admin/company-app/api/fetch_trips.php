@@ -73,11 +73,11 @@ try {
         . '&company_id=eq.' . rawurlencode($companyId)
         . '&order=created_at.desc';
 
-    error_log("Fetching trips endpoint: {$endpoint}");
+    // error_log("Fetching trips endpoint: {$endpoint}");
 
     // Also log the full URL for debugging (SupabaseClient will log too)
-    $fullUrl = $supabase->getUrl() . '/rest/v1/' . $endpoint;
-    error_log("Full Supabase URL: {$fullUrl}");
+    // $fullUrl = $supabase->getUrl() . '/rest/v1/' . $endpoint;
+    // error_log("Full Supabase URL: {$fullUrl}");
 
     // Attempt primary request, but if Supabase returns a 4xx about parsing or missing
     // relationships, retry with a simplified select (already compact above).

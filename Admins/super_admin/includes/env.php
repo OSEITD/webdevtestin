@@ -6,11 +6,11 @@ class EnvLoader {
 
     private static function loadFile(string $path): void {
         if (!file_exists($path)) {
-            error_log("EnvLoader: .env file not found: {$path}");
+            // error_log("EnvLoader: .env file not found: {$path}");
             return;
         }
 
-        error_log("EnvLoader: Reading .env file from: {$path}");
+        // error_log("EnvLoader: Reading .env file from: {$path}");
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         $loadedCount = 0;
         
@@ -37,23 +37,23 @@ class EnvLoader {
                     putenv("$key=$value");
                     $loadedCount++;
 
-                    if ($key === 'SUPABASE_URL') {
-                        error_log("EnvLoader: Set SUPABASE_URL = {$value}");
-                    }
+                    // if ($key === 'SUPABASE_URL') {
+                    //     error_log("EnvLoader: Set SUPABASE_URL = {$value}");
+                    // }
                 } else {
-                    error_log("EnvLoader: Skipped overriding {$key} from {$path}; already set");
+                    // error_log("EnvLoader: Skipped overriding {$key} from {$path}; already set");
                 }
             }
         }
         
-        error_log("EnvLoader: Loaded {$loadedCount} variables from {$path}");
+        // error_log("EnvLoader: Loaded {$loadedCount} variables from {$path}");
     }
 
     public static function load($path = null) {
-        error_log("=== EnvLoader::load() called, \$loaded = " . (self::$loaded ? 'true' : 'false'));
+        // error_log("=== EnvLoader::load() called, \$loaded = " . (self::$loaded ? 'true' : 'false'));
         
         if (self::$loaded) {
-            error_log("=== EnvLoader::load() returning early because already loaded");
+            // error_log("=== EnvLoader::load() returning early because already loaded");
             return;
         }
 
@@ -63,7 +63,7 @@ class EnvLoader {
             $path = file_exists($adminsEnv) ? $adminsEnv : $rootEnv;
         }
 
-        error_log("=== EnvLoader: loading env file from: {$path}");
+        // error_log("=== EnvLoader: loading env file from: {$path}");
 
         if (!file_exists($path)) {
             $examplePath = dirname($path) . '/.env.example';
@@ -82,7 +82,7 @@ class EnvLoader {
         if (!$isSuperAdminContext && file_exists($outletEnv)) {
             self::loadFile($outletEnv);
         } elseif ($isSuperAdminContext && file_exists($outletEnv)) {
-            error_log('EnvLoader: super_admin context - skipping outlet-app/.env load');
+            // error_log('EnvLoader: super_admin context - skipping outlet-app/.env load');
         }
 
         self::$loaded = true;

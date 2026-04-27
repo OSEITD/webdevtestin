@@ -544,7 +544,7 @@ $current_user = getCurrentUser();
         }
     </style>
 </head>
-<body>
+<body class="sidebar-page">
     <div class="mobile-dashboard">
         <?php include '../includes/navbar.php'; ?>
         <?php include '../includes/sidebar.php'; ?>

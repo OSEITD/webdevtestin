@@ -1,6 +1,6 @@
 {
-  "name": "WDParcel Admin Dashboard",
-  "short_name": "Admin",
+  "name": "Nex-er Admin",
+  "short_name": "Nex-er Admin",
   "start_url": "./super_admin/pages/dashboard.php",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -8,16 +8,22 @@
   "scope": "./super_admin/",
   "icons": [
     {
-      "src": "./super_admin/favicon.png",
+      "src": "/shared/android-chrome-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./super_admin/favicon.png",
+      "src": "/shared/android-chrome-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/shared/nex-er.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }

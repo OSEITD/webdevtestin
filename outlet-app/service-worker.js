@@ -1,7 +1,7 @@
 ﻿
 
-const CACHE_NAME      = 'outlet-manager-v2.0.0';
-const DATA_CACHE_NAME = 'outlet-data-v2.0.0';
+const CACHE_NAME      = 'outlet-manager-v2.0.1';
+const DATA_CACHE_NAME = 'outlet-data-v2.0.1';
 
 self.addEventListener('install', (event) => {
     console.log('[Manager SW] Installing...');
@@ -35,8 +35,8 @@ self.addEventListener('push', (event) => {
         
         const options = {
             body: data.body || data.message || 'New notification',
-            icon: data.icon || '/outlet-app/icons/icon-192x192.png',
-            badge: data.badge || '/outlet-app/icons/icon-72x72.png',
+            icon: data.icon || '/shared/android-chrome-192.png',
+            badge: data.badge || '/shared/favicon-32x32.png',
             data: data.data || {},
             vibrate: data.vibrate || [200, 100, 200],
             tag: data.tag || 'manager-notification',
@@ -62,7 +62,7 @@ self.addEventListener('push', (event) => {
         event.waitUntil(
             self.registration.showNotification('New Message', {
                 body: 'You have a new notification',
-                icon: '/outlet-app/icons/icon-192x192.png'
+                icon: '/shared/android-chrome-192.png'
             })
         );
     }

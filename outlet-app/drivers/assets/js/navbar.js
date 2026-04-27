@@ -287,8 +287,13 @@ function escapeHtml(value) {
 }
 
 function showNotifications() {
-    // TODO: Implement notifications panel
-    alert('Notifications panel will be implemented soon!');
+    const panel = document.getElementById('driverNotificationPanel');
+    if (!panel) {
+        console.warn('Driver notification panel not found in DOM.');
+        return;
+    }
+    fetchDriverNotifications();
+    panel.classList.toggle('show');
 }
 
 function toggleDriverMenu() {
@@ -328,15 +333,83 @@ function updateNotificationBadge(count) {
 document.addEventListener('click', function(event) {
     const dropdown = document.getElementById('driverMenuDropdown');
     const menuButton = document.querySelector('.topbar-menu');
+    const bellButton = document.querySelector('.topbar-bell');
+    const panel = document.getElementById('driverNotificationPanel');
     
     if (dropdown && !dropdown.contains(event.target) && !menuButton.contains(event.target)) {
         closeDriverMenu();
     }
+
+    if (panel && bellButton && !panel.contains(event.target) && !bellButton.contains(event.target)) {
+        panel.classList.remove('show');
+    }
 });
 
 // Initialize notification badge
+async function fetchDriverNotifications() {
+    const apiUrl = buildDriverUrl('api/notifications.php?limit=5');
+    try {
+        const response = await fetch(apiUrl, {
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch notifications');
+        }
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load notifications');
+        }
+
+        const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+        const unreadCount = typeof data.unread_count === 'number' ? data.unread_count : 0;
+
+        updateNotificationBadge(unreadCount);
+        renderDriverNotificationList(notifications);
+    } catch (error) {
+        console.warn('Driver notifications failed to load:', error);
+    }
+}
+
+function renderDriverNotificationList(notifications) {
+    const list = document.getElementById('driverNotificationList');
+    if (!list) {
+        return;
+    }
+
+    if (!notifications.length) {
+        list.innerHTML = `
+            <div class="notification-item notification-empty">
+                <div class="notification-icon"><i class="fas fa-bell-slash"></i></div>
+                <div class="notification-content">
+                    <p class="notification-title">No notifications</p>
+                    <p class="notification-text">You don't have any notifications right now.</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = notifications.map((notification) => {
+        const title = notification.title || 'Notification';
+        const message = notification.message || '';
+        const time = notification.created_at ? new Date(notification.created_at).toLocaleString() : '';
+        const unread = notification.status === 'unread';
+        return `
+            <div class="notification-item${unread ? ' unread' : ''}">
+                <div class="notification-icon"><i class="fas fa-bell${unread ? '' : '-slash'}"></i></div>
+                <div class="notification-content">
+                    <p class="notification-title">${escapeHtml(title)}</p>
+                    <p class="notification-text">${escapeHtml(message)}</p>
+                    <span class="notification-time">${escapeHtml(time)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // TODO: Fetch actual notification count from API
-    // updateNotificationBadge will be called with the notification count from PHP
     initDriverSearch();
+    fetchDriverNotifications();
 });

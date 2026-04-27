@@ -1,18 +1,7 @@
 <?php
-
-// Use shared session-check and header for company-app pages
-require_once __DIR__ . '/../../auth/session-check.php';
-// Ensure session started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-// If the session-check did not find a user, redirect to login
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../auth/login.php');
-    exit();
-}
 $page_title = 'Trips';
-include __DIR__ . '/../includes/header.php';
+// Include the header (which also handles session, authentication, and init.php)
+require_once __DIR__ . '/../includes/header.php';
 
 // Build current_user from session
 $current_user = [
@@ -228,16 +217,218 @@ error_log("Outlet ID in trips.php: " . ($current_user['outlet_id'] ?? 'not set')
                 justify-content: center;
             }
         }
+        /* ── Trip Details Modal ─────────────────────────────────────────────── */
+        #tripDetailsModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        #tripDetailsModal .td-box {
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            max-width: 600px;
+            width: 96%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.28);
+            animation: tdSlideIn 0.22s ease;
+        }
+        @keyframes tdSlideIn {
+            from { opacity: 0; transform: translateY(-18px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0)   scale(1);     }
+        }
+        #tripDetailsModal .td-header {
+            padding: 1.4rem 1.6rem 1rem;
+            border-bottom: 2px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+        #tripDetailsModal .td-header h3 {
+            margin: 0 0 0.25rem;
+            font-size: 1.05rem;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #tripDetailsModal .td-header .td-trip-id {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            font-family: monospace;
+        }
+        #tripDetailsModal .td-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #6b7280;
+            cursor: pointer;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        #tripDetailsModal .td-close-btn:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        #tripDetailsModal .td-body {
+            padding: 1.25rem 1.6rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+        #tripDetailsModal .td-section {
+            margin-bottom: 1.25rem;
+        }
+        #tripDetailsModal .td-section-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #9ca3af;
+            margin-bottom: 0.6rem;
+        }
+        #tripDetailsModal .td-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.65rem 1.25rem;
+        }
+        #tripDetailsModal .td-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+        #tripDetailsModal .td-item span {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        #tripDetailsModal .td-item strong {
+            font-size: 0.9rem;
+            color: #1f2937;
+        }
+        #tripDetailsModal .td-route {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 1rem;
+        }
+        #tripDetailsModal .td-route .td-outlet {
+            flex: 1;
+            font-weight: 700;
+            color: #1f2937;
+            font-size: 0.95rem;
+        }
+        #tripDetailsModal .td-route .td-arrow {
+            color: #9ca3af;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        #tripDetailsModal .td-status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: capitalize;
+            color: white;
+        }
+        #tripDetailsModal .td-stops-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        #tripDetailsModal .td-stop-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 0.75rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border-left: 3px solid #d1d5db;
+        }
+        #tripDetailsModal .td-stop-row.origin  { border-left-color: #10b981; }
+        #tripDetailsModal .td-stop-row.dest    { border-left-color: #ef4444; }
+        #tripDetailsModal .td-stop-row.inter   { border-left-color: #f59e0b; }
+        #tripDetailsModal .td-stop-row .td-stop-time {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        #tripDetailsModal .td-footer {
+            padding: 1rem 1.6rem;
+            border-top: 2px solid #f3f4f6;
+            display: flex;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
     </style>
 <body class="bg-gray-100 min-h-screen">
 
-    <div class="mobile-dashboard">
-        <!-- Trip preview modal (hidden by default) -->
-        <div id="tripPreviewModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-            <div id="tripPreviewContent" style="max-width:900px; width:95%; margin:auto;"> 
-                <!-- Filled dynamically -->
+    <!-- Trip Details Modal (matching outlet app design) -->
+    <div id="tripDetailsModal"
+         onclick="if(event.target===this) closeTripDetails()" role="dialog"
+         aria-modal="true" aria-labelledby="tdModalTitle">
+        <div class="td-box">
+            <div class="td-header">
+                <div>
+                    <h3 id="tdModalTitle"><i class="fas fa-clipboard-list"></i> Trip Details</h3>
+                    <div class="td-trip-id" id="tdTripId"></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <span class="td-status-badge" id="tdStatusBadge"></span>
+                    <button class="td-close-btn" onclick="closeTripDetails()" aria-label="Close">&times;</button>
+                </div>
+            </div>
+            <div class="td-body">
+                <div id="tdRoute" class="td-route">
+                    <div class="td-outlet" id="tdOrigin"></div>
+                    <i class="fas fa-arrow-right td-arrow"></i>
+                    <div class="td-outlet" id="tdDestination"></div>
+                </div>
+
+                <div class="td-section">
+                    <div class="td-section-title">Trip Info</div>
+                    <div class="td-grid">
+                        <div class="td-item"><span>Trip Date</span><strong id="tdDate"></strong></div>
+                        <div class="td-item"><span>Departure</span><strong id="tdDeparture"></strong></div>
+                        <div class="td-item"><span>Driver</span><strong id="tdDriver"></strong></div>
+                        <div class="td-item"><span>Vehicle</span><strong id="tdVehicle"></strong></div>
+                        <div class="td-item"><span>Parcels</span><strong id="tdParcels"></strong></div>
+                        <div class="td-item"><span>Created</span><strong id="tdCreated"></strong></div>
+                    </div>
+                </div>
+
+                <div class="td-section">
+                    <div class="td-section-title">Route Stops</div>
+                    <div class="td-stops-list" id="tdStopsList"></div>
+                </div>
+            </div>
+            <div class="td-footer">
+                <button onclick="closeTripDetails()" style="background:#f3f4f6;color:#374151;border:none;padding:0.6rem 1.2rem;border-radius:8px;font-weight:600;cursor:pointer;">
+                    <i class="fas fa-times"></i> Close
+                </button>
             </div>
         </div>
+    </div>
+
+    <div class="mobile-dashboard">
     
         <main class="main-content">
             <div class="content-container">
@@ -886,8 +1077,8 @@ error_log("Outlet ID in trips.php: " . ($current_user['outlet_id'] ?? 'not set')
             const viewBtn = document.createElement('button');
             viewBtn.className = 'filter-btn';
             viewBtn.style.cssText = 'background:#3b82f6;color:white;padding:0.5rem 0.75rem;border-radius:6px;border:none;cursor:pointer;';
-            viewBtn.textContent = 'View';
-            viewBtn.addEventListener('click', () => showTripModal(trip));
+            viewBtn.innerHTML = '<i class="fas fa-eye"></i> View';
+            viewBtn.addEventListener('click', () => viewTripDetails(trip));
             actions.appendChild(viewBtn);
 
             const editBtn = document.createElement('a');
@@ -911,88 +1102,81 @@ error_log("Outlet ID in trips.php: " . ($current_user['outlet_id'] ?? 'not set')
             return card;
         }
 
-        // Show in-page modal with trip preview similar to create-trip success summary
-        function showTripModal(trip) {
-            const modal = document.getElementById('tripPreviewModal');
-            const content = document.getElementById('tripPreviewContent');
-            if (!modal || !content) return;
+        // Show trip details modal (matching outlet app design)
+        function viewTripDetails(trip) {
+            if (!trip) return;
 
-            // Normalize parcel items similarly to createTripCard
+            // Status badge colour
+            const statusColors = {
+                scheduled: '#f59e0b', accepted: '#06b6d4', in_transit: '#3b82f6',
+                at_outlet: '#8b5cf6', completed: '#10b981', cancelled: '#ef4444'
+            };
+            const statusLabel = (trip.trip_status || '').replace(/_/g, ' ');
+
+            document.getElementById('tdTripId').textContent = trip.id;
+            document.getElementById('tdStatusBadge').textContent = statusLabel;
+            document.getElementById('tdStatusBadge').style.background = statusColors[trip.trip_status] || '#6b7280';
+
+            // Resolve origin/destination names
+            const outletMap = window.__outletNameMap || {};
+            const originId = trip.origin_outlet_id || trip.origin_outlet || trip.from_outlet_id || null;
+            const destId = trip.destination_outlet_id || trip.destination_outlet || trip.to_outlet_id || null;
+            const originName = outletMap[originId] || trip.origin_outlet_name || trip.origin_name || (Array.isArray(trip.stops) && trip.stops[0] ? (trip.stops[0].outlet_name || trip.stops[0].name) : 'Unknown');
+            const destName = outletMap[destId] || trip.destination_outlet_name || trip.destination_name || (Array.isArray(trip.stops) && trip.stops.length ? (trip.stops[trip.stops.length - 1].outlet_name || trip.stops[trip.stops.length - 1].name) : 'Unknown');
+
+            document.getElementById('tdOrigin').textContent = originName;
+            document.getElementById('tdDestination').textContent = destName;
+
+            // Trip info fields
+            document.getElementById('tdDate').textContent = trip.departure_time ? new Date(trip.departure_time).toLocaleDateString() : '—';
+            document.getElementById('tdDeparture').textContent = trip.departure_time ? new Date(trip.departure_time).toLocaleString() : '—';
+
+            // Normalize driver/vehicle
+            const driverObj = Array.isArray(trip.driver) ? (trip.driver[0] || null) : (trip.driver || null);
+            const driverName = driverObj ? (driverObj.driver_name || driverObj.name || 'Unknown') : 'Not assigned';
+            const vehicleObj = Array.isArray(trip.vehicle) ? (trip.vehicle[0] || null) : (trip.vehicle || null);
+            const vehicleName = vehicleObj ? ((vehicleObj.name || vehicleObj.vehicle_name || 'Vehicle') + (vehicleObj.plate_number || vehicleObj.plate ? ` (${vehicleObj.plate_number || vehicleObj.plate})` : '')) : 'Not assigned';
+
+            document.getElementById('tdDriver').textContent = driverName;
+            document.getElementById('tdVehicle').textContent = vehicleName;
+            document.getElementById('tdCreated').textContent = trip.created_at ? new Date(trip.created_at).toLocaleDateString() : '—';
+
+            // Parcel count
             let parcelItems = [];
             if (Array.isArray(trip.parcels) && trip.parcels.length) {
                 parcelItems = trip.parcels.map(pl => (pl.parcel ? pl.parcel : pl));
             }
-            const stopsLen = Array.isArray(trip.stops) ? trip.stops.length : 0;
+            const parcelCount = (typeof trip.total_parcels === 'number') ? trip.total_parcels : parcelItems.length;
+            document.getElementById('tdParcels').textContent = parcelCount;
 
-            // Debug: print parcel objects so we can inspect available fields in the browser console
-            try {
-                // expose the parcel items on window for easy copying from DevTools
-                window.__lastParcelItems = parcelItems;
-                console.log('showTripModal - parcelItems sample (first 3):', window.__lastParcelItems.slice(0, 3));
-            } catch (e) {
-                // ignore logging errors in older browsers
+            // Stops
+            const stopsList = document.getElementById('tdStopsList');
+            const stops = trip.stops || [];
+            if (stops.length === 0) {
+                stopsList.innerHTML = '<div style="color:#9ca3af;font-size:0.85rem;padding:0.25rem 0;">No stops data available</div>';
+            } else {
+                stopsList.innerHTML = stops.map((s, i) => {
+                    const isOrigin = i === 0;
+                    const isDest   = i === stops.length - 1;
+                    const cls      = isOrigin ? 'origin' : (isDest ? 'dest' : 'inter');
+                    const icon     = isOrigin ? 'fa-play' : (isDest ? 'fa-flag-checkered' : 'fa-map-marker-alt');
+                    const arrTime  = s.arrival_time   ? new Date(s.arrival_time).toLocaleTimeString()   : null;
+                    const depTime  = s.departure_time ? new Date(s.departure_time).toLocaleTimeString() : null;
+                    const timeStr  = arrTime ? (depTime ? `Arr ${arrTime} · Dep ${depTime}` : `Arr ${arrTime}`) : '';
+                    const outletName = outletMap[s.outlet_id] || s.outlet_name || s.name || 'Outlet';
+                    return `<div class="td-stop-row ${cls}">
+                        <i class="fas ${icon}" style="color:inherit;opacity:0.6;font-size:0.75rem;"></i>
+                        <span>${s.stop_order || (i + 1)}. ${outletName}</span>
+                        ${timeStr ? `<span class="td-stop-time">${timeStr}</span>` : ''}
+                    </div>`;
+                }).join('');
             }
 
-            // Build a resilient parcels list that prefers tracking number fields.
-            // Intentionally do not fall back to parcel id here so the modal
-            // doesn't display internal IDs when no tracking number exists.
-            const parcelsListHtml = parcelItems.map(p => {
-                const track = p.track_number || p.tracking_number || p.trackNumber || p.trackingNumber || p.track_no || p.tracking_no || p.tracking || p.trackingNo || p.track || p.parcel_number || p.parcel_no || p.parcelNo || p.parcel_number_alt || null;
-                const recipient = p.recipient_name || p.name || p.receiver_name || p.to_name || 'Unknown';
-                const trackDisplay = track ? track : '—';
-                // Make track number a clickable link to parcel details page
-                const trackLink = track ? `<a href="parcel_details.php?track=${encodeURIComponent(track)}" style="color:#3b82f6;text-decoration:none;font-weight:600;cursor:pointer;"><strong>${trackDisplay}</strong></a>` : `<strong>${trackDisplay}</strong>`;
-                return `<div style="padding:8px;border-bottom:1px solid #f1f5f9;">${trackLink} — ${recipient}</div>`;
-            }).join('');
+            document.getElementById('tripDetailsModal').style.display = 'flex';
+        }
 
-            const html = `
-                <div style="background: white; padding: 24px; border-radius: 12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h2 style="margin:0;"><i class="fas fa-route"></i> Trip Preview</h2>
-                        <div>
-                            <button id="closeTripPreviewBtn" class="filter-btn">Close</button>
-                        </div>
-                    </div>
-                    <div style="margin-top:16px; display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px;">
-                        <div style="padding:12px; border:1px solid #e5e7eb; border-radius:8px;">
-                            <strong>Trip ID</strong>
-                            <div>${trip.id}</div>
-                        </div>
-                        <div style="padding:12px; border:1px solid #e5e7eb; border-radius:8px;">
-                            <strong>Stops</strong>
-                            <div>${stopsLen}</div>
-                        </div>
-                        <div style="padding:12px; border:1px solid #e5e7eb; border-radius:8px;">
-                            <strong>Parcels</strong>
-                            <div>${parcelItems.length}</div>
-                        </div>
-                    </div>
-                    <div style="margin-top:16px;">
-                        <strong>Parcels:</strong>
-                        <div style="margin-top:8px; max-height:200px; overflow:auto;">
-                            ${parcelsListHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            content.innerHTML = html;
-            modal.style.display = 'flex';
-
-            const closeBtn = document.getElementById('closeTripPreviewBtn');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
-                    modal.style.display = 'none';
-                });
-            }
-
-            // Note: openTripPageBtn may not exist on this modal; check before binding
-            const openTripBtn = document.getElementById('openTripPageBtn');
-            if (openTripBtn) {
-                openTripBtn.addEventListener('click', () => {
-                    window.location.href = `view_trip.php?id=${trip.id}`;
-                });
-            }
+        function closeTripDetails() {
+            document.getElementById('tripDetailsModal').style.display = 'none';
         }
 
         // Initialize paget

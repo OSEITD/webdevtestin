@@ -55,13 +55,27 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             color: white;
             padding: 2rem;
             border-radius: 1rem;
-            margin: 20px auto;
+            margin: 0 auto 20px !important;
             box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
             max-width: 1400px;
             text-align: center;
         }
         .page-header h1, .page-header .subtitle {
             color: white;
+        }
+
+        .manager-trips-page .main-content {
+            padding-top: 65px !important;
+        }
+
+        @media (max-width: 480px) {
+            .manager-trips-page .main-content {
+                padding-top: 60px !important;
+            }
+        }
+
+        .manager-trips-page .content-container {
+            margin-top: 0;
         }
 
         /* match trip wizard width */
@@ -277,6 +291,44 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             gap: 1rem;
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
+        }
+
+        .summary-toggle-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 0.75rem;
+        }
+
+        .summary-toggle-btn {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #4338ca;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .summary-toggle-btn:hover {
+            background: #e0e7ff;
+        }
+
+        .summary-toggle-btn[aria-expanded="true"] {
+            background: #4338ca;
+            color: #ffffff;
+            border-color: #4338ca;
+        }
+
+        .summary-toggle-btn i {
+            transition: transform 0.2s ease;
+        }
+
+        .summary-toggle-btn[aria-expanded="true"] i {
+            transform: rotate(180deg);
         }
 
         .summary-card {
@@ -1102,7 +1154,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         }
     </style>
 </head>
-<body>
+<body class="manager-trips-page sidebar-page">
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-container">
@@ -1145,6 +1197,12 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 <p class="subtitle">Manage and track all trips assigned to you as a manager.</p>
             </div>
             <div class="content-container">
+                <div class="summary-toggle-wrapper">
+                    <button type="button" id="summaryToggleBtn" class="summary-toggle-btn" aria-expanded="false">
+                        <i class="fas fa-chevron-down"></i>
+                        <span>Show trip summary</span>
+                    </button>
+                </div>
 
                 <!-- Summary Cards -->
                 <div class="trips-summary" id="tripsSummary" style="display: none;">
@@ -1411,6 +1469,31 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
         let trackingMap = null;
         let currentTrackingTrip = null;
         let autoRefreshHandle = null;
+        let summaryVisible = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const summaryToggleBtn = document.getElementById('summaryToggleBtn');
+            if (summaryToggleBtn) {
+                summaryToggleBtn.addEventListener('click', function() {
+                    const summary = document.getElementById('tripsSummary');
+                    const icon = this.querySelector('i');
+                    const text = this.querySelector('span');
+                    summaryVisible = !summaryVisible;
+
+                    if (summaryVisible && parseInt(document.getElementById('totalTrips').textContent, 10) > 0) {
+                        summary.style.display = 'flex';
+                        this.setAttribute('aria-expanded', 'true');
+                        icon.className = 'fas fa-chevron-up';
+                        text.textContent = 'Hide trip summary';
+                    } else {
+                        summary.style.display = 'none';
+                        this.setAttribute('aria-expanded', 'false');
+                        icon.className = 'fas fa-chevron-down';
+                        text.textContent = 'Show trip summary';
+                    }
+                });
+            }
+        });
 
         // ── Shared toast helper ──────────────────────────────────────────────────
         function showToast(message, type = 'success') {
@@ -1495,6 +1578,16 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
             }
         }
 
+        function renderSummary() {
+            const summary = document.getElementById('tripsSummary');
+            const total = parseInt(document.getElementById('totalTrips').textContent, 10);
+            if (summaryVisible && total > 0) {
+                summary.style.display = 'flex';
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+
         
         function resetFilters() {
             document.getElementById('statusFilter').value = '';
@@ -1510,7 +1603,7 @@ $brandingColors = getCompanyBrandingColors($companyInfo);
                 return;
             }
 
-            summary.style.display = 'flex';
+            renderSummary();
 
             const total               = trips.length;
             const scheduled           = trips.filter(t => t.trip_status === 'scheduled').length;

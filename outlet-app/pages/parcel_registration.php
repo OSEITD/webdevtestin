@@ -37,6 +37,18 @@ $lencoEnv = LENCO_ENV;
     <!-- Styles -->
     <link rel="stylesheet" href="../css/outlet-dashboard.css">
     <link rel="stylesheet" href="../css/parcel_registration_v2.css?v=<?php echo time(); ?>">
+    <style>
+        body.bg-gray-100 .mobile-dashboard .main-content {
+            padding-top: 65px !important;
+        }
+        body.bg-gray-100 .mobile-dashboard .main-content .content-container,
+        .content-container {
+            padding-top: 0 !important;
+        }
+        .page-header {
+            margin-top: 0 !important;
+        }
+    </style>
     
     <!-- Lenco Payment Widget (Sandbox) - loaded async so it doesn't block rendering -->
     <script src="<?php echo htmlspecialchars($lencoWidgetUrl); ?>" async></script>
@@ -62,7 +74,7 @@ $lencoEnv = LENCO_ENV;
     <script src="../assets/js/error-handler.js"></script>
 </head>
 
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen sidebar-page">
 
     <div class="mobile-dashboard">
 

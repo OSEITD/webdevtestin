@@ -1,4 +1,4 @@
-﻿
+
 
 class GlobalSearch {
     constructor() {
@@ -311,6 +311,17 @@ class NotificationManager {
     async loadUnreadCount() {
         try {
             const response = await fetch('../../api/notifications.php?action=unread_count');
+
+            // Stop polling if session expired
+            if (response.status === 401) {
+                console.warn('Session expired — stopping notification polling.');
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                    this.refreshInterval = null;
+                }
+                return;
+            }
+
             const data = await response.json();
 
             if (data.success) {
@@ -456,32 +467,32 @@ class NotificationManager {
             case 'parcel_created':
             case 'parcel_status_change':
                 if (parcelId) {
-                    window.location.href = `${basePath}parcel_management.php?parcel_id=${parcelId}`;
+                    window.location.href = `${basePath}trips.php?parcel_id=${parcelId}`;
                 } else {
-                    window.location.href = `${basePath}parcel_management.php`;
+                    window.location.href = `${basePath}trips.php`;
                 }
                 break;
 
             case 'delivery_assigned':
             case 'urgent_delivery':
                 if (tripId) {
-                    window.location.href = `${basePath}trip_management.php?trip_id=${tripId}`;
+                    window.location.href = `${basePath}trips.php?trip_id=${tripId}`;
                 } else {
-                    window.location.href = `${basePath}trip_management.php`;
+                    window.location.href = `${basePath}trips.php`;
                 }
                 break;
 
             case 'delivery_completed':
-                window.location.href = `${basePath}outlet_dashboard.php`;
+                window.location.href = `${basePath}dashboard.php`;
                 break;
 
             case 'driver_unavailable':
-                window.location.href = `${basePath}driver_management.php`;
+                window.location.href = `${basePath}drivers.php`;
                 break;
 
             case 'payment_received':
                 if (parcelId) {
-                    window.location.href = `${basePath}parcel_management.php?parcel_id=${parcelId}`;
+                    window.location.href = `${basePath}wallet.php?parcel_id=${parcelId}`;
                 }
                 break;
 

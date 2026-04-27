@@ -1334,7 +1334,7 @@ body {
 /* Standardized page header (matches parcel_registration) */
 .page-header {
     text-align: center !important;
-    margin: 0 auto 2.5rem !important;
+    margin: 5rem auto 1.5rem !important;
     padding: 2rem 1rem !important;
     background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%) !important;
     border-radius: 1.5rem !important;
@@ -1496,6 +1496,25 @@ body {
     max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+}
+
+/* Sidebar page spacing normalization */
+body.sidebar-page .main-content {
+    padding-top: 65px !important;
+}
+
+@media (max-width: 480px) {
+    body.sidebar-page .main-content {
+        padding-top: 60px !important;
+    }
+}
+
+body.sidebar-page .page-header {
+    margin: 0 auto 20px !important;
+}
+
+body.sidebar-page .content-container {
+    margin-top: 0;
 }
 
 @media (max-width: 1024px) {

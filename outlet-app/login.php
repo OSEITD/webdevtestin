@@ -503,12 +503,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login - Outlet Management</title>
-  <link rel="icon" href="/favicon.png" type="image/png" />
-  <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/shared/apple-touch-icon-180x180.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/shared/favicon-16x16.png" />
+    <link rel="manifest" href="./manifest.json?v=3" />
   <meta name="theme-color" content="#2e0b3f" />
+    <meta name="apple-mobile-web-app-title" content="Nex-er Outlet" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="stylesheet" href="./css/login-styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(registration => console.log('Outlet SW registered:', registration.scope))
+                .catch(err => console.warn('Outlet SW registration failed:', err));
+        });
+    }
+  </script>
   <style>
     
     .toast-notification {
@@ -575,20 +593,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="login-body">
-    <!-- Toast Notifications at Top -->
-    <?php if (!empty($error)): ?>
-        <div class="toast-notification error" id="errorToast">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span><?= htmlspecialchars($error) ?></span>
-        </div>
-    <?php endif; ?>
-  
-    <?php if (!empty($message)): ?>
-        <div class="toast-notification success" id="successToast">
-            <i class="fas fa-check-circle"></i>
-            <span><?= htmlspecialchars($message) ?></span>
-        </div>
-    <?php endif; ?>
+    <!-- Inline form alerts (moved into the form) -->
 
     <div class="auth-wrapper">
         <div class="auth-card">
@@ -603,9 +608,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h2>Account Login</h2>
                 <form action="login.php" method="POST">
                     <?php echo CSRF::field(); ?>
+                    <?php if (!empty($error) || !empty($message)): ?>
+                        <div id="formAlert" class="form-alert <?= !empty($error) ? 'error' : 'success' ?>" role="alert" aria-live="assertive">
+                            <i class="<?= !empty($error) ? 'fas fa-exclamation-triangle' : 'fas fa-check-circle' ?>" aria-hidden="true"></i>
+                            <div id="formAlertMsg" class="form-alert-message"><?= htmlspecialchars($error ?: $message) ?></div>
+                            <button type="button" class="close-btn" aria-label="Dismiss message">&times;</button>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="input-container">
                         <i class="fa fa-envelope"></i>
-                        <input type="email" name="email" placeholder="Email Address" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
+                        <input type="email" name="email" placeholder="Email Address" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" <?php if(!empty($error) || !empty($message)) echo 'aria-describedby="formAlertMsg"'; ?> />
                     </div>
                     <div class="input-container">
                         <i class="fa fa-lock"></i>
@@ -633,18 +646,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   
   <script>
     
-    document.addEventListener('DOMContentLoaded', function() {
-      const toasts = document.querySelectorAll('.toast-notification');
-      
-      toasts.forEach(function(toast) {
-        setTimeout(function() {
-          toast.classList.add('hiding');
-          
-          setTimeout(function() {
-            toast.remove();
-          }, 300); 
-        }, 5000); 
-      });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-dismiss top toasts and inline form alerts after a short delay
+            const alerts = document.querySelectorAll('.toast-notification, .form-alert');
+
+            alerts.forEach(function(el) {
+                // keep inline form alerts visible a little longer, then remove
+                setTimeout(function() {
+                    if (el.classList.contains('toast-notification')) {
+                        el.classList.add('hiding');
+                        setTimeout(function() { el.remove(); }, 300);
+                    } else {
+                        el.remove();
+                    }
+                }, 6000);
+            });
+
+            // allow user to manually dismiss form alerts or toast close buttons
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.close-btn');
+                if (!btn) return;
+                const parent = btn.closest('.form-alert, .toast-notification');
+                if (parent) parent.remove();
+            });
 
       // Toggle password visibility inside input containers
       document.querySelectorAll('.input-container .toggle-password').forEach(function(btn) {

@@ -38,7 +38,8 @@ $SUPABASE_URL = getenv('SUPABASE_URL');
 $SUPABASE_API_KEY = getenv('SUPABASE_SERVICE_ROLE_KEY') ?: getenv('SUPABASE_SERVICE_KEY');
 
 try {
-    $ch = curl_init("$SUPABASE_URL/rest/v1/vehicle?company_id=eq.$companyId&status=in.(available,out_for_delivery)&select=id,name,plate_number,status&order=name");
+    // Exclude vehicles that are already out for delivery.
+    $ch = curl_init("$SUPABASE_URL/rest/v1/vehicle?company_id=eq.$companyId&status=eq.available&select=id,name,plate_number,status&order=name");
 
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,

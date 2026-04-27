@@ -12,7 +12,7 @@ if (function_exists('opcache_reset')) {
     opcache_reset();
 }
 
-error_log('DEBUG: opcache_reset called? ' . (function_exists('opcache_reset') ? 'yes' : 'not available'));
+// error_log('DEBUG: opcache_reset called? ' . (function_exists('opcache_reset') ? 'yes' : 'not available'));
 
 
 $supabaseUrl = getenv('SUPABASE_URL') ?: EnvLoader::get('SUPABASE_URL');
@@ -40,10 +40,10 @@ if (empty($supabaseServiceKey)) {
 }
 
 
-error_log('DEBUG: Supabase URL from env=' . ($supabaseUrl ?: '[missing]'));
-error_log('DEBUG: Supabase key source: ' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY env' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY env' : 'EnvLoader')));
-error_log('DEBUG: Supabase URL is set: ' . (!empty($supabaseUrl) ? 'yes' : 'no'));
-error_log('DEBUG: Supabase service key present: ' . (!empty($supabaseServiceKey) ? 'yes' : 'no'));
+// error_log('DEBUG: Supabase URL from env=' . ($supabaseUrl ?: '[missing]'));
+// error_log('DEBUG: Supabase key source: ' . (getenv('SUPABASE_SERVICE_ROLE_KEY') ? 'SERVICE_ROLE_KEY env' : (getenv('SUPABASE_SERVICE_KEY') ? 'SERVICE_KEY env' : 'EnvLoader')));
+// error_log('DEBUG: Supabase URL is set: ' . (!empty($supabaseUrl) ? 'yes' : 'no'));
+// error_log('DEBUG: Supabase service key present: ' . (!empty($supabaseServiceKey) ? 'yes' : 'no'));
 
 
 $outletEnvPath = dirname(__DIR__, 3) . '/outlet-app/.env';

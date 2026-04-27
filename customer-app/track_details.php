@@ -189,9 +189,23 @@ if ($originName || $destinationName) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WD Parcel Services - Tracking Details</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
-    <link rel="shortcut icon" href="/favicon.png" type="image/png">
+    <title>Nex-er Tracking Details</title>
+    <meta name="theme-color" content="#2e0b3f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" sizes="180x180" href="/shared/apple-touch-icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/shared/apple-touch-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/shared/apple-touch-icon-120x120.png">
+    <meta name="apple-mobile-web-app-title" content="Nex-er" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/shared/favicon-16x16.png">
+    <link rel="manifest" href="./manifest.json?v=3">
+    <meta name="msapplication-TileColor" content="#2e0b3f">
+    <meta name="msapplication-TileImage" content="/shared/mstile-150x150.png">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -789,14 +803,14 @@ if ($originName || $destinationName) {
                                 <?php endif; ?>
                             </span>
                         </div>
+                        <?php endif; ?>
                         <?php if ($showGPSButton): ?>
                             <div class="detail-item detail-item-fullwidth" style="margin-top: 16px;">
-                                <button class="btn <?php echo $gpsButtonClass; ?>" onclick="openGPSTracking()">
+                                <button class="btn <?php echo htmlspecialchars($gpsButtonClass); ?>" onclick="openGPSTracking()">
                                     <i class="fas fa-map-marker-alt"></i>
-                                    <?php echo $gpsButtonText; ?>
+                                    <?php echo htmlspecialchars($gpsButtonText); ?>
                                 </button>
                             </div>
-                        <?php endif; ?>
                         <?php endif; ?>
                         
                         <?php if (!empty($parcel['estimated_delivery_date'])): ?>
@@ -956,45 +970,16 @@ if ($originName || $destinationName) {
         </div>
 
         <div class="actions-section">
-            <?php 
-            $showGPSButton = false;
-            $gpsButtonText = 'Live GPS Tracking';
-            $gpsButtonClass = 'btn-gps';
-            
-            if (!empty($parcel['driver_info']['gps_status'])) {
-                $gpsStatus = $parcel['driver_info']['gps_status']['status'];
-                if (in_array($gpsStatus, ['live', 'recent', 'stale'])) {
-                    $showGPSButton = true;
-                    if ($gpsStatus === 'live') {
-                        $gpsButtonText = '🔴 Live GPS Tracking';
-                    } elseif ($gpsStatus === 'recent') {
-                        $gpsButtonText = '🟡 Recent GPS Location';
-                    } else {
-                        $gpsButtonText = '🟠 View Last GPS Location';
-                        $gpsButtonClass = 'btn-secondary';
-                    }
-                }
-            } elseif (!empty($parcel['driver_info']['gps_available']) && $parcel['driver_info']['gps_available']) {
-                $showGPSButton = true;
-            } elseif (in_array(($parcel['status'] ?? ''), ['in_transit', 'assigned'])) {
-              
-                $showGPSButton = true;
-                $gpsButtonText = ($parcel['status'] ?? '') === 'assigned'
-                    ? ' Track Driver'
-                    : ' Live GPS Tracking';
-            }
-            ?>
-            
             <button class="btn btn-primary" onclick="getTrackingHistory()">
                 <i class="fas fa-history"></i>
                 View Tracking History
             </button>
-            
+
             <a href="secure_tracking.html" class="btn btn-secondary">
                 <i class="fas fa-search"></i>
                 Track Another Parcel
             </a>
-            
+
             <button class="btn btn-secondary" onclick="window.print()">
                 <i class="fas fa-print"></i>
                 Print Details

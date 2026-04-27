@@ -624,7 +624,7 @@ $current_user = getCurrentUser();
     </style>
 </head>
 
-<body>
+<body class="sidebar-page">
     <div class="mobile-dashboard">
         <?php include '../includes/navbar.php'; ?>
         <?php include '../includes/sidebar.php'; ?>
@@ -1057,6 +1057,7 @@ $current_user = getCurrentUser();
             
             select.innerHTML = '<option value="">Select a driver</option>';
             
+            let availableDriverAdded = false;
             if (Array.isArray(drivers)) {
                 drivers.forEach(driver => {
                     if (driver && driver.id) {
@@ -1069,18 +1070,24 @@ $current_user = getCurrentUser();
                         const driverId = driver.id ? ` [${driver.id.substring(0, 8)}...]` : '';
 
                         const status = (driver.status || 'unavailable').toLowerCase();
-                        const isAvailable = status === 'available';
-
-                        option.textContent = `${driverName} (${driverPhone})${driverEmail}${driverId}` + (isAvailable ? '' : ' (Unavailable)');
+                        const isAvailable = status === 'available' || status === 'assigned';
 
                         if (!isAvailable) {
                             option.disabled = true;
                             option.style.color = '#85919e';
+                        } else {
+                            availableDriverAdded = true;
                         }
 
+                        option.textContent = `${driverName} (${driverPhone})${driverEmail}${driverId}` +
+                            (isAvailable ? (status === 'assigned' ? ' (Assigned)' : '') : ` (${status.charAt(0).toUpperCase() + status.slice(1)})`);
                         select.appendChild(option);
                     }
                 });
+            }
+
+            if (!availableDriverAdded) {
+                select.innerHTML = '<option value="">No drivers available for selection</option>';
             }
         }
 

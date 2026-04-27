@@ -1,25 +1,31 @@
 {
-  "name": "Outlet Management System",
-  "short_name": "OutletApp",
-  "description": "Parcel management system for outlet managers with offline support",
-  "start_url": "./",
+  "name": "Nex-er Outlet",
+  "short_name": "Nex-er Outlet",
+  "description": "Nex-er outlet parcel management app for dispatch and delivery tracking.",
+  "start_url": "./login.php",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#2e0b3f",
+  "background_color": "#ffffff",
   "theme_color": "#2e0b3f",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/favicon.png",
+      "src": "/shared/android-chrome-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.png",
+      "src": "/shared/android-chrome-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/shared/nex-er.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ],
   "categories": ["business", "productivity"],
@@ -31,14 +37,14 @@
       "short_name": "New Parcel",
       "description": "Register a new parcel",
       "url": "./pages/parcel_registration.php",
-      "icons": [{ "src": "img/logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/shared/android-chrome-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "View Trips",
       "short_name": "Trips",
       "description": "Manage delivery trips",
       "url": "./pages/trips.php",
-      "icons": [{ "src": "img/logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/shared/android-chrome-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

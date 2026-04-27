@@ -347,11 +347,11 @@ async function removeStoredUpdate(store, id) {
 // Push notifications for delivery updates
 self.addEventListener('push', (event) => {
     console.log('Driver App SW: Push notification received');
-    
+
     if (!event.data) {
         return;
     }
-    
+
     const data = event.data.json();
     const options = {
         body: data.body,
@@ -375,10 +375,28 @@ self.addEventListener('push', (event) => {
         renotify: true,
         timestamp: Date.now()
     };
-    
-    event.waitUntil(
-        self.registration.showNotification(data.title, options)
-    );
+
+    // Show the notification and notify any open clients via postMessage
+    event.waitUntil((async () => {
+        try {
+            await self.registration.showNotification(data.title, options);
+        } catch (err) {
+            console.error('Driver App SW: showNotification failed', err);
+        }
+
+        try {
+            const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+            for (const client of clientList) {
+                try {
+                    client.postMessage({ type: 'notification-received', notification: data });
+                } catch (msgErr) {
+                    console.warn('Driver App SW: Failed to postMessage to client', msgErr);
+                }
+            }
+        } catch (err) {
+            console.warn('Driver App SW: clients.matchAll failed', err);
+        }
+    })());
 });
 
 // Listen for pushsubscriptionchange to handle expired subscriptions

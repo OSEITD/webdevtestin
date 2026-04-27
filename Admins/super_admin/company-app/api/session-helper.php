@@ -51,9 +51,9 @@ class SessionHelper {
         // Start session
         session_start();
 
-        // Regenerate session ID on first use (prevent fixation)
+        // Session regeneration should only happen on login, not during random AJAX calls
+        // to prevent race conditions that destroy the session for concurrent requests.
         if (!isset($_SESSION['__session_initialized'])) {
-            session_regenerate_id(true);
             $_SESSION['__session_initialized'] = time();
         }
     }

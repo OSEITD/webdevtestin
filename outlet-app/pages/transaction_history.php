@@ -89,7 +89,7 @@ if (!empty($parcelIds)) {
         color: white;
         padding: 2rem;
         border-radius: 1rem;
-        margin: 0 auto 20px;
+        margin: 0 auto 20px !important;
         box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
         max-width: 1400px;
         text-align: center;
@@ -100,6 +100,16 @@ if (!empty($parcelIds)) {
 
     /* widen main content container */
     .content-container { max-width: 1400px; }
+
+    .transaction-history-page .main-content {
+        padding-top: 65px !important;
+    }
+
+    @media (max-width: 480px) {
+        .transaction-history-page .main-content {
+            padding-top: 60px !important;
+        }
+    }
 
     .transaction-history-page .content-container {
         margin-top: 0;
@@ -200,7 +210,7 @@ if (!empty($parcelIds)) {
     }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen transaction-history-page">
+<body class="bg-gray-100 min-h-screen transaction-history-page sidebar-page">
     <?php include '../includes/navbar.php'; ?>
     <?php include '../includes/sidebar.php'; ?>
 

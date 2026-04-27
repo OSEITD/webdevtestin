@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WD Parcel Send Receiver System</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
-    <link rel="shortcut icon" href="/favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="./favicon.png" sizes="512x512">
+    <link rel="icon" href="./favicon.png" type="image/png" sizes="512x512">
+    <link rel="shortcut icon" href="./favicon.png" type="image/png" sizes="512x512">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
@@ -218,6 +219,42 @@
             line-height: 1.6;
         }
 
+        .terms-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+            color: var(--ink);
+            line-height: 1.75;
+        }
+
+        .terms-card h4 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        .terms-card p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .terms-card ul {
+            margin: 18px 0 0;
+            padding-left: 20px;
+            color: var(--muted);
+        }
+
+        .terms-card li {
+            margin-bottom: 10px;
+        }
+
+        .terms-note {
+            margin-top: 18px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
         .contact {
             background: var(--card);
             border-radius: 20px;
@@ -334,6 +371,25 @@
                 <div class="info-card">
                     <h4>Operational insight</h4>
                     <p>Dashboards and reports that highlight delivery performance and service efficiency.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">Terms &amp; Conditions</h2>
+            <div class="terms-card">
+                <h4>Platform usage terms</h4>
+                <p>Access to the WD Parcel Send Receiver System is subject to acceptable use, accurate data entry, and respect for account security.</p>
+                <ul>
+                    <li>Use the system only for authorized parcel operations and customer service activities.</li>
+                    <li>Preserve the confidentiality of login credentials and do not share access with unauthorized users.</li>
+                    <li>Ensure shipment information is complete and accurate before submission.</li>
+                    <li>Respect privacy requirements and only access data that is relevant to your role.</li>
+                    <li>WebDev Technologies is not responsible for third-party delivery delays or errors caused by incorrect input.</li>
+                </ul>
+                <p class="terms-note">For a full service agreement or privacy policy, please contact the WebDev Technologies team or your account administrator.</p>
+                <div class="cta-row">
+                    <a href="mailto:info@webdevzm.tech?subject=Request%20for%20Terms%20and%20Conditions" class="btn secondary">Request full terms</a>
                 </div>
             </div>
         </section>

@@ -1,24 +1,30 @@
 {
-  "name": "WD Parcel Send Receiver",
-  "short_name": "WDParcel",
+  "name": "Nex-er",
+  "short_name": "Nex-er",
   "start_url": "./secure_tracking.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#2e0b3f",
+  "background_color": "#ffffff",
   "theme_color": "#2e0b3f",
-  "description": "Send and receive parcels with Webdev Technologies.",
+  "description": "Nex-er customer parcel tracker for shipment tracking and delivery updates.",
   "icons": [
     {
-      "src": "./assets/img/app-icon-192.png",
+      "src": "/shared/android-chrome-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./assets/img/app-icon-512.png",
+      "src": "/shared/android-chrome-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/shared/nex-er.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }

@@ -158,11 +158,24 @@ class NotificationDispatcher
         // Step 2: Send Web Push
         if (!$dbOnly && $this->pushEnabled) {
             try {
+                // Ensure push payload contains notification_id and current unread_count
+                $pushData = $params['data'] ?? [];
+                if (!empty($result['notification_id'])) {
+                    $pushData['notification_id'] = $result['notification_id'];
+                }
+                // Attempt to include unread count for recipient (helpful for badges)
+                try {
+                    $pushData['unread_count'] = $this->getUnreadCount($params['recipient_id']);
+                } catch (\Exception $e) {
+                    // Non-fatal; continue without unread_count
+                    error_log('[NotificationDispatcher] Failed to fetch unread count: ' . $e->getMessage());
+                }
+
                 $pushResult = $this->sendPush(
                     $params['recipient_id'],
                     $params['title'],
                     $params['message'],
-                    $params['data'] ?? [],
+                    $pushData,
                     $params
                 );
                 $result['push_result'] = $pushResult;
@@ -281,11 +294,17 @@ class NotificationDispatcher
      */
     public function sendToDriver(string $driverId, string $title, string $body, array $data = []): array
     {
-        return $this->sendPush($driverId, $title, $body, $data, [
-            'role_filter' => 'driver',
-            'tag'         => $data['tag'] ?? 'trip-assignment',
-            'icon'        => '/outlet-app/drivers/icons/icon-192x192.png',
-            'actions'     => $data['actions'] ?? [
+        return $this->send([
+            'recipient_id' => $driverId,
+            'company_id'   => $data['company_id'] ?? null,
+            'title'        => $title,
+            'message'      => $body,
+            'notification_type' => $data['notification_type'] ?? 'trip_assignment',
+            'data'         => $data,
+            'role_filter'  => 'driver',
+            'tag'          => $data['tag'] ?? 'trip-assignment',
+            'icon'         => $data['icon'] ?? '/outlet-app/drivers/icons/icon-192x192.png',
+            'actions'      => $data['actions'] ?? [
                 ['action' => 'view', 'title' => 'View Trip'],
                 ['action' => 'dismiss', 'title' => 'Dismiss'],
             ],
@@ -297,11 +316,17 @@ class NotificationDispatcher
      */
     public function sendToManager(string $managerId, string $title, string $body, array $data = []): array
     {
-        return $this->sendPush($managerId, $title, $body, $data, [
-            'role_filter' => 'outlet_manager',
-            'tag'         => $data['tag'] ?? 'manager-notification',
-            'icon'        => '/outlet-app/icons/icon-192x192.png',
-            'actions'     => $data['actions'] ?? [
+        return $this->send([
+            'recipient_id' => $managerId,
+            'company_id'   => $data['company_id'] ?? null,
+            'title'        => $title,
+            'message'      => $body,
+            'notification_type' => $data['notification_type'] ?? 'manager_notification',
+            'data'         => $data,
+            'role_filter'  => 'outlet_manager',
+            'tag'          => $data['tag'] ?? 'manager-notification',
+            'icon'         => $data['icon'] ?? '/outlet-app/icons/icon-192x192.png',
+            'actions'      => $data['actions'] ?? [
                 ['action' => 'view', 'title' => 'View Details'],
                 ['action' => 'dismiss', 'title' => 'Dismiss'],
             ],
@@ -665,12 +690,36 @@ class NotificationDispatcher
 
     private function createNotificationRecord(array $params): ?array
     {
+        // Ensure notification_type conforms to allowed values in the DB check constraint.
+        $allowedTypes = [
+            'parcel_created', 'parcel_status_change', 'delivery_assigned', 'delivery_completed',
+            'driver_unavailable', 'payment_received', 'urgent_delivery', 'system_alert', 'customer_inquiry'
+        ];
+
+        $requestedType = $params['notification_type'] ?? null;
+        $mapping = [
+            'trip_assignment' => 'delivery_assigned',
+            'trip_assignment_outlet' => 'delivery_assigned',
+            'trip_assignment_manager' => 'delivery_assigned',
+            'trip_started' => 'urgent_delivery',
+            'trip_arrived' => 'urgent_delivery',
+            'trip_completed' => 'delivery_completed',
+        ];
+
+        if ($requestedType === null) {
+            $finalType = 'system_alert';
+        } elseif (!in_array($requestedType, $allowedTypes, true)) {
+            $finalType = $mapping[$requestedType] ?? 'system_alert';
+        } else {
+            $finalType = $requestedType;
+        }
+
         $record = [
             'company_id'        => $params['company_id'],
             'recipient_id'      => $params['recipient_id'],
             'title'             => $params['title'],
             'message'           => $params['message'],
-            'notification_type' => $params['notification_type'],
+            'notification_type' => $finalType,
             'priority'          => $params['priority'] ?? 'medium',
             'status'            => 'unread',
             'created_at'        => date('c'),
@@ -718,6 +767,19 @@ class NotificationDispatcher
         return $this->supabaseGet('push_subscriptions', $query) ?: [];
     }
 
+    /**
+     * Return the number of unread notifications for a recipient.
+     * @param string $recipientId
+     * @return int
+     */
+    private function getUnreadCount(string $recipientId): int
+    {
+        $query = "recipient_id=eq.$recipientId&status=eq.unread&select=id";
+        $rows = $this->supabaseGet('notifications', $query);
+        if (!is_array($rows)) return 0;
+        return count($rows);
+    }
+
     private function deactivateSubscriptions(array $ids): void
     {
         foreach ($ids as $id) {
@@ -732,10 +794,34 @@ class NotificationDispatcher
 
     private function getOutletStaffIds(string $outletId, string $companyId): array
     {
-        $profiles = $this->supabaseGet(
-            'profiles',
-            "outlet_id=eq.$outletId&company_id=eq.$companyId&role=in.(outlet_manager,admin)&select=id"
-        );
+        $outlet = $this->supabaseGet('outlets', "id=eq.$outletId&company_id=eq.$companyId&select=id,outlet_manager_id,manager_id");
+        if (empty($outlet) || !is_array($outlet)) {
+            return [];
+        }
+
+        $outlet = $outlet[0] ?? $outlet;
+        $managerIds = array_filter([
+            $outlet['outlet_manager_id'] ?? null,
+            $outlet['manager_id'] ?? null,
+        ]);
+
+        $queryParts = [
+            "company_id=eq.$companyId",
+            'role=in.(outlet_manager,outlet_staff,admin)',
+            'select=id',
+        ];
+
+        $conditions = ["outlet_id.eq.$outletId"];
+        foreach ($managerIds as $managerId) {
+            $conditions[] = "id.eq.$managerId";
+        }
+
+        if (!empty($conditions)) {
+            $queryParts[] = 'or=(' . implode(',', $conditions) . ')';
+        }
+
+        $query = implode('&', $queryParts);
+        $profiles = $this->supabaseGet('profiles', $query);
 
         return array_column($profiles ?: [], 'id');
     }

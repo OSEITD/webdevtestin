@@ -4,6 +4,20 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 error_log("API endpoint hit: add_vehicle.php");
 
+// Early debugging: capture raw request headers and body for diagnosis
+$rawInput = file_get_contents('php://input');
+if (function_exists('getallheaders')) {
+    error_log("Request headers: " . print_r(getallheaders(), true));
+} else {
+    // Fallback for environments without getallheaders()
+    $hdrs = [];
+    foreach ($_SERVER as $k => $v) {
+        if (strpos($k, 'HTTP_') === 0) $hdrs[$k] = $v;
+    }
+    error_log("Request headers (fallback): " . print_r($hdrs, true));
+}
+error_log("Raw input: " . $rawInput);
+
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     error_log("Error in add_vehicle.php: $errstr");
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
@@ -14,6 +28,10 @@ require_once __DIR__ . '/error-handler.php';
 
 // Start session to get company ID
 session_start();
+
+// Ensure requester is authenticated and session contains company info
+require_once __DIR__ . '/error-handler.php';
+ErrorHandler::requireAuth('add_vehicle.php');
 
 // Initialize Supabase client
 $supabase = new SupabaseClient();
@@ -26,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Get JSON data from request body
-$data = json_decode(file_get_contents('php://input'), true);
+// Get JSON data from request body (use previously-captured raw input to avoid double-reading php://input)
+$data = json_decode($rawInput, true);
 
 if (!$data) {
     http_response_code(400);
@@ -62,20 +80,36 @@ try {
 
     error_log("Creating vehicle with data: " . print_r($data, true));
 
+    // Resolve company id from session and prefer service role key for server-side inserts
+    $companyId = isset($_SESSION['id']) ? $_SESSION['id'] : null;
+    if (empty($companyId)) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Missing company session. Please log in again.']);
+        exit;
+    }
+
+    // Use service role key when available for privileged operations
+    $serviceRoleKey = null;
+    if (class_exists('EnvLoader')) {
+        $serviceRoleKey = EnvLoader::get('SUPABASE_SERVICE_ROLE_KEY', null);
+    }
+    if (empty($serviceRoleKey)) {
+        $serviceRoleKey = $supabaseKey; // fallback to configured key
+    }
+
     // Check for duplicate plate number within same company
     $checkUrl = $supabaseUrl . '/rest/v1/vehicle?plate_number=eq.' . urlencode($data['plate_number']) . 
-                '&company_id=eq.' . $_SESSION['id'] . '&deleted_at=is.null&select=id';
-    
+                '&company_id=eq.' . $companyId . '&deleted_at=is.null&select=id';
+
     $ch = curl_init($checkUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "apikey: $supabaseKey",
-        "Authorization: Bearer $supabaseKey"
+        "Authorization: Bearer $serviceRoleKey"
     ]);
-    
+
     $checkResponse = curl_exec($ch);
     $existingVehicles = json_decode($checkResponse, true);
-    curl_close($ch);
     
     if (!empty($existingVehicles)) {
         http_response_code(409);
@@ -95,7 +129,7 @@ try {
         'name' => $data['name'],
         'plate_number' => $data['plate_number'],
         'status' => $status,
-        'company_id' => $_SESSION['id'] // Using the company ID from session
+        'company_id' => $companyId // Using the company ID from session
     ];
     
     error_log("Vehicle data to be sent: " . json_encode($vehicleData));
@@ -108,7 +142,7 @@ try {
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($vehicleData));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         "apikey: $supabaseKey",
-        "Authorization: Bearer $supabaseKey",
+        "Authorization: Bearer $serviceRoleKey",
         "Content-Type: application/json",
         "Prefer: return=representation"
     ]);
@@ -151,8 +185,12 @@ try {
         throw new Exception($errorMsg);
     }
 
-    $vehicleId = $result[0]['id']; // Get the new vehicle ID
-    curl_close($ch);
+    // Safely extract created vehicle id
+    $vehicleId = null;
+    if (is_array($result) && isset($result[0]) && isset($result[0]['id'])) {
+        $vehicleId = $result[0]['id'];
+    }
+    // curl_close() intentionally omitted due to PHP 8.5 deprecation (no-op since PHP 8.0)
 
     // Return success response
     http_response_code(200);

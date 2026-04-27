@@ -264,7 +264,7 @@ $current_user = getCurrentUser();
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen sidebar-page">
 
     <div class="mobile-dashboard">
 

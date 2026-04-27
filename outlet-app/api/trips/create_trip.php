@@ -102,10 +102,27 @@ try {
     ];
     
     
-    $trip = $supabase->createTrip($tripData);
-    
-    if (!$trip) {
-        throw new Exception("Failed to create trip");
+    $driverAssignmentDeferred = null;
+    try {
+        $trip = $supabase->createTrip($tripData);
+        if (!$trip) {
+            throw new Exception("Failed to create trip");
+        }
+    } catch (Exception $e) {
+        $msg = $e->getMessage();
+        // Only retry without driver_id when the driver is explicitly unavailable.
+        if (stripos($msg, 'Driver is not available') !== false) {
+            error_log("Driver not available during trip creation for driver_id {$tripData['driver_id']}. Retrying without driver assignment. Original error: $msg");
+            $driverAssignmentDeferred = $tripData['driver_id'];
+            $tripDataNoDriver = $tripData;
+            $tripDataNoDriver['driver_id'] = null;
+            $trip = $supabase->createTrip($tripDataNoDriver);
+            if (!$trip) {
+                throw new Exception("Failed to create trip (deferred driver assignment)");
+            }
+        } else {
+            throw $e;
+        }
     }
     
     
@@ -303,7 +320,8 @@ try {
             "parcel_list_batch" => isset($parcelListBatch) ? $parcelListBatch : [],
             "assigned_parcels" => $assignedParcels,
             "skipped_parcels" => isset($skippedParcels) ? $skippedParcels : [],
-            "parcels_query" => isset($parcels) ? $parcels : []
+            "parcels_query" => isset($parcels) ? $parcels : [],
+            "driver_assignment_deferred" => isset($driverAssignmentDeferred) ? $driverAssignmentDeferred : null
         ]
     ];
     
@@ -348,52 +366,79 @@ try {
     
     ob_start(); 
     
-    if (isset($bgDriverId) && !empty($bgDriverId)) {
-        try {
-            
-            require_once '../../includes/MultiTenantSupabaseHelper.php';
-            $bgSupabase = new MultiTenantSupabaseHelper($bgCompanyId);
-            $pushService = new PushNotificationService($bgSupabase);
-            
-            
-            $outletIds = array_unique([$bgOriginOutletId, $bgDestinationOutletId]);
-            $outletIdsStr = implode(',', array_map(function($id) { return addslashes($id); }, $outletIds));
-            $outlets = $bgSupabase->get('outlets', "id=in.($outletIdsStr)", 'id,outlet_name');
-            
-            $outletMap = [];
-            foreach ($outlets as $outlet) {
-                $outletMap[$outlet['id']] = $outlet['outlet_name'];
+    try {
+        require_once '../../includes/MultiTenantSupabaseHelper.php';
+        $bgSupabase = new MultiTenantSupabaseHelper($bgCompanyId);
+
+        // Use the shared NotificationDispatcher to create DB records and send WebPush
+        require_once __DIR__ . '/../../../shared/NotificationDispatcher.php';
+        $dispatcher = new NotificationDispatcher();
+
+        // Build list of route outlet IDs from created stops (includes origin, intermediate stops, destination)
+        $routeOutletIds = [];
+        if (!empty($createdStops) && is_array($createdStops)) {
+            foreach ($createdStops as $s) {
+                if (!empty($s['outlet_id'])) $routeOutletIds[] = $s['outlet_id'];
             }
-            
-            $originOutletName = $outletMap[$bgOriginOutletId] ?? 'Unknown';
-            $destinationOutletName = $outletMap[$bgDestinationOutletId] ?? 'Unknown';
-            
-            $tripData = [
-                'trip_id' => $bgTripId,
-                'origin_outlet_name' => $originOutletName,
-                'destination_outlet_name' => $destinationOutletName,
-                'departure_time' => $bgDepartureTime,
-                'parcels_count' => $bgParcelsCount
-            ];
-            
-            
-            $pushService->sendTripAssignmentNotification($bgDriverId, $tripData);
-            
-            
-            if ($bgOriginOutletId) {
-                $outletManager = $bgSupabase->get('profiles', "outlet_id=eq.$bgOriginOutletId&role=eq.outlet_manager", 'id');
-                if (!empty($outletManager)) {
-                    $managerId = $outletManager[0]['id'];
-                    $pushService->sendTripAssignmentToManager($managerId, $tripData);
-                    error_log("Manager notification sent to manager: $managerId");
-                }
-            }
-            
-            error_log("Push notifications sent");
-            
-        } catch (Exception $e) {
-            error_log("Push notification error: " . $e->getMessage());
         }
+        // Fallback to origin/destination if no createdStops
+        if (empty($routeOutletIds)) {
+            $routeOutletIds = array_unique([$bgOriginOutletId, $bgDestinationOutletId]);
+        } else {
+            $routeOutletIds = array_unique($routeOutletIds);
+        }
+
+        $outletIdsStr = implode(',', array_map(function($id) { return addslashes($id); }, $routeOutletIds));
+        $outlets = $bgSupabase->get('outlets', "id=in.($outletIdsStr)", 'id,outlet_name');
+
+        $outletMap = [];
+        foreach ($outlets as $outlet) {
+            $outletMap[$outlet['id']] = $outlet['outlet_name'];
+        }
+
+        $originOutletName = $outletMap[$bgOriginOutletId] ?? 'Unknown';
+        $destinationOutletName = $outletMap[$bgDestinationOutletId] ?? 'Unknown';
+
+        $tripData = [
+            'trip_id' => $bgTripId,
+            'origin_outlet_name' => $originOutletName,
+            'destination_outlet_name' => $destinationOutletName,
+            'departure_time' => $bgDepartureTime,
+            'parcels_count' => $bgParcelsCount,
+            'driver_id' => $bgDriverId,
+            'company_id' => $bgCompanyId,
+            'outlet_manager_id' => $bgUserId,
+        ];
+
+        // Notify driver (creates DB notification + WebPush) if a driver was assigned
+        if (!empty($bgDriverId)) {
+            $dispatcher->send([
+                'recipient_id' => $bgDriverId,
+                'company_id'   => $bgCompanyId,
+                'title'        => 'New Trip Assigned',
+                'message'      => "Trip from $originOutletName to $destinationOutletName — Departure: $bgDepartureTime",
+                // Use allowed DB notification type while preserving data.type for frontend/service-worker logic
+                'notification_type' => 'delivery_assigned',
+                'data'         => ['type' => 'trip_assignment', 'trip_id' => $bgTripId, 'url' => '/outlet-app/drivers/dashboard.php?trip_id=' . $bgTripId]
+            ]);
+        }
+
+        // Notify outlet staff (managers + staff/admins) for every stop on the route
+        foreach ($routeOutletIds as $oid) {
+            if (empty($oid)) continue;
+            // Use an allowed DB notification_type; keep the data.type for SW/UI routing
+            $dispatcher->sendToOutletStaff($oid, $bgCompanyId, [
+                'title' => 'Trip Scheduled',
+                'message' => "A trip impacting your outlet is scheduled: $originOutletName → $destinationOutletName",
+                'notification_type' => 'delivery_assigned',
+                'data' => ['type' => 'trip_assignment_outlet', 'trip_id' => $bgTripId, 'url' => '/outlet-app/pages/trips.php']
+            ]);
+        }
+
+        error_log("Notifications dispatched via NotificationDispatcher for outlets: " . json_encode($routeOutletIds));
+
+    } catch (Exception $e) {
+        error_log("NotificationDispatcher error: " . $e->getMessage());
     }
     
     if (ob_get_level() > 0) {

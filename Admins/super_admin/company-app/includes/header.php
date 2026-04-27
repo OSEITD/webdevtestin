@@ -63,10 +63,15 @@ $appCurrencySymbol = currency_symbol_for_code($appCurrency);
     <link rel="stylesheet" href="../assets/css/company-search-notifications.css">
     <!-- Form Validation Styles (shared with super_admin) -->
     <link rel="stylesheet" href="../../assets/css/form-validation.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
-    <link rel="shortcut icon" href="/favicon.png" type="image/png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/shared/apple-touch-icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/shared/apple-touch-icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/shared/apple-touch-icon-120x120.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/shared/favicon-16x16.png" />
+    <meta name="msapplication-TileColor" content="#2e0b3f" />
+    <meta name="msapplication-TileImage" content="/shared/mstile-150x150.png" />
     <!-- PWA Manifest - Pointing to company-app folder -->
-    <link rel="manifest" href="../manifest.json">
+    <link rel="manifest" href="../manifest.json?v=3">
     <meta name="theme-color" content="#2e0b3f">
 
     <!-- Supabase JS -->

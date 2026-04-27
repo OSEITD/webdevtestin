@@ -94,6 +94,46 @@ body.login-body {
   margin-bottom: 1.5rem;
 }
 
+/* Inline form alert (error / success) shown above form inputs */
+.form-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  box-shadow: 0 8px 20px rgba(29,5,27,0.06);
+  font-weight: 600;
+}
+
+.form-alert.error {
+  background: #fff1f2;
+  border: 1px solid #fecaca;
+  color: #9b1c1c;
+}
+
+.form-alert.success {
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #065f46;
+}
+
+.form-alert .form-alert-message {
+  flex: 1 1 auto;
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.form-alert .close-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 6px;
+  line-height: 1;
+}
+
 .form-box form {
   width: 100%;
   max-width: 300px;

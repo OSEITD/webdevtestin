@@ -38,13 +38,21 @@ $current_user = getCurrentUser();
         /* Page container */
         .content-container { max-width: 1400px; margin: 20px auto; padding: 0 12px; }
 
+        body .main-content {
+            padding-top: 65px !important;
+        }
+
+        .content-container {
+            padding-top: 0 !important;
+        }
+
         /* match parcel pool header look */
         .page-header {
             background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
             color: white;
             padding: 2rem;
             border-radius: 1rem;
-            margin: 20px auto;
+            margin: 0 auto 20px !important;
             box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
             max-width: 1400px;
             text-align: center;
@@ -96,7 +104,7 @@ $current_user = getCurrentUser();
         .stat-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
     </style> 
 </head>
-<body>
+<body class="sidebar-page">
     <?php include '../includes/navbar.php'; ?>
     <?php include '../includes/sidebar.php'; ?>
     <div class="menu-overlay" id="menuOverlay"></div>

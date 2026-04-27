@@ -43,7 +43,7 @@ $current_user = getCurrentUser();
             color: white;
             padding: 2rem;
             border-radius: 1rem;
-            margin: 20px auto;
+            margin: 0 auto 20px !important;
             box-shadow: 0 10px 30px rgba(46, 13, 42, 0.3);
             max-width: 1400px;
             text-align: center;
@@ -51,6 +51,20 @@ $current_user = getCurrentUser();
         .page-header h1,
         .page-header .subtitle {
             color: white;
+        }
+
+        .trips-page .main-content {
+            padding-top: 65px !important;
+        }
+
+        @media (max-width: 480px) {
+            .trips-page .main-content {
+                padding-top: 60px !important;
+            }
+        }
+
+        .trips-page .content-container {
+            margin-top: 0;
         }
 
         /* expand content area to match trip wizard page width */
@@ -206,6 +220,44 @@ $current_user = getCurrentUser();
             gap: 1rem;
             margin-bottom: 1rem;
             flex-wrap: wrap;
+        }
+
+        .summary-toggle-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 0.75rem;
+        }
+
+        .summary-toggle-btn {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #4338ca;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .summary-toggle-btn:hover {
+            background: #e0e7ff;
+        }
+
+        .summary-toggle-btn[aria-expanded="true"] {
+            background: #4338ca;
+            color: #ffffff;
+            border-color: #4338ca;
+        }
+
+        .summary-toggle-btn i {
+            transition: transform 0.2s ease;
+        }
+
+        .summary-toggle-btn[aria-expanded="true"] i {
+            transform: rotate(180deg);
         }
 
         .trips-scroll-container {
@@ -532,7 +584,7 @@ $current_user = getCurrentUser();
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen trips-page sidebar-page">
 
     <div class="mobile-dashboard">
         <?php include '../includes/navbar.php'; ?>
@@ -545,6 +597,12 @@ $current_user = getCurrentUser();
                 <p class="subtitle">View and manage all trips that start from or pass through your outlet and their parcel contents.</p>
             </div>
             <div class="content-container">
+                <div class="summary-toggle-wrapper">
+                    <button type="button" id="summaryToggleBtn" class="summary-toggle-btn" aria-expanded="false">
+                        <i class="fas fa-chevron-down"></i>
+                        <span>Show trip summary</span>
+                    </button>
+                </div>
                 <div class="trips-summary" id="tripsSummary" style="display: none;">
                     <div class="summary-card">
                         <span class="summary-card-label">Total Trips</span>
@@ -744,6 +802,38 @@ $current_user = getCurrentUser();
         let filteredTrips = [];
         let selectedParcels = new Set();
         let currentTripId = null;
+        let summaryVisible = false;
+
+        document.getElementById('summaryToggleBtn').addEventListener('click', function() {
+            const summary = document.getElementById('tripsSummary');
+            const icon = this.querySelector('i');
+            const text = this.querySelector('span');
+            summaryVisible = !summaryVisible;
+
+            if (summaryVisible) {
+                if (parseInt(document.getElementById('totalTrips').textContent, 10) > 0) {
+                    summary.style.display = 'flex';
+                }
+                this.setAttribute('aria-expanded', 'true');
+                icon.className = 'fas fa-chevron-up';
+                text.textContent = 'Hide trip summary';
+            } else {
+                summary.style.display = 'none';
+                this.setAttribute('aria-expanded', 'false');
+                icon.className = 'fas fa-chevron-down';
+                text.textContent = 'Show trip summary';
+            }
+        });
+
+        function renderSummary() {
+            const summary = document.getElementById('tripsSummary');
+            const total = parseInt(document.getElementById('totalTrips').textContent, 10);
+            if (summaryVisible && total > 0) {
+                summary.style.display = 'flex';
+            } else {
+                summary.style.display = 'none';
+            }
+        }
 
         document.getElementById('filterToggleBtn').addEventListener('click', function() {
             const content = document.getElementById('filtersContent');
@@ -934,7 +1024,7 @@ $current_user = getCurrentUser();
             document.getElementById('inTransitTrips').textContent = inTransit;
             document.getElementById('completedTrips').textContent = completed;
             document.getElementById('pendingVerifTrips').textContent = pendingVerif;
-            document.getElementById('tripsSummary').style.display = total > 0 ? 'flex' : 'none';
+            renderSummary();
         }
 
         function applyFilters() {
@@ -1493,7 +1583,7 @@ $current_user = getCurrentUser();
                         </div>
 
                         <div style="display: flex; gap: 0.5rem; align-items: center; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
-                            <button onclick="viewParcelDetails('${parcel.id}')"
+                            <button onclick="viewParcelDetails('${parcel.id}', '${parcel.track_number}')"
                                style="flex: 1; text-align: center; background: #3b82f6; color: white; border: none; font-size: 0.875rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 6px; transition: background 0.2s; cursor: pointer;"
                                onmouseover="this.style.background='#2563eb'"
                                onmouseout="this.style.background='#3b82f6'">
@@ -1789,9 +1879,192 @@ $current_user = getCurrentUser();
             }
         });
 
-        function viewParcelDetails(parcelId) {
-            // For now, show a simple alert. In a full implementation, you'd create a modal similar to parcelpool.php
-            alert('Parcel details functionality would be implemented here. Parcel ID: ' + parcelId);
+        function viewParcelDetails(parcelId, trackNumber) {
+            ensureParcelDetailsModalExists();
+
+            const modal = document.getElementById('parcelDetailsModal');
+            const content = document.getElementById('parcelDetailsContent');
+            const footer = document.getElementById('parcelDetailsFooter');
+
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+
+            content.innerHTML = `
+                <div style="text-align:center; padding:2rem;">
+                    <i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#2563eb;"></i>
+                    <p style="margin-top:0.75rem; font-weight:600;">Loading parcel details...</p>
+                </div>
+            `;
+            footer.style.display = 'none';
+
+            (async () => {
+                try {
+                    let url = `../api/parcels/fetch_parcel_details.php?parcel_id=${encodeURIComponent(parcelId)}&v=${Date.now()}`;
+                    let resp = await fetch(url, { credentials: 'same-origin' });
+
+                    if (!resp.ok && trackNumber) {
+                        url = `../api/parcels/fetch_parcel_details.php?track_number=${encodeURIComponent(trackNumber)}&v=${Date.now()}`;
+                        resp = await fetch(url, { credentials: 'same-origin' });
+                    }
+
+                    if (!resp.ok) throw new Error('Parcel not found or server error');
+
+                    const data = await resp.json();
+                    if (data.error) throw new Error(data.error || 'Unknown error');
+
+                    const parcel = data.parcel ?? data;
+                    renderParcelDetailsInModal(parcel);
+                    footer.style.display = 'flex';
+                } catch (err) {
+                    console.error('Error loading parcel details:', err);
+                    content.innerHTML = `
+                        <div style="text-align:center; padding:2rem; color:#ef4444;">
+                            <i class="fas fa-exclamation-triangle" style="font-size:2rem;"></i>
+                            <p style="margin-top:0.75rem; font-weight:600;">Failed to load parcel</p>
+                            <p style="margin-top:0.25rem;">${err.message}</p>
+                        </div>
+                    `;
+                }
+            })();
+        }
+
+        function ensureParcelDetailsModalExists() {
+            if (document.getElementById('parcelDetailsModal')) return;
+
+            const el = document.createElement('div');
+            el.innerHTML = `
+                <div class="modal-overlay" id="parcelDetailsModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;z-index:4000;">
+                    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="parcelDetailsTitle" style="max-width:820px; width:95%; max-height:90vh; overflow:auto; border-radius:10px; background:white; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+                        <div class="modal-header">
+                            <h3 id="parcelDetailsTitle"><i class="fas fa-box"></i> Parcel Details</h3>
+                            <button class="modal-close-btn" id="closeParcelDetailsBtn" aria-label="Close parcel details">&times;</button>
+                        </div>
+                        <div class="modal-body" id="parcelDetailsContent" style="max-height:60vh; overflow:auto;">
+                            <div style="text-align:center; padding:2rem;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#2563eb;"></i><p style="margin-top:0.75rem; font-weight:600;">Preparing...</p></div>
+                        </div>
+                        <div class="modal-footer" id="parcelDetailsFooter" style="display:none; justify-content:space-between;">
+                            <div></div>
+                            <div style="display:flex; gap:0.5rem;">
+                                <button class="btn btn-secondary" onclick="closeParcelDetailsModal()">Close</button>
+                                <button class="btn btn-primary" id="parcelPrintBtn">Print</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(el);
+
+            const modal = document.getElementById('parcelDetailsModal');
+            const closeBtn = document.getElementById('closeParcelDetailsBtn');
+
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) closeParcelDetailsModal();
+            });
+
+            closeBtn.addEventListener('click', closeParcelDetailsModal);
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    const m = document.getElementById('parcelDetailsModal');
+                    if (m && m.style.display === 'block') closeParcelDetailsModal();
+                }
+            });
+        }
+
+        function closeParcelDetailsModal() {
+            const modal = document.getElementById('parcelDetailsModal');
+            if (!modal) return;
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        function renderParcelDetailsInModal(parcel) {
+            const content = document.getElementById('parcelDetailsContent');
+            const printBtn = document.getElementById('parcelPrintBtn');
+
+            if (!parcel || !content) return;
+
+            const statusBadge = parcel.status ? `<span style="display:inline-block;padding:0.25rem 0.5rem;border-radius:6px;background:#e6f2ff;color:#1e40af;font-weight:600">${escapeHtml(parcel.status)}</span>` : '';
+
+            content.innerHTML = `
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:260px;">
+                        <h4 style="margin:0 0 0.5rem 0;">Tracking</h4>
+                        <div style="font-weight:700; font-size:1.05rem;">${escapeHtml(parcel.track_number ?? parcel.track_number ?? parcel.track_number ?? parcel.id)}</div>
+                        <div style="margin-top:0.5rem;">${statusBadge}</div>
+
+                        <h4 style="margin-top:1rem;">Sender</h4>
+                        <div>${escapeHtml(parcel.sender_name ?? parcel.sender)}</div>
+                        <div style="color:#6b7280;">${escapeHtml(parcel.sender_phone ?? parcel.sender_contact ?? '')}</div>
+                        <div style="margin-top:0.25rem; color:#374151;">${escapeHtml(parcel.sender_address ?? parcel.sender_address_line ?? '')}</div>
+                    </div>
+
+                    <div style="flex:1; min-width:260px;">
+                        <h4 style="margin:0 0 0.5rem 0;">Receiver</h4>
+                        <div style="font-weight:700;">${escapeHtml(parcel.receiver_name ?? parcel.receiver)}</div>
+                        <div style="color:#6b7280;">${escapeHtml(parcel.receiver_phone ?? parcel.receiver_contact ?? '')}</div>
+                        <div style="margin-top:0.25rem; color:#374151;">${escapeHtml(parcel.receiver_address ?? parcel.receiver_address_line ?? '')}</div>
+
+                        <h4 style="margin-top:1rem;">Details</h4>
+                        <div>Weight: <strong>${parcel.weight ?? parcel.package_weight ?? 'N/A'}</strong></div>
+                        <div>Value: <strong>ZMW ${parcel.value ? parseFloat(parcel.value).toFixed(2) : (parcel.total_amount ? parseFloat(parcel.total_amount).toFixed(2) : '0.00')}</strong></div>
+                        <div>Delivery Fee: <strong>ZMW ${parcel.delivery_fee ? parseFloat(parcel.delivery_fee).toFixed(2) : '0.00'}</strong></div>
+                        <div>COD Amount: <strong>ZMW ${parcel.cod_amount ? parseFloat(parcel.cod_amount).toFixed(2) : '0.00'}</strong></div>
+                    </div>
+
+                    <div style="flex-basis:100%; margin-top:0.75rem;">
+                        <h4 style="margin:0 0 0.5rem 0;">Route / History</h4>
+                        <div style="color:#374151;">${escapeHtml(parcel.origin_outlet_name ?? parcel.origin ?? '')} → ${escapeHtml(parcel.destination_outlet_name ?? parcel.destination ?? '')}</div>
+                        ${parcel.history ? `<pre style="background:#f3f4f6;padding:0.75rem;border-radius:6px;overflow:auto;max-height:160px;">${escapeHtml(JSON.stringify(parcel.history, null, 2))}</pre>` : ''}
+                    </div>
+                </div>
+            `;
+
+            printBtn.onclick = function () {
+                printParcelDetailsModal(parcel);
+            };
+        }
+
+        function printParcelDetailsModal(parcel) {
+            const w = window.open('', '_blank', 'toolbar=0,location=0,menubar=0');
+            if (!w) return alert('Unable to open print window. Please enable popups.');
+            const html = `
+                <html>
+                <head>
+                    <title>Parcel ${escapeHtml(parcel.track_number ?? parcel.id)}</title>
+                    <style>body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#111} h1{font-size:18px} .muted{color:#6b7280}</style>
+                </head>
+                <body>
+                    <h1>Parcel Details</h1>
+                    <p><strong>Tracking:</strong> ${escapeHtml(parcel.track_number ?? parcel.id)}</p>
+                    <p><strong>Status:</strong> ${escapeHtml(parcel.status ?? '')}</p>
+                    <h3>Sender</h3>
+                    <p>${escapeHtml(parcel.sender_name ?? parcel.sender ?? '')}<br>${escapeHtml(parcel.sender_address ?? '')}</p>
+                    <h3>Receiver</h3>
+                    <p>${escapeHtml(parcel.receiver_name ?? parcel.receiver ?? '')}<br>${escapeHtml(parcel.receiver_address ?? '')}</p>
+                    <h3>Details</h3>
+                    <p>Weight: ${parcel.weight ?? 'N/A'}<br>Value: ZMW ${parcel.value ? parseFloat(parcel.value).toFixed(2) : '0.00'}</p>
+                </body>
+                </html>
+            `;
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            setTimeout(() => { w.print(); }, 250);
+        }
+
+        function escapeHtml(str) {
+            if (str === undefined || str === null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         /**

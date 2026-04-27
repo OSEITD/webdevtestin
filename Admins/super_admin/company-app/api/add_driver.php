@@ -75,7 +75,9 @@ try {
     
     $checkResponse = curl_exec($ch);
     $existingDrivers = json_decode($checkResponse, true);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
     
     if (!empty($existingDrivers)) {
         http_response_code(409);
@@ -100,7 +102,9 @@ try {
     
     $phoneCheckResponse = curl_exec($ch);
     $existingPhoneDrivers = json_decode($phoneCheckResponse, true);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
     
     if (!empty($existingPhoneDrivers)) {
         http_response_code(409);
@@ -265,7 +269,9 @@ try {
     
     $profileResponse = curl_exec($ch);
     $profileHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    if (PHP_VERSION_ID < 80000) {
+        curl_close($ch);
+    }
     error_log("Driver Profile Update Response Code: " . $profileHttpCode);
 
     // Return success response

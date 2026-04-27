@@ -24,7 +24,7 @@ $company_id = $_SESSION['company_id'];
     <link rel="stylesheet" href="../css/notifications-page.css">
     <link rel="stylesheet" href="../assets/css/search-notifications.css">
 </head>
-<body>
+<body class="sidebar-page">
     <div class="mobile-dashboard">
         <?php include '../includes/navbar.php'; ?>
         <?php include '../includes/sidebar.php'; ?>

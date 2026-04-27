@@ -503,7 +503,9 @@ class SupabaseClient {
         
         $response = curl_exec($ch);
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            curl_close($ch);
+        }
         
         if ($statusCode >= 200 && $statusCode < 300) {
             if (preg_match('/Content-Range:\s*(?:\w+\s+)?\d+-\d+\/(\d+)/i', $response, $matches)) {
@@ -607,12 +609,12 @@ class SupabaseClient {
      * Helper method to make HTTP requests
      */
     private function makeRequest($method, $url, $data = null, $headers = null, $retry = true): mixed {
-        error_log("=== Starting HTTP Request ===");
-        error_log("Method: {$method}");
-        error_log("URL: {$url}");
-        if ($data) {
-            error_log("Request data: " . $data);
-        }
+        // error_log("=== Starting HTTP Request ===");
+        // error_log("Method: {$method}");
+        // error_log("URL: {$url}");
+        // if ($data) {
+        //     error_log("Request data: " . $data);
+        // }
         
         $ch = curl_init($url);
         
@@ -633,7 +635,7 @@ class SupabaseClient {
         $finalHeaders = $headers !== null ? $headers : $this->defaultHeaders;
         curl_setopt($ch, CURLOPT_HTTPHEADER, $finalHeaders);
         
-        error_log("Request headers: " . print_r($finalHeaders, true));
+        // error_log("Request headers: " . print_r($finalHeaders, true));
 
         $response = curl_exec($ch);
         $error = curl_error($ch);
@@ -648,7 +650,9 @@ class SupabaseClient {
             error_log("=== CURL Exec Failed ===\n" . $verboseLog);
             fclose($verbose);
             $errMsg = $error ?: 'Unknown cURL error';
-            curl_close($ch);
+            if (PHP_VERSION_ID < 80000) {
+                curl_close($ch);
+            }
             throw new Exception("cURL exec failed: {$errMsg}");
         }
 
@@ -656,18 +660,20 @@ class SupabaseClient {
         $responseHeaders = substr($response, 0, $headerSize);
         $responseBody = substr($response, $headerSize);
 
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            curl_close($ch);
+        }
 
-        error_log("=== Response Information ===");
-        error_log("Status Code: " . $statusCode);
-        error_log("Headers: " . $responseHeaders);
-        error_log("Body: " . $responseBody);
+        // error_log("=== Response Information ===");
+        // error_log("Status Code: " . $statusCode);
+        // error_log("Headers: " . $responseHeaders);
+        // error_log("Body: " . $responseBody);
 
         // Get CURL debug information
-        rewind($verbose);
-        $verboseLog = stream_get_contents($verbose);
-        error_log("=== CURL Debug Information ===");
-        error_log($verboseLog);
+        // rewind($verbose);
+        // $verboseLog = stream_get_contents($verbose);
+        // error_log("=== CURL Debug Information ===");
+        // error_log($verboseLog);
         fclose($verbose);
 
         if ($error) {
@@ -699,7 +705,9 @@ class SupabaseClient {
                             }
                         }
                         // Retry once with refreshed token
-                        curl_close($ch);
+                        if (PHP_VERSION_ID < 80000) {
+                            curl_close($ch);
+                        }
                         return $this->makeRequest($method, $url, $data, $finalHeaders, false);
                     }
                 } catch (Exception $refreshEx) {

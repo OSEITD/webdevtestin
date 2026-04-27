@@ -84,10 +84,20 @@ $current_user = getCurrentUser();
             color: #10b981;
             display: block;
         }
+
+        body.sidebar-page .main-content {
+            padding-top: 115px !important;
+        }
+
+        @media (max-width: 768px) {
+            body.sidebar-page .main-content {
+                padding-top: 140px !important;
+            }
+        }
     </style>
 
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen sidebar-page">
 
     <div class="mobile-dashboard">
 
@@ -96,7 +106,7 @@ $current_user = getCurrentUser();
 
         <div class="menu-overlay" id="menuOverlay"></div>
 
-        <main class="main-content">
+        <main class="main-content" style="padding-top: 95px !important;">
             <div class="settings-content">
                 <div class="settings-header">
                     <h2><i class="fas fa-cog"></i> Outlet Settings</h2>

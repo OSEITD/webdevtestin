@@ -1,28 +1,37 @@
-const CACHE_NAME = 'wdparcel-customer-cache-v4';
+const CACHE_NAME = 'wdparcel-customer-cache-v7';
 const urlsToCache = [
-  './',
-  './secure_tracking.html',
-  './gps_tracking.html',
-  './assets/css/secure_tracking.css',
-  './assets/css/track_details.css',
-  './assets/css/styles.css',
-  './assets/img/logo.png',
-  './assets/img/app-icon-192.png',
-  './assets/img/app-icon-512.png',
-  './manifest.json',
+  '/',
+  '/secure_tracking.html',
+  '/gps_tracking.html',
+  '/assets/css/secure_tracking.css',
+  '/assets/css/track_details.css',
+  '/assets/css/styles.css',
+  '/assets/img/logo.png',
+  '/shared/android-chrome-192.png',
+  '/shared/android-chrome-512.png',
+  '/shared/nex-er.jpeg',
+  '/manifest.json',
+  '/customer-app/manifest.json?v=3'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache =>
-      Promise.all(
-        urlsToCache.map((url) =>
-          cache.add(url).catch((error) => {
-            console.warn('[Service Worker] Skipping cache for', url, error);
-          })
-        )
-      )
-    )
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        urlsToCache.map(async (url) => {
+          try {
+            const response = await fetch(url, { credentials: 'same-origin', redirect: 'follow' });
+            if (!response || !response.ok) {
+              console.warn('[Service Worker] Skipping cache for', url, 'status', response ? response.status : 'no-response');
+              return;
+            }
+            await cache.put(url, response.clone());
+          } catch (error) {
+            console.warn('[Service Worker] Skipping cache for', url);
+          }
+        })
+      );
+    })
   );
   self.skipWaiting();
 });

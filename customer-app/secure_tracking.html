@@ -3,15 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WD Parcel Services - Secure Tracking</title>
+    <title>Nex-er Secure Tracking</title>
     
     <meta name="description" content="Secure parcel tracking with identity verification - Track your packages safely with NRC and phone verification">
     <meta name="keywords" content="secure parcel tracking, NRC verification, Zambian parcel tracking, logistics">
-    <meta name="author" content="WD Parcel Services">
-    <meta name="theme-color" content="#1e40af">
-    <link rel="icon" href="/favicon.png" type="image/png">
-    <link rel="shortcut icon" href="/favicon.png" type="image/png">
-    <link rel="manifest" href="manifest.json">
+    <meta name="author" content="Nex-er">
+    <meta name="theme-color" content="#2e0b3f">
+    <meta name="apple-mobile-web-app-title" content="Nex-er" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" sizes="180x180" href="/shared/apple-touch-icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/shared/apple-touch-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/shared/apple-touch-icon-120x120.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/shared/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/shared/favicon-16x16.png">
+    <link rel="manifest" href="./manifest.json?v=3">
+    <meta name="msapplication-TileColor" content="#2e0b3f">
+    <meta name="msapplication-TileImage" content="/shared/mstile-150x150.png">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -136,6 +145,7 @@
                 </svg>
             </button>
         </div>
+        <div class="pwa-install-instructions" style="display: none;"></div>
     </div>
 
     <script>
@@ -371,12 +381,16 @@
                 || window.navigator.standalone
                 || document.referrer.includes('android-app://');
 
+            console.log('[PWA] init', { isStandalone, dismissedUntil });
+
             if (dismissedUntil && Date.now() > dismissedUntil) {
                 localStorage.removeItem('pwa-install-dismissed');
             }
 
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('service-worker.js').catch(() => {});
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('[SW] registered', reg.scope))
+                    .catch(err => console.warn('[SW] registration failed', err));
             }
 
             if (isStandalone) {
@@ -384,13 +398,21 @@
             }
 
             window.addEventListener('beforeinstallprompt', (e) => {
+                console.log('[PWA] beforeinstallprompt fired', e);
                 e.preventDefault();
-                deferredPrompt = e;
+                deferredPrompt = e; // stored but not used — we provide custom instructions instead
 
                 if (!localStorage.getItem('pwa-install-dismissed') && installBanner) {
                     setTimeout(() => {
                         installBanner.style.display = 'block';
+                        const content = installBanner.querySelector('.pwa-banner-content');
+                        if (content) content.style.display = 'flex';
+                        const instr = installBanner.querySelector('.pwa-install-instructions');
+                        if (instr) instr.style.display = 'none';
+                        console.log('[PWA] install banner shown');
                     }, 1500);
+                } else {
+                    console.log('[PWA] install banner suppressed (dismissed or missing)');
                 }
             });
 
@@ -399,22 +421,93 @@
                     installBanner.classList.add('hiding');
                     setTimeout(() => {
                         installBanner.style.display = 'none';
+                        const content = installBanner.querySelector('.pwa-banner-content');
+                        if (content) content.style.display = 'flex';
+                        const instr = installBanner.querySelector('.pwa-install-instructions');
+                        if (instr) instr.style.display = 'none';
                         installBanner.classList.remove('hiding');
                     }, 300);
                 }
             }
 
+            function showInstructions() {
+                if (!installBanner) return;
+                const instr = installBanner.querySelector('.pwa-install-instructions');
+                const content = installBanner.querySelector('.pwa-banner-content');
+                if (content) content.style.display = 'none';
+                if (!instr) return;
+
+                const ua = navigator.userAgent || '';
+                const isIos = /iPhone|iPad|iPod/.test(ua) && !window.MSStream;
+                const isAndroid = /Android/.test(ua);
+                let stepsHtml = '';
+                if (isIos) {
+                    stepsHtml = `<ol class="pwa-instruction-steps"><li>Tap the Share button (<span class="ios-share">⤴</span>).</li><li>Select <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong> in the top-right.</li></ol>`;
+                } else if (isAndroid) {
+                    stepsHtml = `<ol class="pwa-instruction-steps"><li>Open the browser menu (⋮).</li><li>Tap <strong>Add to Home screen</strong> or <strong>Install</strong>.</li></ol>`;
+                } else {
+                    stepsHtml = `<ol class="pwa-instruction-steps"><li>Open your browser menu and choose <strong>Add to Home screen</strong>.</li></ol>`;
+                }
+
+                instr.innerHTML = `
+                    <div class="pwa-instructions-heading">Add Nex-er to your home screen</div>
+                    <div class="pwa-instructions-body">
+                        ${stepsHtml}
+                        <div class="pwa-instructions-actions" style="margin-top:12px; display:flex; gap:8px;">
+                            <button id="pwa-instructions-done" class="pwa-install-btn-primary">Done</button>
+                            <button id="pwa-instructions-copy" class="pwa-install-btn-dismiss">Copy Link</button>
+                        </div>
+                    </div>
+                `;
+                instr.style.display = 'block';
+
+                const doneBtn = document.getElementById('pwa-instructions-done');
+                if (doneBtn) {
+                    doneBtn.addEventListener('click', () => {
+                        hideBanner();
+                        const hideUntil = Date.now() + (7 * 24 * 60 * 60 * 1000);
+                        localStorage.setItem('pwa-install-dismissed', String(hideUntil));
+                    });
+                }
+
+                const copyBtn = document.getElementById('pwa-instructions-copy');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', async () => {
+                        try {
+                            await navigator.clipboard.writeText(location.href);
+                            copyBtn.textContent = 'Link Copied';
+                            setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 2000);
+                        } catch (err) {
+                            console.warn('Clipboard write failed', err);
+                        }
+                    });
+                }
+            }
+
             if (installBtn) {
                 installBtn.addEventListener('click', async () => {
-                    if (!deferredPrompt) {
-                        return;
+                    // If the browser provided a beforeinstallprompt event, trigger the native prompt.
+                    if (deferredPrompt) {
+                        try {
+                            deferredPrompt.prompt();
+                            const choice = await deferredPrompt.userChoice;
+                            console.log('[PWA] userChoice', choice);
+                            // If accepted, hide banner and clear dismissed flag. If dismissed, keep banner visible.
+                            if (choice.outcome === 'accepted') {
+                                hideBanner();
+                                localStorage.removeItem('pwa-install-dismissed');
+                            }
+                            // Clear stored prompt — it can only be used once.
+                            deferredPrompt = null;
+                        } catch (err) {
+                            console.warn('[PWA] prompt failed', err);
+                            // Fallback to showing instructions if prompt fails
+                            showInstructions();
+                        }
+                    } else {
+                        // No deferred prompt available (iOS or unsupported) — show in-page instructions
+                        showInstructions();
                     }
-
-                    hideBanner();
-                    deferredPrompt.prompt();
-
-                    await deferredPrompt.userChoice;
-                    deferredPrompt = null;
                 });
             }
 
@@ -427,6 +520,7 @@
             }
 
             window.addEventListener('appinstalled', () => {
+                console.log('[PWA] appinstalled event');
                 hideBanner();
                 localStorage.removeItem('pwa-install-dismissed');
             });

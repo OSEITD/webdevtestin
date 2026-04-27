@@ -160,21 +160,21 @@ body::before {
 .tracking-header {
     background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
     color: white;
-    /* extra vertical padding to give room for wrapped text */
-    padding: 48px 36px;
-    min-height: 160px;
+    /* reduced vertical padding for a tighter header */
+    padding: 20px 20px;
+    min-height: unset;
     text-align: center;
     overflow: hidden;
-    /* pill: constrain to same width as tracking-content, fully rounded */
+    /* pill: constrain to same width as tracking-content */
     max-width: 800px;
-    width: calc(100% - 48px);
-    margin: 20px auto 0;
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(46,13,42,0.35);
+    width: calc(100% - 40px);
+    margin: 12px auto 0;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(46,13,42,0.28);
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .tracking-header::before {
@@ -230,9 +230,9 @@ body::before {
 /* ── PWA install banner ────────────────────────────── */
 .pwa-install-banner {
     position: fixed;
-    bottom: calc(16px + env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%);
+    top: calc(16px + env(safe-area-inset-top));
     background: linear-gradient(135deg, #2E0D2A 0%, #4A1C40 100%);
     color: white;
     padding: 16px 20px;
@@ -240,7 +240,49 @@ body::before {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     z-index: 9999;
     width: min(420px, calc(100% - 24px));
-    animation: slideUp 0.3s ease-out;
+    animation: slideDownIn 0.3s ease-out;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+/* In-page A2HS instructions panel (compact card inside the banner) */
+.pwa-install-instructions {
+    display: none;
+    background: #ffffff;
+    color: #0f172a;
+    padding: 12px 14px;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border: 1px solid rgba(15,23,42,0.04);
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+}
+.pwa-instructions-heading {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+.pwa-instruction-steps {
+    padding-left: 18px;
+    margin: 0;
+}
+.pwa-instruction-steps li {
+    margin: 6px 0;
+    line-height: 1.3;
+    font-size: 14px;
+}
+.pwa-instructions-actions { display:flex; gap:8px; margin-top:10px; justify-content:flex-end; }
+
+@keyframes slideDownIn {
+    from {
+        transform: translateX(-50%) translateY(-100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideUp {
@@ -338,9 +380,13 @@ body::before {
 
 @media (max-width: 480px) {
     .pwa-install-banner {
+        top: auto !important;
         bottom: calc(12px + env(safe-area-inset-bottom));
-        padding: 14px 16px 16px;
-        width: calc(100% - 20px);
+        padding: 12px 16px;
+        width: calc(100% - 24px);
+        max-height: 48vh;
+        overflow: auto;
+        border-radius: 12px;
     }
 
     .pwa-banner-content {
@@ -370,7 +416,8 @@ body::before {
     .pwa-install-btn-primary {
         padding: 8px 16px;
         font-size: 13px;
-        width: 100%;
+        width: auto;
+        min-width: 120px;
         order: 2;
     }
 
@@ -847,32 +894,33 @@ body::before {
     }
     
     .webdev-tracking-logo {
-        width: 70px;
-        height: 48px;
+        width: 60px;
+        height: 42px;
     }
     
     .tracking-header {
-        padding: 20px 22px;
-        width: calc(100% - 32px);
-        border-radius: 16px;
+        /* more compact header on small screens */
+        padding: 12px 14px;
+        width: calc(100% - 28px);
+        border-radius: 14px;
     }
 
     .tracking-content {
         width: calc(100% - 32px);
-        padding: 24px 20px 36px;
+        padding: 20px 16px 30px;
         border-radius: 16px;
     }
     
     .tracking-header h1 {
-        font-size: 26px;
+        font-size: 22px;
     }
     
     .tracking-header h1 i {
-        font-size: 28px;
+        font-size: 24px;
     }
     
     .tracking-header p {
-        font-size: 15px;
+        font-size: 13px;
     }
     
     .form-control {
@@ -905,15 +953,34 @@ body::before {
     }
     
     .tracking-content {
-        padding: 24px 20px;
+        padding: 16px 12px;
     }
-    
+
+    /* compact header for very small screens */
+    .tracking-header {
+        padding: 8px 10px;
+        width: calc(100% - 20px);
+        border-radius: 12px;
+        gap: 4px;
+    }
+
+    .webdev-tracking-logo {
+        width: 54px;
+        height: 36px;
+    }
+
     .tracking-header h1 {
-        font-size: 24px;
+        font-size: 18px;
+        margin-bottom: 4px;
     }
-    
+
+    .tracking-header h1 i {
+        font-size: 20px;
+    }
+
     .tracking-header p {
-        font-size: 14px;
+        font-size: 12px;
+        margin: 0;
     }
     
     .form-group label {

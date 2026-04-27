@@ -1038,6 +1038,46 @@ if (window.notificationSystemInitialized) {
             window.notificationSystem.destroy();
         }
     });
-}
 
+    // Listen for messages from the Service Worker to refresh notifications in real-time
+    if (navigator.serviceWorker && typeof navigator.serviceWorker.addEventListener === 'function') {
+        navigator.serviceWorker.addEventListener('message', (evt) => {
+            try {
+                const msg = evt.data;
+                if (msg && msg.type === 'notification-received') {
+                    console.log('🔔 SW message received:', msg);
+                    if (window.notificationSystem) {
+                        // Refresh notifications (reset) to update unread count and list quickly
+                        window.notificationSystem.loadNotifications(true);
+                        // Show a subtle toast to inform user
+                        if (msg.notification && msg.notification.title) {
+                            window.notificationSystem.showToast(msg.notification.title, 'info');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('🔔 Error handling SW message', e);
+            }
+        });
+    } else {
+        // Fallback: listen on window message
+        window.addEventListener('message', (evt) => {
+            try {
+                const msg = evt.data;
+                if (msg && msg.type === 'notification-received') {
+                    console.log('🔔 window message received:', msg);
+                    if (window.notificationSystem) {
+                        window.notificationSystem.loadNotifications(true);
+                        if (msg.notification && msg.notification.title) {
+                            window.notificationSystem.showToast(msg.notification.title, 'info');
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('🔔 Error handling window message', e);
+            }
+        });
+    }
+
+}
 } 

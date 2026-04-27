@@ -125,11 +125,37 @@ body.bg-gray-100 .mobile-dashboard .main-content {
     min-height: 100vh;
 }
 
+@media (max-width: 992px) {
+    body.bg-gray-100 .mobile-dashboard .main-content {
+        padding: 70px var(--space-4) var(--space-6) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body.bg-gray-100 .mobile-dashboard .main-content {
+        padding: 65px var(--space-4) 1rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body.bg-gray-100 .mobile-dashboard .main-content {
+        padding: 60px var(--space-3) 0.75rem !important;
+    }
+}
+
 .content-container {
     max-width: 1440px !important;
     margin: 0 auto !important;
-    padding: var(--space-6) !important;
+    padding: 24px var(--space-6) var(--space-6) !important;
     width: 100% !important;
+}
+
+body.bg-gray-100 .mobile-dashboard .main-content .content-container {
+    padding-top: 0 !important;
+}
+
+.content-container {
+    padding-top: 0 !important;
 }
 
 /* ---------- Page Header ---------- */

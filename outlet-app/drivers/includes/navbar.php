@@ -24,6 +24,20 @@ $notificationCount = 0;
             <div class="topbar-bell" onclick="showNotifications()">
                 <i class="fas fa-bell"></i>
                 <span class="topbar-badge" id="notificationBadge"><?php echo $notificationCount; ?></span>
+                <div class="notification-panel" id="driverNotificationPanel">
+                    <div class="notification-header">
+                        <h3>Notifications</h3>
+                    </div>
+                    <div class="notification-list" id="driverNotificationList">
+                        <div class="notification-item notification-empty">
+                            <div class="notification-icon"><i class="fas fa-bell-slash"></i></div>
+                            <div class="notification-content">
+                                <p class="notification-title">No notifications</p>
+                                <p class="notification-text">You don't have any notifications right now.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <button class="topbar-menu" onclick="toggleDriverMenu()">
                 <i class="fas fa-bars"></i>
@@ -80,7 +94,7 @@ $notificationCount = 0;
 <div class="menu-overlay" id="menuOverlay" onclick="closeDriverMenu()"></div>
 
 <!-- Include External Navbar JavaScript -->
-<script src="<?php echo (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) ? '../assets/js/navbar.js' : 'assets/js/navbar.js'; ?>"></script>
+<script src="<?php echo (strpos($_SERVER['PHP_SELF'], '/pages/') !== false) ? '../assets/js/navbar.js' : 'assets/js/navbar.js'; ?>?v=<?php echo filemtime(__DIR__ . '/../assets/js/navbar.js'); ?>"></script>
 <script>
 
 document.addEventListener('DOMContentLoaded', function() {

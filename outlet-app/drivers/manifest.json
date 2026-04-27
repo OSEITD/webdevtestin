@@ -1,25 +1,25 @@
 {
-  "name": "Driver App - Professional Courier",
-  "short_name": "Driver App",
-  "description": "Professional courier and delivery driver application with real-time tracking",
-  "start_url": "/WDParcelSendReceiverPWA/outlet-app/drivers/dashboard.php",
+  "name": "Nex-er",
+  "short_name": "Nex-er",
+  "description": "Nex-er driver app for delivery tracking and parcel scanning.",
+  "start_url": "./dashboard.php",
   "display": "standalone",
   "background_color": "#2e0d2a",
   "theme_color": "#2e0d2a",
   "orientation": "portrait",
-  "scope": "/WDParcelSendReceiverPWA/outlet-app/drivers/",
+  "scope": "./",
   "icons": [
     {
-      "src": "img/logo.png",
+      "src": "../nex-er-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "img/logo.png",
+      "src": "../nex-er-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
   "categories": ["productivity", "business", "logistics"],

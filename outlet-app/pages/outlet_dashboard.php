@@ -879,10 +879,11 @@ header('Content-Type: text/html; charset=UTF-8');
             margin: 5% auto;
             padding: 0;
             border-radius: 12px;
-            width: 90%;
-            max-width: 900px;
+            width: min(95%, 900px);
             max-height: 80vh;
             overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             animation: slideInDown 0.3s ease;
         }
@@ -895,12 +896,16 @@ header('Content-Type: text/html; charset=UTF-8');
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1rem;
         }
 
         .dashboard-modal-header h3 {
             margin: 0;
             font-size: 1.4rem;
             font-weight: 600;
+            flex: 1 1 auto;
+            min-width: 0;
+            word-break: break-word;
         }
 
         .dashboard-modal-close {
@@ -916,6 +921,7 @@ header('Content-Type: text/html; charset=UTF-8');
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
+            flex: 0 0 auto;
         }
 
         .dashboard-modal-close:hover {
@@ -924,6 +930,85 @@ header('Content-Type: text/html; charset=UTF-8');
 
         .dashboard-modal-body {
             padding: 2rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            min-width: 0;
+        }
+
+        .dashboard-modal-body table,
+        .dashboard-modal-body .dashboard-table {
+            width: max-content;
+            min-width: 100%;
+            box-sizing: border-box;
+            border-collapse: collapse;
+        }
+
+        .dashboard-modal-body table th,
+        .dashboard-modal-body table td {
+            white-space: nowrap;
+            word-break: normal;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-modal-content {
+                width: 95%;
+                max-width: 95%;
+                margin: 4% auto;
+                max-height: 90vh;
+            }
+
+            .dashboard-modal-header {
+                padding: 1rem 1rem;
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .dashboard-modal-header h3 {
+                font-size: 1.2rem;
+            }
+
+            .dashboard-modal-close {
+                width: 36px;
+                height: 36px;
+                font-size: 1.25rem;
+            }
+
+            .dashboard-modal-body {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .dashboard-modal-body table,
+            .dashboard-modal-body .dashboard-table {
+                min-width: 100%;
+            }
+
+            .dashboard-modal-body table th,
+            .dashboard-modal-body table td {
+                padding: 0.6rem 0.75rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard-modal-content {
+                width: 100%;
+                height: 100%;
+                max-width: 100%;
+                max-height: 100vh;
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .dashboard-modal-header {
+                padding: 0.9rem 0.9rem;
+                border-radius: 0;
+            }
+
+            .dashboard-modal-body {
+                padding: 0.9rem;
+            }
         }
 
         .dashboard-table {
@@ -1668,7 +1753,7 @@ header('Content-Type: text/html; charset=UTF-8');
     </style>
 
 </head>
-<body>
+<body class="sidebar-page">
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-container">
